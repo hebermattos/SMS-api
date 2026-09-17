@@ -1,25 +1,30 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sms.Api.Auth;
+using Sms.Application.Auth;
 
 namespace Sms.Api.Controllers;
 
-public sealed record TokenRequest(Guid TenantId, string ClientId, string ClientSecret);
+public sealed record TokenRequest(string ClientId, string ClientSecret);
 
 [ApiController]
 [Route("api/v1/auth")]
-public sealed class AuthController(TokenService tokenService, IConfiguration configuration) : ControllerBase
+public sealed class AuthController(TokenService tokenService, IApiClientRepository clients) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("token")]
-    public IActionResult Token([FromBody] TokenRequest request)
+    public async Task<IActionResult> Token([FromBody] TokenRequest request, CancellationToken cancellationToken)
     {
-        var configuredId = configuration["Auth:ClientId"];
-        var configuredSecret = configuration["Auth:ClientSecret"];
-        if (string.IsNullOrEmpty(configuredId) || string.IsNullOrEmpty(configuredSecret) ||
-            !string.Equals(request.ClientId, configuredId, StringComparison.Ordinal) ||
-            !string.Equals(request.ClientSecret, configuredSecret, StringComparison.Ordinal)) return Unauthorized();
+        if (string.IsNullOrWhiteSpace(request.ClientId) || string.IsNullOrWhiteSpace(request.ClientSecret)) return Unauthorized();
 
-        return Ok(new { access_token = tokenService.Create(request.TenantId, request.ClientId), token_type = "Bearer" });
+        var client = await clients.GetActiveByClientIdAsync(request.ClientId, cancellationToken);
+        if (client is null || !ClientSecretHasher.Verify(request.ClientSecret, client.SecretHash, client.SecretSalt, client.SecretIterations))
+            return Unauthorized();
+
+        return Ok(new
+        {
+            access_token = tokenService.Create(client.TenantId, client.ClientId),
+            token_type = "Bearer"
+        });
     }
 }
