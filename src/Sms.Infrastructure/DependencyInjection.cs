@@ -18,7 +18,12 @@ public static class DependencyInjection
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();
         services.AddScoped<ITenantSmsProviderRepository, TenantSmsProviderRepository>();
         services.AddScoped<ISmsProviderResolver, SmsProviderResolver>();
-        services.AddScoped<ISmsProvider, TwilioSmsProvider>();
+        services.AddHttpClient<TwilioSmsProvider>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.twilio.com/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddScoped<ISmsProvider>(sp => sp.GetRequiredService<TwilioSmsProvider>());
         services.AddScoped<ISmsProvider, BandwidthSmsProvider>();
         return services;
     }
