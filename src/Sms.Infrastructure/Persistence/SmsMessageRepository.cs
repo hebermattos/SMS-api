@@ -28,6 +28,22 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
         await connection.ExecuteAsync(new CommandDefinition(sql, message, cancellationToken: cancellationToken));
     }
 
+    public async Task InsertInboundIfNotExistsAsync(SmsMessage message, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            IF NOT EXISTS (
+                SELECT 1 FROM dbo.SmsMessages WITH (UPDLOCK, HOLDLOCK)
+                WHERE TenantId = @TenantId AND Provider = @Provider AND ProviderMessageId = @ProviderMessageId
+            )
+            BEGIN
+                INSERT INTO dbo.SmsMessages (Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, UpdatedAt)
+                VALUES (@Id, @TenantId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @Status, @CreatedAt, @UpdatedAt);
+            END
+            """;
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(sql, message, cancellationToken: cancellationToken));
+    }
+
     public async Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
     {
         const string sql = """UPDATE dbo.SmsMessages SET Status = @Status, ProviderMessageId = COALESCE(@ProviderMessageId, ProviderMessageId), UpdatedAt = @UpdatedAt WHERE TenantId = @TenantId AND Id = @Id;""";
@@ -37,8 +53,20 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
 
     public async Task UpdateStatusByProviderMessageIdAsync(Guid tenantId, string provider, string providerMessageId, SmsStatus status, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
     {
-        const string sql = """UPDATE dbo.SmsMessages SET Status = @Status, UpdatedAt = @UpdatedAt WHERE TenantId = @TenantId AND Provider = @Provider AND ProviderMessageId = @ProviderMessageId;""";
+        const string sql = """
+            UPDATE dbo.SmsMessages
+            SET Status = @Status, UpdatedAt = @UpdatedAt
+            WHERE TenantId = @TenantId AND Provider = @Provider AND ProviderMessageId = @ProviderMessageId
+              AND (
+                    Status = @Queued
+                    OR (Status = @Sent AND @Status IN (@Delivered, @Failed))
+                  );
+            """;
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(sql, new { TenantId = tenantId, Provider = provider, ProviderMessageId = providerMessageId, Status = status, UpdatedAt = updatedAt }, cancellationToken: cancellationToken));
+        await connection.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            TenantId = tenantId, Provider = provider, ProviderMessageId = providerMessageId, Status = status, UpdatedAt = updatedAt,
+            Queued = SmsStatus.Queued, Sent = SmsStatus.Sent, Delivered = SmsStatus.Delivered, Failed = SmsStatus.Failed
+        }, cancellationToken: cancellationToken));
     }
 }

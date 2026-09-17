@@ -27,7 +27,7 @@ public sealed class TwilioWebhooksController(
         var to = form["To"].ToString();
         if (string.IsNullOrWhiteSpace(sid) || string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to)) return BadRequest();
 
-        await messages.InsertAsync(new SmsMessage
+        await messages.InsertInboundIfNotExistsAsync(new SmsMessage
         {
             Id = Guid.NewGuid(), TenantId = config.TenantId, From = from, To = to,
             Body = form["Body"].ToString(), Provider = "Twilio", ProviderMessageId = sid,
