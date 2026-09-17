@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Sms.Api.Controllers;
 using Sms.Application.Messages;
 using Sms.Application.Providers;
@@ -79,7 +80,9 @@ public sealed class TwilioWebhooksControllerTests
         const string token="auth-token";
         var config=configurationExists ? new TenantSmsProviderConfiguration(tenantId,"Twilio","AC1",token,"+2",true,true) : null;
         var repository=new ProviderRepository(config);
-        var controller=new TwilioWebhooksController(repository,messages,new TwilioWebhookValidator());
+        var webhookUrls=new ConfiguredSmsWebhookUrlProvider(new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string,string?> { ["Sms:PublicBaseUrl"]="https://sms.example.com" }).Build());
+        var controller=new TwilioWebhooksController(repository,messages,new TwilioWebhookValidator(),webhookUrls);
         var context=new DefaultHttpContext();
         context.Request.Scheme="https"; context.Request.Host=new HostString("sms.example.com"); context.Request.Path="/api/v1/webhooks/twilio/inbound";
         context.Request.ContentType="application/x-www-form-urlencoded";

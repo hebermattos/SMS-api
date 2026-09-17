@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Configuration;
 using Sms.Application.Common;
 using Sms.Application.Providers;
 using Sms.Infrastructure.Providers;
@@ -21,6 +22,7 @@ public sealed class TwilioSmsProviderTests
         Assert.Contains("Accounts/AC123/Messages.json", handler.RequestUri);
         Assert.Contains("From=%2B15550000001", handler.Body);
         Assert.Contains("To=%2B15550000002", handler.Body);
+        Assert.Contains("StatusCallback=https%3A%2F%2Fsms.example.com%2Fapi%2Fv1%2Fwebhooks%2Ftwilio%2Fstatus", handler.Body);
         Assert.Equal("Basic", handler.AuthorizationScheme);
     }
 
@@ -81,8 +83,12 @@ public sealed class TwilioSmsProviderTests
     private static TwilioSmsProvider Create(Guid tenantId, HttpMessageHandler handler, TenantSmsProviderConfiguration? config)
     {
         var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.twilio.com/") };
-        return new TwilioSmsProvider(client, new TenantContext(tenantId), new ProviderRepository(config));
+        return new TwilioSmsProvider(client, new TenantContext(tenantId), new ProviderRepository(config), WebhookUrls());
     }
+
+    private static ConfiguredSmsWebhookUrlProvider WebhookUrls() => new(new ConfigurationBuilder()
+        .AddInMemoryCollection(new Dictionary<string, string?> { ["Sms:PublicBaseUrl"] = "https://sms.example.com" })
+        .Build());
 
     private static TenantSmsProviderConfiguration Configuration(Guid tenantId, string? from) =>
         new(tenantId, "Twilio", "AC123", "secret", from, true, true);

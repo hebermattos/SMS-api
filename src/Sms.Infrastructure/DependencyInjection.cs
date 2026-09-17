@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddSingleton<SqlConnectionFactory>();
         services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();
         services.AddSingleton<TwilioWebhookValidator>();
+        services.AddSingleton<ISmsWebhookUrlProvider, ConfiguredSmsWebhookUrlProvider>();
         services.AddScoped<IApiClientRepository, ApiClientRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ITenantProvisioner, TenantProvisioner>();
