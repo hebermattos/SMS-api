@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sms.Application.Messages;
+using Sms.Application.Providers;
 using Sms.Infrastructure.Persistence;
 using Sms.Infrastructure.Providers;
 
@@ -12,6 +13,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<SqlConnectionFactory>();
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();
+        services.AddScoped<ITenantSmsProviderRepository, TenantSmsProviderRepository>();
         services.AddScoped<ISmsProviderResolver, SmsProviderResolver>();
         services.AddScoped<ISmsProvider, TwilioSmsProvider>();
         services.AddScoped<ISmsProvider, BandwidthSmsProvider>();
