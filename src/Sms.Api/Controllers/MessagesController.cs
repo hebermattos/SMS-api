@@ -24,6 +24,15 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
         return message is null ? NotFound() : Ok(message);
     }
 
+    [HttpGet("{id:guid}/status-history")]
+    public async Task<IActionResult> GetStatusHistory(Guid id, CancellationToken cancellationToken)
+    {
+        var message = await repository.GetByIdAsync(tenantContext.TenantId, id, cancellationToken);
+        if (message is null) return NotFound();
+
+        return Ok(await repository.GetStatusHistoryAsync(tenantContext.TenantId, id, cancellationToken));
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetHistory([FromQuery] int skip = 0, [FromQuery] int take = 50, CancellationToken cancellationToken = default)
     {
