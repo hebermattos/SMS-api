@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddSingleton<TwilioWebhookValidator>();
         services.AddScoped<IApiClientRepository, ApiClientRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<ITenantProvisioner, TenantProvisioner>();
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();
         services.AddScoped<ITenantSmsProviderRepository, TenantSmsProviderRepository>();
         services.AddScoped<ISmsProviderResolver, SmsProviderResolver>();
