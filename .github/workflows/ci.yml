@@ -18,5 +18,11 @@ jobs:
         run: dotnet restore Sms.Api.sln
       - name: Build
         run: dotnet build Sms.Api.sln --configuration Release --no-restore
-      - name: Test
-        run: dotnet test Sms.Api.sln --configuration Release --no-build
+      - name: Test with coverage
+        run: dotnet test Sms.Api.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: error
