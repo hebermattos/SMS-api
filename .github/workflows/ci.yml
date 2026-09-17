@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build-test:
@@ -20,7 +24,21 @@ jobs:
         run: dotnet build Sms.Api.sln --configuration Release --no-restore
       - name: Test with coverage
         run: dotnet test Sms.Api.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+      - name: Verify coverage report
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path ./TestResults -Filter coverage.cobertura.xml -Recurse
+          if ($files.Count -eq 0) { throw "No coverage report was generated." }
+          $rates = foreach ($file in $files) {
+            [xml]$coverage = Get-Content $file.FullName
+            [double]$coverage.coverage.'line-rate'
+          }
+          $lineRate = ($rates | Measure-Object -Minimum).Minimum
+          $percent = [math]::Round($lineRate * 100, 2)
+          Write-Host "Minimum line coverage: $percent%"
+          if ($percent -lt 80) { throw "Line coverage $percent% is below the required 80%." }
       - name: Upload coverage
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: code-coverage
