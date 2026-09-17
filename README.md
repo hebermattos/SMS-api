@@ -130,9 +130,11 @@ Jwt__ExpirationMinutes
 Encryption__MasterKey
 Admin__ProvisioningKey
 Sms__DefaultProvider
+Sms__PublicBaseUrl
 ```
 
 `Encryption__MasterKey` must be Base64 encoding of exactly 32 bytes. Do not commit production keys.
+`Sms__PublicBaseUrl` must be the externally reachable HTTPS base URL. It is used both when requesting provider status callbacks and when validating webhook signatures, so callback validation does not trust proxy-provided host or scheme headers.
 
 ## Tenant provisioning
 
@@ -169,7 +171,6 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 - Bandwidth provider transport is still a stub.
 - Bandwidth inbound/status webhooks are not implemented.
 - Angular administration UI is not implemented.
-- Twilio webhook URL validation needs deployment-aware handling when the API is behind a reverse proxy/load balancer.
 - CI workflow execution still needs to be verified in repository settings; recent commits have not exposed workflow runs through the available GitHub integration.
 
 ## Contributing

@@ -39,6 +39,7 @@ public sealed class RegistrationAndModelTests
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsProviderResolver));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsMessageRepository));
         Assert.Contains(services, x => x.ServiceType == typeof(ITenantSmsProviderRepository));
+        Assert.Contains(services, x => x.ServiceType == typeof(ISmsWebhookUrlProvider));
     }
 
     [Fact]

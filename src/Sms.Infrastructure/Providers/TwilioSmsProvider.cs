@@ -10,7 +10,8 @@ namespace Sms.Infrastructure.Providers;
 public sealed class TwilioSmsProvider(
     HttpClient httpClient,
     ITenantContext tenantContext,
-    ITenantSmsProviderRepository configurations) : ISmsProvider
+    ITenantSmsProviderRepository configurations,
+    ISmsWebhookUrlProvider webhookUrls) : ISmsProvider
 {
     public string Name => "Twilio";
 
@@ -34,7 +35,8 @@ public sealed class TwilioSmsProvider(
         {
             ["From"] = sender,
             ["To"] = to,
-            ["Body"] = body
+            ["Body"] = body,
+            ["StatusCallback"] = webhookUrls.GetUrl("api/v1/webhooks/twilio/status").ToString()
         });
 
         using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);

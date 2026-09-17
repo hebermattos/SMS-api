@@ -13,7 +13,8 @@ namespace Sms.Api.Controllers;
 public sealed class TwilioWebhooksController(
     ITenantSmsProviderRepository providers,
     ISmsMessageRepository messages,
-    TwilioWebhookValidator validator) : ControllerBase
+    TwilioWebhookValidator validator,
+    ISmsWebhookUrlProvider webhookUrls) : ControllerBase
 {
     [HttpPost("inbound")]
     public async Task<IActionResult> Inbound(CancellationToken cancellationToken)
@@ -59,7 +60,8 @@ public sealed class TwilioWebhooksController(
         if (config is null) return null;
 
         var signature = Request.Headers["X-Twilio-Signature"].ToString();
-        var url = $"{Request.Scheme}://{Request.Host}{Request.PathBase}{Request.Path}{Request.QueryString}";
+        var relativeUrl = $"{Request.PathBase}{Request.Path}{Request.QueryString}";
+        var url = webhookUrls.GetUrl(relativeUrl).ToString();
         var parameters = form.SelectMany(x => x.Value.Select(value => new KeyValuePair<string, string>(x.Key, value ?? string.Empty)));
         return validator.Validate(url, parameters, signature, config.ApiSecret) ? config : null;
     }
