@@ -25,13 +25,24 @@ public sealed class TwilioSmsProviderTests
     }
 
     [Fact]
-    public async Task SendAsync_UsesExplicitFrom()
+    public async Task SendAsync_AllowsConfiguredExplicitFrom()
     {
         var tenantId = Guid.NewGuid();
         var handler = new RecordingHandler(HttpStatusCode.Created, """{"sid":"SM1","status":"sent"}""");
         var provider = Create(tenantId, handler, Configuration(tenantId, from: "+100"));
-        await provider.SendAsync("+200", "+300", "body");
-        Assert.Contains("From=%2B200", handler.Body);
+        await provider.SendAsync("+100", "+300", "body");
+        Assert.Contains("From=%2B100", handler.Body);
+    }
+
+    [Fact]
+    public async Task SendAsync_RejectsFromNumberOwnedByAnotherTenantRoute()
+    {
+        var tenantId = Guid.NewGuid();
+        var provider = Create(tenantId, new RecordingHandler(HttpStatusCode.Created, "{}"), Configuration(tenantId, from: "+100"));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => provider.SendAsync("+200", "+300", "body"));
+
+        Assert.Contains("not configured", error.Message);
     }
 
     [Fact]
@@ -82,7 +93,7 @@ public sealed class TwilioSmsProviderTests
     {
         public Task<TenantSmsProviderConfiguration?> GetAsync(Guid tenantId, string provider, CancellationToken cancellationToken = default) => Task.FromResult(configuration);
         public Task<TenantSmsProviderConfiguration?> GetDefaultAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(configuration);
-        public Task<TenantSmsProviderConfiguration?> GetByAccountAsync(string provider, string accountId, CancellationToken cancellationToken = default) => Task.FromResult(configuration);
+        public Task<TenantSmsProviderConfiguration?> GetByAccountAndNumberAsync(string provider, string accountId, string number, CancellationToken cancellationToken = default) => Task.FromResult(configuration);
         public Task UpsertAsync(TenantSmsProviderConfiguration configuration, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 

@@ -19,9 +19,12 @@ public sealed class TwilioSmsProvider(
         var config = await configurations.GetAsync(tenantContext.TenantId, Name, cancellationToken)
             ?? throw new InvalidOperationException("Twilio is not configured for this tenant.");
 
-        var sender = string.IsNullOrWhiteSpace(from) ? config.FromNumber : from;
-        if (string.IsNullOrWhiteSpace(sender))
+        var configuredSender = config.FromNumber?.Trim();
+        if (string.IsNullOrWhiteSpace(configuredSender))
             throw new InvalidOperationException("A Twilio From number is required.");
+        if (!string.IsNullOrWhiteSpace(from) && !string.Equals(from.Trim(), configuredSender, StringComparison.Ordinal))
+            throw new InvalidOperationException("The requested From number is not configured for this tenant.");
+        var sender = configuredSender;
 
         var request = new HttpRequestMessage(HttpMethod.Post,
             $"2010-04-01/Accounts/{Uri.EscapeDataString(config.AccountId)}/Messages.json");

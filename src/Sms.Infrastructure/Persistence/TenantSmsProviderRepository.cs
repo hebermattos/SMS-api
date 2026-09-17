@@ -22,11 +22,14 @@ public sealed class TenantSmsProviderRepository(SqlConnectionFactory connectionF
         return Decrypt(await connection.QuerySingleOrDefaultAsync<TenantSmsProviderConfiguration>(new CommandDefinition(sql,new {TenantId=tenantId},cancellationToken:cancellationToken)));
     }
 
-    public async Task<TenantSmsProviderConfiguration?> GetByAccountAsync(string provider,string accountId,CancellationToken cancellationToken=default)
+    public async Task<TenantSmsProviderConfiguration?> GetByAccountAndNumberAsync(string provider, string accountId, string number, CancellationToken cancellationToken = default)
     {
-        var sql=$"SELECT {Columns} FROM dbo.TenantSmsProviders WHERE Provider=@Provider AND AccountId=@AccountId AND IsActive=1;";
-        using var connection=connectionFactory.CreateConnection();
-        return Decrypt(await connection.QuerySingleOrDefaultAsync<TenantSmsProviderConfiguration>(new CommandDefinition(sql,new {Provider=provider,AccountId=accountId},cancellationToken:cancellationToken)));
+        var sql = $"SELECT {Columns} FROM dbo.TenantSmsProviders WHERE Provider=@Provider AND AccountId=@AccountId AND FromNumber=@FromNumber AND IsActive=1;";
+        using var connection = connectionFactory.CreateConnection();
+        return Decrypt(await connection.QuerySingleOrDefaultAsync<TenantSmsProviderConfiguration>(new CommandDefinition(
+            sql,
+            new { Provider = provider, AccountId = accountId, FromNumber = number.Trim() },
+            cancellationToken: cancellationToken)));
     }
 
     public async Task UpsertAsync(TenantSmsProviderConfiguration configuration,CancellationToken cancellationToken=default)
@@ -40,7 +43,7 @@ public sealed class TenantSmsProviderRepository(SqlConnectionFactory connectionF
                 VALUES(@Id,@TenantId,@Provider,@AccountId,@ApiSecret,@FromNumber,@IsDefault,@IsActive,@Settings,@Now);
             """;
         using var connection=connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(sql,new {Id=Guid.NewGuid(),configuration.TenantId,configuration.Provider,configuration.AccountId,ApiSecret=secretProtector.Protect(configuration.ApiSecret),configuration.FromNumber,configuration.IsDefault,configuration.IsActive,Settings=ProtectOptional(configuration.Settings),Now=DateTimeOffset.UtcNow},cancellationToken:cancellationToken));
+        await connection.ExecuteAsync(new CommandDefinition(sql,new {Id=Guid.NewGuid(),configuration.TenantId,configuration.Provider,configuration.AccountId,ApiSecret=secretProtector.Protect(configuration.ApiSecret),FromNumber=configuration.FromNumber?.Trim(),configuration.IsDefault,configuration.IsActive,Settings=ProtectOptional(configuration.Settings),Now=DateTimeOffset.UtcNow},cancellationToken:cancellationToken));
     }
 
     private string? ProtectOptional(string? value)=>string.IsNullOrWhiteSpace(value)?null:secretProtector.Protect(value);

@@ -8,3 +8,4 @@ GO
 :r /database/004_example_tenant.sql
 :r /database/005_provider_settings.sql
 :r /database/006_message_status_history.sql
+:r /database/007_shared_provider_account_routing.sql

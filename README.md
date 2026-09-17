@@ -32,6 +32,7 @@ database/
   004_example_tenant.sql
   005_provider_settings.sql
   006_message_status_history.sql
+  007_shared_provider_account_routing.sql
 ```
 
 All SMS providers implement the same `ISmsProvider` interface and are selected through `ISmsProviderResolver`. Provider credentials are tenant-specific and secrets are encrypted at rest using AES-256-GCM.
@@ -59,6 +60,7 @@ Message endpoints require a JWT. The authenticated `tenant_id` claim controls da
 Each message status transition is stored in `SmsMessageStatusHistory`. Authenticated clients can query the chronological status history only for messages belonging to their tenant. Technical application logs remain separate from customer-visible message history and must not expose message bodies, credentials, tokens, or complete phone numbers.
 
 Twilio webhook endpoints are anonymous by design and validate `X-Twilio-Signature` using the tenant provider secret.
+Twilio accounts may be shared by multiple tenants. Callback ownership is resolved by the unique active combination of provider, account ID, and configured sender number. A tenant cannot override its configured sender number when sending.
 
 The tenant provisioning endpoint uses `X-Admin-Key`. It is intended as bootstrap administration and should not be exposed publicly without additional administrative access controls.
 

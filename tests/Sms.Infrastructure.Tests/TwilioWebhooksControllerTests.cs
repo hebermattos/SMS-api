@@ -47,7 +47,7 @@ public sealed class TwilioWebhooksControllerTests
     public async Task Status_MapsProviderStatus(string value,SmsStatus expected)
     {
         var messages=new MessageRepository();
-        var controller=Create(Guid.NewGuid(),messages,Form(("AccountSid","AC1"),("MessageSid","SM1"),("MessageStatus",value)));
+        var controller=Create(Guid.NewGuid(),messages,Form(("AccountSid","AC1"),("MessageSid","SM1"),("MessageStatus",value),("From","+2")));
         Assert.IsType<NoContentResult>(await controller.Status(default));
         Assert.Equal(expected,messages.Status);
     }
@@ -55,15 +55,22 @@ public sealed class TwilioWebhooksControllerTests
     [Fact]
     public async Task Status_RejectsMissingMessageSid()
     {
-        var controller=Create(Guid.NewGuid(),new MessageRepository(),Form(("AccountSid","AC1"),("MessageStatus","sent")));
+        var controller=Create(Guid.NewGuid(),new MessageRepository(),Form(("AccountSid","AC1"),("MessageStatus","sent"),("From","+2")));
         Assert.IsType<BadRequestResult>(await controller.Status(default));
     }
 
     [Fact]
     public async Task Status_ForbidsUnknownAccount()
     {
-        var form=Form(("AccountSid","AC1"),("MessageSid","SM1"));
+        var form=Form(("AccountSid","AC1"),("MessageSid","SM1"),("From","+2"));
         var controller=Create(Guid.NewGuid(),new MessageRepository(),form,configurationExists:false);
+        Assert.IsType<ForbidResult>(await controller.Status(default));
+    }
+
+    [Fact]
+    public async Task Status_ForbidsMissingTenantRouteNumber()
+    {
+        var controller=Create(Guid.NewGuid(),new MessageRepository(),Form(("AccountSid","AC1"),("MessageSid","SM1"),("MessageStatus","sent")));
         Assert.IsType<ForbidResult>(await controller.Status(default));
     }
 
@@ -71,7 +78,8 @@ public sealed class TwilioWebhooksControllerTests
     {
         const string token="auth-token";
         var config=configurationExists ? new TenantSmsProviderConfiguration(tenantId,"Twilio","AC1",token,"+2",true,true) : null;
-        var controller=new TwilioWebhooksController(new ProviderRepository(config),messages,new TwilioWebhookValidator());
+        var repository=new ProviderRepository(config);
+        var controller=new TwilioWebhooksController(repository,messages,new TwilioWebhookValidator());
         var context=new DefaultHttpContext();
         context.Request.Scheme="https"; context.Request.Host=new HostString("sms.example.com"); context.Request.Path="/api/v1/webhooks/twilio/inbound";
         context.Request.ContentType="application/x-www-form-urlencoded";
@@ -96,7 +104,7 @@ public sealed class TwilioWebhooksControllerTests
     {
         public Task<TenantSmsProviderConfiguration?> GetAsync(Guid t,string p,CancellationToken c=default)=>Task.FromResult(config);
         public Task<TenantSmsProviderConfiguration?> GetDefaultAsync(Guid t,CancellationToken c=default)=>Task.FromResult(config);
-        public Task<TenantSmsProviderConfiguration?> GetByAccountAsync(string p,string a,CancellationToken c=default)=>Task.FromResult(config);
+        public Task<TenantSmsProviderConfiguration?> GetByAccountAndNumberAsync(string p,string a,string n,CancellationToken c=default)=>Task.FromResult(n=="+2"?config:null);
         public Task UpsertAsync(TenantSmsProviderConfiguration x,CancellationToken c=default)=>Task.CompletedTask;
     }
     private sealed class MessageRepository:ISmsMessageRepository
