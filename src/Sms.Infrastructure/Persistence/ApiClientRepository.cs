@@ -16,4 +16,20 @@ public sealed class ApiClientRepository(SqlConnectionFactory connectionFactory) 
         return await connection.QuerySingleOrDefaultAsync<ApiClientCredential>(
             new CommandDefinition(sql, new { ClientId = clientId }, cancellationToken: cancellationToken));
     }
+
+    public async Task CreateAsync(CreateApiClient client, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            INSERT INTO dbo.ApiClients
+                (Id, TenantId, ClientId, SecretHash, SecretSalt, SecretIterations, IsActive, CreatedAt)
+            VALUES
+                (@Id, @TenantId, @ClientId, @SecretHash, @SecretSalt, @SecretIterations, 1, @CreatedAt);
+            """;
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            Id = Guid.NewGuid(), client.TenantId, client.ClientId, client.SecretHash, client.SecretSalt,
+            client.SecretIterations, CreatedAt = DateTimeOffset.UtcNow
+        }, cancellationToken: cancellationToken));
+    }
 }
