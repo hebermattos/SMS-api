@@ -19,7 +19,7 @@ public sealed class TwilioWebhooksController(
     public async Task<IActionResult> Inbound(CancellationToken cancellationToken)
     {
         var form = await Request.ReadFormAsync(cancellationToken);
-        var config = await ResolveAndValidateAsync(form, cancellationToken);
+        var config = await ResolveAndValidateAsync(form, form["To"].ToString(), cancellationToken);
         if (config is null) return Forbid();
 
         var sid = form["MessageSid"].ToString();
@@ -41,7 +41,7 @@ public sealed class TwilioWebhooksController(
     public async Task<IActionResult> Status(CancellationToken cancellationToken)
     {
         var form = await Request.ReadFormAsync(cancellationToken);
-        var config = await ResolveAndValidateAsync(form, cancellationToken);
+        var config = await ResolveAndValidateAsync(form, form["From"].ToString(), cancellationToken);
         if (config is null) return Forbid();
 
         var sid = form["MessageSid"].ToString();
@@ -51,11 +51,11 @@ public sealed class TwilioWebhooksController(
         return NoContent();
     }
 
-    private async Task<TenantSmsProviderConfiguration?> ResolveAndValidateAsync(IFormCollection form, CancellationToken cancellationToken)
+    private async Task<TenantSmsProviderConfiguration?> ResolveAndValidateAsync(IFormCollection form, string tenantNumber, CancellationToken cancellationToken)
     {
         var accountSid = form["AccountSid"].ToString();
-        if (string.IsNullOrWhiteSpace(accountSid)) return null;
-        var config = await providers.GetByAccountAsync("Twilio", accountSid, cancellationToken);
+        if (string.IsNullOrWhiteSpace(accountSid) || string.IsNullOrWhiteSpace(tenantNumber)) return null;
+        var config = await providers.GetByAccountAndNumberAsync("Twilio", accountSid, tenantNumber, cancellationToken);
         if (config is null) return null;
 
         var signature = Request.Headers["X-Twilio-Signature"].ToString();
