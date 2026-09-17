@@ -21,9 +21,33 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
         return rows.AsList();
     }
 
+    public async Task<IReadOnlyList<SmsStatusHistory>> GetStatusHistoryAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT Id, MessageId, Status, CreatedAt
+            FROM dbo.SmsMessageStatusHistory
+            WHERE TenantId = @TenantId AND MessageId = @MessageId
+            ORDER BY CreatedAt, Id;
+            """;
+        using var connection = connectionFactory.CreateConnection();
+        var rows = await connection.QueryAsync<SmsStatusHistory>(new CommandDefinition(sql, new { TenantId = tenantId, MessageId = messageId }, cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
     public async Task InsertAsync(SmsMessage message, CancellationToken cancellationToken = default)
     {
-        const string sql = """INSERT INTO dbo.SmsMessages (Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, UpdatedAt) VALUES (@Id, @TenantId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @Status, @CreatedAt, @UpdatedAt);""";
+        const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRANSACTION;
+
+            INSERT INTO dbo.SmsMessages (Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, UpdatedAt)
+            VALUES (@Id, @TenantId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @Status, @CreatedAt, @UpdatedAt);
+
+            INSERT INTO dbo.SmsMessageStatusHistory (Id, TenantId, MessageId, Status, CreatedAt)
+            VALUES (NEWID(), @TenantId, @Id, @Status, @CreatedAt);
+
+            COMMIT TRANSACTION;
+            """;
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(sql, message, cancellationToken: cancellationToken));
     }
@@ -31,14 +55,25 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
     public async Task InsertInboundIfNotExistsAsync(SmsMessage message, CancellationToken cancellationToken = default)
     {
         const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRANSACTION;
+
+            DECLARE @InsertedMessages TABLE (Id UNIQUEIDENTIFIER);
+
             IF NOT EXISTS (
                 SELECT 1 FROM dbo.SmsMessages WITH (UPDLOCK, HOLDLOCK)
                 WHERE TenantId = @TenantId AND Provider = @Provider AND ProviderMessageId = @ProviderMessageId
             )
             BEGIN
                 INSERT INTO dbo.SmsMessages (Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, UpdatedAt)
+                OUTPUT INSERTED.Id INTO @InsertedMessages
                 VALUES (@Id, @TenantId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @Status, @CreatedAt, @UpdatedAt);
             END
+
+            INSERT INTO dbo.SmsMessageStatusHistory (Id, TenantId, MessageId, Status, CreatedAt)
+            SELECT NEWID(), @TenantId, Id, @Status, @CreatedAt FROM @InsertedMessages;
+
+            COMMIT TRANSACTION;
             """;
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(sql, message, cancellationToken: cancellationToken));
@@ -46,7 +81,24 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
 
     public async Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
     {
-        const string sql = """UPDATE dbo.SmsMessages SET Status = @Status, ProviderMessageId = COALESCE(@ProviderMessageId, ProviderMessageId), UpdatedAt = @UpdatedAt WHERE TenantId = @TenantId AND Id = @Id;""";
+        const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRANSACTION;
+
+            DECLARE @ChangedMessages TABLE (Id UNIQUEIDENTIFIER, PreviousStatus INT);
+
+            UPDATE dbo.SmsMessages
+            SET Status = @Status, ProviderMessageId = COALESCE(@ProviderMessageId, ProviderMessageId), UpdatedAt = @UpdatedAt
+            OUTPUT INSERTED.Id, DELETED.Status INTO @ChangedMessages
+            WHERE TenantId = @TenantId AND Id = @Id;
+
+            INSERT INTO dbo.SmsMessageStatusHistory (Id, TenantId, MessageId, Status, CreatedAt)
+            SELECT NEWID(), @TenantId, Id, @Status, @UpdatedAt
+            FROM @ChangedMessages
+            WHERE PreviousStatus <> @Status;
+
+            COMMIT TRANSACTION;
+            """;
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(sql, new { TenantId = tenantId, Id = id, Status = status, ProviderMessageId = providerMessageId, UpdatedAt = updatedAt }, cancellationToken: cancellationToken));
     }
@@ -54,13 +106,26 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
     public async Task UpdateStatusByProviderMessageIdAsync(Guid tenantId, string provider, string providerMessageId, SmsStatus status, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
     {
         const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRANSACTION;
+
+            DECLARE @ChangedMessages TABLE (Id UNIQUEIDENTIFIER, PreviousStatus INT);
+
             UPDATE dbo.SmsMessages
             SET Status = @Status, UpdatedAt = @UpdatedAt
+            OUTPUT INSERTED.Id, DELETED.Status INTO @ChangedMessages
             WHERE TenantId = @TenantId AND Provider = @Provider AND ProviderMessageId = @ProviderMessageId
               AND (
                     Status = @Queued
                     OR (Status = @Sent AND @Status IN (@Delivered, @Failed))
                   );
+
+            INSERT INTO dbo.SmsMessageStatusHistory (Id, TenantId, MessageId, Status, CreatedAt)
+            SELECT NEWID(), @TenantId, Id, @Status, @UpdatedAt
+            FROM @ChangedMessages
+            WHERE PreviousStatus <> @Status;
+
+            COMMIT TRANSACTION;
             """;
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(sql, new

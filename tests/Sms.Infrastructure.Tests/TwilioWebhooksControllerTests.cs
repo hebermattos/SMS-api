@@ -106,6 +106,7 @@ public sealed class TwilioWebhooksControllerTests
         public Task UpdateStatusByProviderMessageIdAsync(Guid t,string p,string id,SmsStatus s,DateTimeOffset u,CancellationToken c=default){Status=s;return Task.CompletedTask;}
         public Task<SmsMessage?> GetByIdAsync(Guid t,Guid i,CancellationToken c=default)=>Task.FromResult<SmsMessage?>(null);
         public Task<IReadOnlyList<SmsMessage>> GetHistoryAsync(Guid t,int s,int n,CancellationToken c=default)=>Task.FromResult<IReadOnlyList<SmsMessage>>([]);
+        public Task<IReadOnlyList<SmsStatusHistory>> GetStatusHistoryAsync(Guid t,Guid i,CancellationToken c=default)=>Task.FromResult<IReadOnlyList<SmsStatusHistory>>([]);
         public Task InsertAsync(SmsMessage m,CancellationToken c=default)=>Task.CompletedTask;
         public Task UpdateStatusAsync(Guid t,Guid i,SmsStatus s,string? p,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
     }
