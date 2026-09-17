@@ -4,6 +4,7 @@ using Sms.Application.Auth;
 using Sms.Application.Messages;
 using Sms.Application.Providers;
 using Sms.Application.Security;
+using Sms.Application.Tenants;
 using Sms.Infrastructure.Persistence;
 using Sms.Infrastructure.Providers;
 using Sms.Infrastructure.Security;
@@ -18,6 +19,7 @@ public static class DependencyInjection
         services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();
         services.AddSingleton<TwilioWebhookValidator>();
         services.AddScoped<IApiClientRepository, ApiClientRepository>();
+        services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();
         services.AddScoped<ITenantSmsProviderRepository, TenantSmsProviderRepository>();
         services.AddScoped<ISmsProviderResolver, SmsProviderResolver>();
