@@ -1,0 +1,40 @@
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Sms.Application.Tenants;
+
+namespace Sms.Api.Controllers;
+
+public sealed record CreateTenantRequest(string Name, string? ClientId);
+
+[ApiController]
+[Route("api/v1/admin/tenants")]
+public sealed class AdminTenantsController(TenantProvisioningService provisioning, IConfiguration configuration) : ControllerBase
+{
+    [AllowAnonymous]
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateTenantRequest request, CancellationToken cancellationToken)
+    {
+        var expected = configuration["Admin:ProvisioningKey"];
+        if (string.IsNullOrWhiteSpace(expected) || !TryValidateKey(expected, Request.Headers["X-Admin-Key"].ToString()))
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(request.Name)) return BadRequest(new { error = "Name is required." });
+        var result = await provisioning.CreateAsync(request.Name, request.ClientId, cancellationToken);
+        return Created($"/api/v1/admin/tenants/{result.TenantId}", new
+        {
+            tenant_id = result.TenantId,
+            name = result.Name,
+            client_id = result.ClientId,
+            client_secret = result.ClientSecret,
+            warning = "Store client_secret now. It cannot be recovered."
+        });
+    }
+
+    private static bool TryValidateKey(string expected, string supplied)
+    {
+        var a = System.Text.Encoding.UTF8.GetBytes(expected);
+        var b = System.Text.Encoding.UTF8.GetBytes(supplied);
+        return a.Length == b.Length && CryptographicOperations.FixedTimeEquals(a, b);
+    }
+}
