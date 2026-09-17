@@ -31,8 +31,14 @@ public sealed class TenantSmsProviderRepository(SqlConnectionFactory connectionF
 
     public async Task UpsertAsync(TenantSmsProviderConfiguration configuration,CancellationToken cancellationToken=default)
     {
-        const string sql="""UPDATE dbo.TenantSmsProviders SET AccountId=@AccountId,ApiSecret=@ApiSecret,FromNumber=@FromNumber,IsDefault=@IsDefault,IsActive=@IsActive,Settings=@Settings,UpdatedAt=@Now WHERE TenantId=@TenantId AND Provider=@Provider;
-IF @@ROWCOUNT=0 INSERT dbo.TenantSmsProviders(Id,TenantId,Provider,AccountId,ApiSecret,FromNumber,IsDefault,IsActive,Settings,CreatedAt) VALUES(@Id,@TenantId,@Provider,@AccountId,@ApiSecret,@FromNumber,@IsDefault,@IsActive,@Settings,@Now);""";
+        const string sql = """
+            UPDATE dbo.TenantSmsProviders
+            SET AccountId=@AccountId,ApiSecret=@ApiSecret,FromNumber=@FromNumber,IsDefault=@IsDefault,IsActive=@IsActive,Settings=@Settings,UpdatedAt=@Now
+            WHERE TenantId=@TenantId AND Provider=@Provider;
+            IF @@ROWCOUNT=0
+                INSERT dbo.TenantSmsProviders(Id,TenantId,Provider,AccountId,ApiSecret,FromNumber,IsDefault,IsActive,Settings,CreatedAt)
+                VALUES(@Id,@TenantId,@Provider,@AccountId,@ApiSecret,@FromNumber,@IsDefault,@IsActive,@Settings,@Now);
+            """;
         using var connection=connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(sql,new {Id=Guid.NewGuid(),configuration.TenantId,configuration.Provider,configuration.AccountId,ApiSecret=secretProtector.Protect(configuration.ApiSecret),configuration.FromNumber,configuration.IsDefault,configuration.IsActive,Settings=ProtectOptional(configuration.Settings),Now=DateTimeOffset.UtcNow},cancellationToken:cancellationToken));
     }

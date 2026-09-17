@@ -142,10 +142,10 @@ Run locally:
 ```bash
 dotnet restore Sms.Api.sln
 dotnet build Sms.Api.sln --configuration Release
-dotnet test Sms.Api.sln --configuration Release --collect:"XPlat Code Coverage"
+dotnet test Sms.Api.sln --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 ```
 
-The CI workflow builds the solution, runs tests, generates Cobertura coverage and enforces a minimum 80% line-coverage threshold. Coverage reports are uploaded as workflow artifacts.
+The CI workflow builds the solution, runs tests, generates Cobertura coverage and enforces a minimum 80% line-coverage threshold. SQL Server/Dapper persistence adapters are reserved for integration testing and excluded from the unit-test coverage calculation. Coverage reports are uploaded as workflow artifacts.
 
 ## Security notes
 
