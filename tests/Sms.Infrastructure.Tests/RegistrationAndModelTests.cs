@@ -1,0 +1,68 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Sms.Application;
+using Sms.Application.Messages;
+using Sms.Application.Providers;
+using Sms.Application.Tenants;
+using Sms.Domain.Tenants;
+using Sms.Infrastructure;
+using Sms.Infrastructure.Providers;
+
+namespace Sms.Infrastructure.Tests;
+
+public sealed class RegistrationAndModelTests
+{
+    [Fact]
+    public void AddApplication_RegistersApplicationServices()
+    {
+        var services = new ServiceCollection();
+
+        services.AddApplication();
+
+        Assert.Contains(services, x => x.ServiceType == typeof(SendSmsService) && x.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(services, x => x.ServiceType == typeof(TenantProvisioningService) && x.Lifetime == ServiceLifetime.Scoped);
+    }
+
+    [Fact]
+    public void AddInfrastructure_RegistersProvidersAndRepositories()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:SqlServer"] = "Server=localhost;Database=SmsApi;User Id=sa;Password=Password1!;TrustServerCertificate=True",
+            ["Encryption:MasterKey"] = Convert.ToBase64String(new byte[32])
+        }).Build();
+        var services = new ServiceCollection();
+
+        services.AddInfrastructure(configuration);
+
+        Assert.Contains(services, x => x.ServiceType == typeof(ISmsProvider) && x.ImplementationType == typeof(BandwidthSmsProvider));
+        Assert.Contains(services, x => x.ServiceType == typeof(ISmsProviderResolver));
+        Assert.Contains(services, x => x.ServiceType == typeof(ISmsMessageRepository));
+        Assert.Contains(services, x => x.ServiceType == typeof(ITenantSmsProviderRepository));
+    }
+
+    [Fact]
+    public async Task BandwidthProvider_ReportsThatTransportIsNotConfigured()
+    {
+        var provider = new BandwidthSmsProvider();
+
+        Assert.Equal("Bandwidth", provider.Name);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.SendAsync("+1", "+2", "body"));
+    }
+
+    [Fact]
+    public void TenantAndProviderConfiguration_ExposeConfiguredValues()
+    {
+        var tenantId = Guid.NewGuid();
+        var createdAt = DateTimeOffset.UtcNow;
+        var tenant = new Tenant { Id = tenantId, Name = "Tenant", CreatedAt = createdAt };
+        var provider = new TenantSmsProviderConfiguration(tenantId, "Twilio", "account", "secret", "+1", true, true);
+
+        Assert.Equal(tenantId, tenant.Id);
+        Assert.Equal("Tenant", tenant.Name);
+        Assert.True(tenant.IsActive);
+        Assert.Equal(createdAt, tenant.CreatedAt);
+        Assert.Equal(tenantId, provider.TenantId);
+        Assert.Null(provider.Settings);
+    }
+}
