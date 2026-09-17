@@ -6,3 +6,4 @@ GO
 :r /database/002_tenant_providers.sql
 :r /database/003_api_clients.sql
 :r /database/004_example_tenant.sql
+:r /database/005_provider_settings.sql
