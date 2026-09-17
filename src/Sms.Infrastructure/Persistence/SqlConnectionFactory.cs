@@ -14,5 +14,6 @@ public sealed class SqlConnectionFactory
             ?? throw new InvalidOperationException("Connection string 'SqlServer' is not configured.");
     }
 
-    public IDbConnection CreateConnection() => new SqlConnection(_connectionString);
+    public SqlConnection CreateSqlConnection() => new(_connectionString);
+    public IDbConnection CreateConnection() => CreateSqlConnection();
 }
