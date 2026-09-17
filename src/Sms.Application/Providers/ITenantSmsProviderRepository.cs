@@ -7,7 +7,8 @@ public sealed record TenantSmsProviderConfiguration(
     string ApiSecret,
     string? FromNumber,
     bool IsDefault,
-    bool IsActive);
+    bool IsActive,
+    string? Settings = null);
 
 public interface ITenantSmsProviderRepository
 {
