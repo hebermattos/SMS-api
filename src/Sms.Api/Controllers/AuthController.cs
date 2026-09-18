@@ -18,7 +18,8 @@ public sealed class AuthController(TokenService tokenService, IApiClientReposito
     [HttpPost("token")]
     public async Task<IActionResult> Token([FromBody] TokenRequest request, CancellationToken cancellationToken)
     {
-        Response.Headers.CacheControl = "no-store";
+        if (ControllerContext.HttpContext is not null)
+            Response.Headers.CacheControl = "no-store";
         if (request.ClientId?.Length > 100 || request.ClientSecret?.Length > 1024) return Unauthorized();
         if (string.IsNullOrWhiteSpace(request.ClientId) || string.IsNullOrWhiteSpace(request.ClientSecret)) return Unauthorized();
 
