@@ -6,7 +6,7 @@ using Sms.Application.Common;
 
 namespace Sms.Api.Controllers;
 
-public sealed record CreateTenantUserRequest(string Username, string Password, string Role);
+public sealed record CreateTenantUserRequest(string Username, string Email, string Password, string Role);
 
 [ApiController]
 [Authorize(Policy = PortalSecurity.TenantAdministratorPolicy)]
@@ -25,7 +25,7 @@ public sealed class TenantUsersController(
         CancellationToken cancellationToken)
     {
         var id = await users.CreateAsync(
-            tenantContext.TenantId, request.Username, request.Password,
+            tenantContext.TenantId, request.Username, request.Email, request.Password,
             request.Role, cancellationToken);
         return Created($"/api/v1/tenant/users/{id}", new { id });
     }

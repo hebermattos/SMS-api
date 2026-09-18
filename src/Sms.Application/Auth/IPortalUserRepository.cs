@@ -4,6 +4,7 @@ public sealed record PortalUserAccount(
     Guid Id,
     Guid? TenantId,
     string Username,
+    string Email,
     byte[] PasswordHash,
     byte[] PasswordSalt,
     int PasswordIterations,

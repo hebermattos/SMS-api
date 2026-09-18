@@ -1,8 +1,8 @@
 namespace Sms.Application.Auth;
 
-public sealed record AdministratorAccount(Guid Id, string Username, byte[] PasswordHash,
+public sealed record AdministratorAccount(Guid Id, string Username, string Email, byte[] PasswordHash,
     byte[] PasswordSalt, int PasswordIterations, bool IsActive);
-public sealed record AdministratorSummary(Guid Id, string Username, bool IsActive, DateTimeOffset CreatedAt);
+public sealed record AdministratorSummary(Guid Id, string Username, string Email, bool IsActive, DateTimeOffset CreatedAt);
 public enum AdministratorStateResult { Updated, NotFound, LastActive }
 public sealed class AdministratorConflictException : Exception { }
 public sealed class LastActiveAdministratorException : Exception { }

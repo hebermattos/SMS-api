@@ -5,6 +5,7 @@ CREATE TABLE dbo.PlatformAdministrators
 (
     Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_PlatformAdministrators PRIMARY KEY,
     Username NVARCHAR(100) COLLATE Latin1_General_100_CI_AS NOT NULL CONSTRAINT UQ_PlatformAdministrators_Username UNIQUE,
+    Email NVARCHAR(320) COLLATE Latin1_General_100_CI_AS NOT NULL,
     PasswordHash VARBINARY(32) NOT NULL,
     PasswordSalt VARBINARY(32) NOT NULL,
     PasswordIterations INT NOT NULL CONSTRAINT CK_PlatformAdministrators_Iterations CHECK (PasswordIterations >= 100000),
@@ -18,6 +19,7 @@ CREATE TABLE dbo.PortalUsers
     Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_PortalUsers PRIMARY KEY,
     TenantId UNIQUEIDENTIFIER NULL,
     Username NVARCHAR(100) COLLATE Latin1_General_100_CI_AS NOT NULL,
+    Email NVARCHAR(320) COLLATE Latin1_General_100_CI_AS NOT NULL,
     PasswordHash VARBINARY(32) NOT NULL,
     PasswordSalt VARBINARY(32) NOT NULL,
     PasswordIterations INT NOT NULL CONSTRAINT CK_PortalUsers_Iterations CHECK (PasswordIterations >= 100000),
@@ -34,6 +36,17 @@ CREATE TABLE dbo.PortalUsers
         OR (Context = 'platform' AND TenantId IS NULL)
     )
 );
+GO
+CREATE UNIQUE INDEX UX_PlatformAdministrators_Email ON dbo.PlatformAdministrators(Email);
+GO
+
+CREATE UNIQUE INDEX UX_PortalUsers_PlatformEmail
+    ON dbo.PortalUsers(Email)
+    WHERE Context = 'platform';
+GO
+CREATE UNIQUE INDEX UX_PortalUsers_TenantEmail
+    ON dbo.PortalUsers(TenantId, Email)
+    WHERE Context = 'tenant';
 GO
 CREATE UNIQUE INDEX UX_PortalUsers_PlatformUsername
     ON dbo.PortalUsers(Username)

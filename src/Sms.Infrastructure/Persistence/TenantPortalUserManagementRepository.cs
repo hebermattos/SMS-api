@@ -12,7 +12,7 @@ public sealed class TenantPortalUserManagementRepository(SqlConnectionFactory co
     {
         using var connection = connections.CreateConnection();
         return (await connection.QueryAsync<PortalUserSummary>(new CommandDefinition("""
-            SELECT Id, TenantId, Username, Context, Role, IsActive, CreatedAt
+            SELECT Id, TenantId, Username, Email, Context, Role, IsActive, CreatedAt
             FROM dbo.PortalUsers
             WHERE TenantId = @TenantId AND Context = 'tenant'
             ORDER BY Username;
@@ -28,10 +28,10 @@ public sealed class TenantPortalUserManagementRepository(SqlConnectionFactory co
         {
             await connection.ExecuteAsync(new CommandDefinition("""
                 INSERT dbo.PortalUsers
-                    (Id, TenantId, Username, PasswordHash, PasswordSalt, PasswordIterations,
+                    (Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations,
                      Context, Role, IsActive, CreatedAt)
                 VALUES
-                    (@Id, @TenantId, @Username, @PasswordHash, @PasswordSalt, @PasswordIterations,
+                    (@Id, @TenantId, @Username, @Email, @PasswordHash, @PasswordSalt, @PasswordIterations,
                      'tenant', @Role, 1, SYSDATETIMEOFFSET());
                 """, user, cancellationToken: cancellationToken));
             return user.Id;

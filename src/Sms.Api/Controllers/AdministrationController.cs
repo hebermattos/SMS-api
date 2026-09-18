@@ -10,7 +10,7 @@ namespace Sms.Api.Controllers;
 public sealed record UpdateTenantRequest(string Name, bool IsActive);
 public sealed record CreateClientRequest(string? ClientId);
 public sealed record ClientStateRequest(bool IsActive);
-public sealed record CreateAdministratorRequest(string Username, string Password);
+public sealed record CreateAdministratorRequest(string Username, string Email, string Password);
 public sealed record AdministratorStateRequest(bool IsActive);
 public sealed record ResetAdministratorPasswordRequest(string Password);
 
@@ -28,7 +28,7 @@ public sealed class AdministrationController(AdministrationService service, Admi
     [HttpPost("administrators")]
     public async Task<IActionResult> CreateAdministrator(CreateAdministratorRequest request, CancellationToken cancellationToken)
     {
-        var id = await administrators.CreateAsync(request.Username, request.Password, cancellationToken);
+        var id = await administrators.CreateAsync(request.Username, request.Email, request.Password, cancellationToken);
         return Created($"/api/v1/admin/administrators/{id}", new { id });
     }
 
