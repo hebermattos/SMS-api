@@ -53,3 +53,12 @@ services:
         condition: service_completed_successfully
     environment:
       SMS_TEST_SQLSERVER: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
+
+  console:
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    depends_on:
+      api:
+        condition: service_started
+    ports: ["4200:80"]

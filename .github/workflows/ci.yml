@@ -69,5 +69,21 @@ jobs:
         run: |
           docker exec "$SQL_CONTAINER" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'SmsApi_Local_2026!' -C -I -b -Q 'CREATE DATABASE SmsApiWebhookTests;'
           docker exec -i "$SQL_CONTAINER" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'SmsApi_Local_2026!' -C -I -b -d SmsApiWebhookTests < database/schema.sql
-      - name: Verify Bandwidth persistence against SQL Server
-        run: dotnet test Sms.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests'
+      - name: Verify webhook and administration persistence against SQL Server
+        run: dotnet test Sms.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests'
+
+  console:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npm test

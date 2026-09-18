@@ -8,9 +8,9 @@ public sealed class ApiClientRepository(SqlConnectionFactory connectionFactory) 
     public async Task<ApiClientCredential?> GetActiveByClientIdAsync(string clientId, CancellationToken cancellationToken = default)
     {
         const string sql = """
-            SELECT TenantId, ClientId, SecretHash, SecretSalt, SecretIterations
-            FROM dbo.ApiClients
-            WHERE ClientId = @ClientId AND IsActive = 1;
+            SELECT c.TenantId, c.ClientId, c.SecretHash, c.SecretSalt, c.SecretIterations
+            FROM dbo.ApiClients c INNER JOIN dbo.Tenants t ON t.Id=c.TenantId
+            WHERE c.ClientId = @ClientId AND c.IsActive = 1 AND t.IsActive = 1;
             """;
         using var connection = connectionFactory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<ApiClientCredential>(

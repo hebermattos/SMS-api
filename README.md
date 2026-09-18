@@ -14,6 +14,23 @@ Multi-tenant REST API for sending, receiving, tracking, and querying SMS message
 
 Bandwidth outbound SMS uses OAuth 2.0 Client Credentials. Inbound and delivery-status webhooks use tenant-specific HTTP Basic authentication.
 
+## Administration console
+
+The Angular 21 console in `ui/` provides two separate workspaces, in Portuguese:
+
+- **Platform administrators:** list/create companies, edit names, suspend/reactivate access, create/disable/reactivate API clients, rotate client secrets, and configure tenant-specific Twilio/Bandwidth credentials and default senders.
+- **Tenant users:** view message totals, send SMS, page through sent/received messages, inspect status history, and query operational logs by date range. The API derives their tenant solely from their JWT.
+
+Start the local stack with `docker compose up --build` and open `http://localhost:4200`. The console proxies `/api/` to the API, so no permissive CORS policy is needed. Use the seeded `example-client` / `example-secret-change-me` for **Minha empresa**, or the configured `ADMIN_PROVISIONING_KEY` for **Plataforma** (local fallback: `local-admin-key-change-me`). These credentials are local-only. TLS termination is required in shared or production environments; Compose is not a production deployment model.
+
+For frontend development, use Node.js 20.19+ or 22.12+ (Angular 21 compatible), run `npm ci` and `npm start` from `ui/`, and keep the API running on port 8080. The development proxy defaults to `http://localhost:8080`; set `SMS_API_URL` to change its upstream. `npm run build` compiles the production bundle into `ui/dist/console/browser`. Serve it with an SPA fallback and a same-origin `/api/` reverse proxy. The Angular project is built separately from `Sms.Api.sln`.
+
+Administrator login exchanges the configured `Admin:ProvisioningKey` for a 15-minute JWT carrying only the `platform_admin` privilege, with no tenant claim. Tenant tokens cannot access administrative endpoints; administrator tokens cannot access tenant messages or logs. The existing `X-Admin-Key` tenant-bootstrap endpoint remains supported. Protect and rotate the shared administrative key through deployment configuration; individual administrator accounts and MFA are not implemented.
+
+Browser tokens remain in memory, so reloading the page requires login again. Password inputs are cleared after submissions. The API never returns stored provider secrets; blank password fields preserve saved values, and newly generated API-client secrets are displayed once. Disabling a tenant or client blocks existing tokens on subsequent API requests. Rotating a client secret prevents new logins with the old secret; already issued tokens remain valid until expiry unless that client is disabled. Suspending a tenant does not delete messages or stop validated provider callbacks.
+
+No database migration is needed: all portal operations use the canonical schema. Default-provider changes are serialized per tenant and committed atomically. SQL integration tests in `AdministrationSqlTests` exercise tenant/client operations, encrypted settings, default switching, and isolation. To run them when tests are permitted, set `SMS_TEST_SQLSERVER` to a disposable database initialized from `database/schema.sql` and use `dotnet test Sms.Api.sln --filter FullyQualifiedName~AdministrationSqlTests`. Frontend test sources can be run with `npm test` inside `ui/`.
+
 ## Architecture
 
 ```text
@@ -51,7 +68,19 @@ POST /api/v1/webhooks/twilio/status
 POST /api/v1/webhooks/bandwidth/inbound
 POST /api/v1/webhooks/bandwidth/status
 
+POST /api/v1/admin/auth/token
+GET  /api/v1/admin/tenants
 POST /api/v1/admin/tenants
+GET  /api/v1/admin/tenants/{tenantId}
+PUT  /api/v1/admin/tenants/{tenantId}
+GET  /api/v1/admin/tenants/{tenantId}/clients
+POST /api/v1/admin/tenants/{tenantId}/clients
+PUT  /api/v1/admin/tenants/{tenantId}/clients/{clientId}/state
+POST /api/v1/admin/tenants/{tenantId}/clients/{clientId}/rotate-secret
+GET  /api/v1/admin/providers/catalog
+GET  /api/v1/admin/tenants/{tenantId}/providers
+PUT  /api/v1/admin/tenants/{tenantId}/providers/{provider}
+GET  /api/v1/overview
 ```
 
 Message endpoints require a JWT. The authenticated `tenant_id` claim controls database access; callers do not supply a tenant ID.
@@ -84,7 +113,7 @@ The existing `TenantSmsProviderConfiguration` uses `Provider = "Bandwidth"`, `Ac
 }
 ```
 
-Provision this configuration through `ITenantSmsProviderRepository.UpsertAsync` in trusted administrative code; it encrypts `ApiSecret` and the complete `Settings` value with AES-256-GCM. The tenant-creation HTTP endpoint and CLI do not currently provision provider settings. Never insert plaintext secrets directly into SQL Server. Existing outbound-only configurations continue to send messages, but callbacks fail authentication until `webhookPassword` is configured.
+Provision this configuration through `ITenantSmsProviderRepository.UpsertAsync` in trusted administrative code; it encrypts `ApiSecret` and the complete `Settings` value with AES-256-GCM. The administration console provisions provider settings through authenticated administrative endpoints. The tenant-creation HTTP endpoint and CLI themselves create only the tenant and its initial client. Never insert plaintext secrets directly into SQL Server. Existing outbound-only configurations continue to send messages, but callbacks fail authentication until `webhookPassword` is configured.
 
 Callbacks accept JSON arrays of 1–100 events, with a maximum request body of 1 MiB. The receiver validates every event's credentials, application ID, owner number, recipient and direction before writing any event. The tenant comes from the authenticated provider configuration; payload tenant identifiers are ignored. Missing or invalid credentials receive `401` with a Basic challenge, malformed or unsupported events receive `400`, and non-JSON requests with credentials receive `415`. Successful callbacks, including duplicates and valid status callbacks for unknown message IDs, receive `204`.
 
@@ -213,7 +242,7 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 
 ## Current limitations
 
-- Angular administration UI is not implemented.
+- Individual administrator identities, MFA and browser session persistence are not implemented; administration uses the configured shared key.
 
 ## Contributing
 
