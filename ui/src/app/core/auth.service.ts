@@ -25,7 +25,7 @@ export class AuthService implements OnDestroy {
       const session = JSON.parse(saved);
       if (!session || typeof session.token !== 'string' || typeof session.identity !== 'string')
         throw new Error('Invalid session.');
-      this.accept(session.token, session.identity);
+      this.accept(session.token, session.identity, session.context ?? (session.role === 'admin' ? 'platform' : 'tenant'));
     } catch {
       this.clearStoredSession();
     }
@@ -35,12 +35,12 @@ export class AuthService implements OnDestroy {
 
   loginTenant(clientId: string, clientSecret: string) {
     return this.http.post<TokenResponse>('/api/v1/auth/token', { clientId, clientSecret })
-      .pipe(tap(value => this.accept(value.access_token, clientId)));
+      .pipe(tap(value => this.accept(value.access_token, clientId, 'tenant')));
   }
 
   loginAdmin(username: string, password: string) {
     return this.http.post<TokenResponse>('/api/v1/admin/auth/token', { username, password })
-      .pipe(tap(value => this.accept(value.access_token, username)));
+      .pipe(tap(value => this.accept(value.access_token, username, 'platform')));
   }
 
   loginPortal(username: string, password: string, context: PortalContext) {
@@ -63,7 +63,7 @@ export class AuthService implements OnDestroy {
     void this.router.navigateByUrl('/login');
   }
 
-  private accept(token: string, identity: string) {
+  private accept(token: string, identity: string, fallbackContext: PortalContext = 'tenant') {
     if (token.split('.').length !== 3) throw new Error('Invalid session.');
     const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const claims = JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, '='))) as {
@@ -71,7 +71,7 @@ export class AuthService implements OnDestroy {
     };
     if (!Number.isFinite(claims.exp) || claims.exp * 1000 <= Date.now()) throw new Error('Invalid session.');
 
-    const context = claims.context ?? (claims.platform_admin === 'true' ? 'platform' : 'tenant');
+    const context = claims.context ?? (claims.platform_admin === 'true' ? 'platform' : fallbackContext);
     const permissionRole = claims.role ?? (claims.platform_admin === 'true' ? 'administrator' : 'user');
     const portalRole: PortalRole = context === 'platform' ? 'admin' : 'tenant';
 
