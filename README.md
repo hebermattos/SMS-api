@@ -159,6 +159,8 @@ docker compose down --remove-orphans
 docker compose up --build
 ```
 
+Database creation is performed by the one-shot `db-init` service with the SQL Server 2022 `sqlcmd` tools. If initialization still fails, inspect its output with `docker compose logs db-init`.
+
 Run the Bandwidth SQL Server integration tests in an isolated local Compose project:
 
 ```bash
