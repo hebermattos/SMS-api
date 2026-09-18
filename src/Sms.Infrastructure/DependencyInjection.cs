@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ILogEntryRepository, LogEntryRepository>();
         services.AddScoped<ITenantSmsProviderRepository, TenantSmsProviderRepository>();
         services.AddScoped<ISmsProviderResolver, SmsProviderResolver>();
+        services.AddScoped<ISmsProvider, MockSmsProvider>();
         services.AddHttpClient<TwilioSmsProvider>(client =>
         {
             client.BaseAddress = new Uri("https://api.twilio.com/");
