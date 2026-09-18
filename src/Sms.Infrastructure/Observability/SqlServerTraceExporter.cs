@@ -9,9 +9,9 @@ public sealed class SqlServerTraceExporter(string connectionString) : BaseExport
 {
     private const string InsertSql = """
         INSERT INTO dbo.Traces
-            (StartedAt, DurationMilliseconds, TraceId, SpanId, ParentSpanId, Name, Source, Kind, Status, StatusDescription, Attributes)
+            (StartedAt, DurationMilliseconds, TraceId, SpanId, ParentSpanId, Name, Source, Kind, Status, Attributes)
         VALUES
-            (@StartedAt, @DurationMilliseconds, @TraceId, @SpanId, @ParentSpanId, @Name, @Source, @Kind, @Status, @StatusDescription, @Attributes);
+            (@StartedAt, @DurationMilliseconds, @TraceId, @SpanId, @ParentSpanId, @Name, @Source, @Kind, @Status, @Attributes);
         """;
 
     public override ExportResult Export(in Batch<Activity> batch)
@@ -34,7 +34,6 @@ public sealed class SqlServerTraceExporter(string connectionString) : BaseExport
                     Source = Limit(activity.Source.Name, 256),
                     Kind = activity.Kind.ToString(),
                     Status = activity.Status.ToString(),
-                    StatusDescription = Limit(activity.StatusDescription, 1000),
                     Attributes = ObservabilityTags.Serialize(activity.TagObjects)
                 }, transaction);
             }
