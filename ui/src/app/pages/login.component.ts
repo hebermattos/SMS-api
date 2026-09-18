@@ -6,9 +6,8 @@ import { finalize } from 'rxjs';
 import { AuthService } from '../core/auth.service';
 import { errorMessage } from '../core/api';
 import { IconComponent } from '../shared/icon.component';
-import { PortalContext } from '../core/models';
 
-type LoginMode = 'client' | 'administrator' | 'account';
+type LoginMode = 'client' | 'platform';
 
 @Component({
   selector: 'sms-login',
@@ -21,7 +20,6 @@ export class LoginComponent {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   readonly mode = signal<LoginMode>('client');
-  readonly context = signal<PortalContext>('tenant');
   readonly busy = signal(false);
   readonly error = signal('');
   readonly showCredential = signal(false);
@@ -56,9 +54,7 @@ export class LoginComponent {
     this.error.set('');
     const request = this.mode() === 'client'
       ? this.auth.loginTenant(identifier, this.credential)
-      : this.mode() === 'administrator'
-        ? this.auth.loginAdmin(identifier, this.credential)
-        : this.auth.loginPortal(identifier, this.credential, this.context());
+      : this.auth.loginPortal(identifier, this.credential, 'platform');
 
     request.pipe(
       takeUntilDestroyed(this.destroyRef),
