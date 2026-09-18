@@ -17,4 +17,8 @@ public interface IPortalUserRepository
         string username,
         string context,
         CancellationToken cancellationToken = default);
+
+    Task<PortalUserAccount?> GetActiveByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
 }
