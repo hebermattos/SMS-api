@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantPortalRepository, TenantPortalRepository>();
         services.AddSingleton<IProviderSettingsPolicy, TwilioSettingsPolicy>();
         services.AddSingleton<IProviderSettingsPolicy, BandwidthSettingsPolicy>();
+        services.AddSingleton<IProviderSettingsPolicy, MockSettingsPolicy>();
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ITenantTimeZoneProvider, TenantTimeZoneProvider>();
         services.AddScoped<ITenantProvisioner, TenantProvisioner>();
