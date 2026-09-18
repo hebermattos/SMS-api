@@ -26,30 +26,25 @@ public static class PortalSecurity
     public static void ConfigureAuthorization(AuthorizationOptions options)
     {
         options.DefaultPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
-            .RequireClaim(ContextClaim, TenantContext)
-            .RequireClaim(RoleClaim, UserRole)
+            .RequireClaim(ContextClaim, TenantContext).RequireClaim(RoleClaim, UserRole)
             .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _)
                 && !context.User.HasClaim(AdminClaim, "true")).Build();
 
         options.AddPolicy(UserPolicy, policy => policy.RequireAuthenticatedUser()
-            .RequireClaim(ContextClaim, TenantContext)
-            .RequireClaim(RoleClaim, UserRole)
+            .RequireClaim(ContextClaim, TenantContext).RequireClaim(RoleClaim, UserRole)
             .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _)));
 
         options.AddPolicy(TenantAdministratorPolicy, policy => policy.RequireAuthenticatedUser()
-            .RequireClaim(ContextClaim, TenantContext)
-            .RequireClaim(RoleClaim, AdministratorRole)
+            .RequireClaim(ContextClaim, TenantContext).RequireClaim(RoleClaim, AdministratorRole)
             .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _))
             .RequireAssertion(context => !context.User.HasClaim(AdminClaim, "true")));
 
         options.AddPolicy(PlatformUserPolicy, policy => policy.RequireAuthenticatedUser()
-            .RequireClaim(ContextClaim, PlatformContext)
-            .RequireClaim(RoleClaim, UserRole)
+            .RequireClaim(ContextClaim, PlatformContext).RequireClaim(RoleClaim, UserRole)
             .RequireAssertion(context => !context.User.HasClaim(x => x.Type == "tenant_id")));
 
         options.AddPolicy(AdminPolicy, policy => policy.RequireAuthenticatedUser()
-            .RequireClaim(ContextClaim, PlatformContext)
-            .RequireClaim(AdminClaim, "true")
+            .RequireClaim(ContextClaim, PlatformContext).RequireClaim(AdminClaim, "true")
             .RequireClaim(RoleClaim, AdministratorRole)
             .RequireAssertion(context => !context.User.HasClaim(x => x.Type == "tenant_id")));
     }
@@ -62,27 +57,45 @@ public static class PortalSecurity
 
     public static async Task ValidateTenantAsync(TokenValidatedContext context)
     {
-        var tenantClaim = context.Principal?.FindFirstValue("tenant_id");
-        var subject = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (context.Principal?.HasClaim(AdminClaim, "true") == true)
+        var principal = context.Principal!;
+        var tenantClaim = principal.FindFirstValue("tenant_id");
+        var subject = principal.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var portalContext = principal.FindFirstValue(ContextClaim);
+
+        if (principal.HasClaim(AdminClaim, "true"))
         {
             if (tenantClaim is not null || !Guid.TryParse(subject, out var administratorId))
             {
                 context.Fail("Invalid administrator identity.");
                 return;
             }
+
             var administrators = context.HttpContext.RequestServices.GetRequiredService<IAdministratorRepository>();
             if (!await administrators.IsActiveAsync(administratorId, context.HttpContext.RequestAborted))
                 context.Fail("Inactive administrator.");
             return;
         }
-        if (tenantClaim is null) { context.Fail("Missing identity."); return; }
-        if (!Guid.TryParse(tenantClaim, out var tenantId) || string.IsNullOrWhiteSpace(subject))
+
+        if (portalContext is not null && Guid.TryParse(subject, out var portalUserId))
+        {
+            var portalUsers = context.HttpContext.RequestServices.GetRequiredService<IPortalUserRepository>();
+            var portalUser = await portalUsers.GetActiveByIdAsync(portalUserId, context.HttpContext.RequestAborted);
+            if (portalUser is null
+                || !string.Equals(portalUser.Context, portalContext, StringComparison.Ordinal)
+                || !string.Equals(portalUser.Role, principal.FindFirstValue(RoleClaim), StringComparison.Ordinal)
+                || (portalUser.TenantId?.ToString() ?? null) != tenantClaim)
+                context.Fail("Inactive portal user.");
+            return;
+        }
+
+        if (tenantClaim is null || !Guid.TryParse(tenantClaim, out var tenantId)
+            || string.IsNullOrWhiteSpace(subject))
         {
             context.Fail("Invalid tenant identity.");
             return;
         }
+
         var clients = context.HttpContext.RequestServices.GetRequiredService<IApiClientRepository>();
         var client = await clients.GetActiveByClientIdAsync(subject, context.HttpContext.RequestAborted);
         if (client is null || client.TenantId != tenantId) context.Fail("Inactive tenant or client.");
