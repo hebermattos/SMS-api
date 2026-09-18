@@ -9,7 +9,7 @@ public sealed class PlatformAuditMiddleware(RequestDelegate next, ILogger<Platfo
     public async Task InvokeAsync(HttpContext context)
     {
         var action = context.GetEndpoint()?.Metadata.GetMetadata<ControllerActionDescriptor>();
-        if (action?.ControllerName is not ("Administration" or "AdminTenants" or "AdminAuth"))
+        if (action?.ControllerName is not ("Administration" or "AdminTenants" or "AdminAuth" or "SystemLogs"))
         {
             await next(context);
             return;

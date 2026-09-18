@@ -38,11 +38,14 @@ public sealed class LogsControllerTests
         public Guid TenantId { get; private set; }
         public int Take { get; private set; }
 
-        public Task<IReadOnlyList<LogEntry>> GetAsync(Guid tenantId, DateTimeOffset? from, DateTimeOffset? to, int skip, int take, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<LogEntry>> GetActivityAsync(Guid tenantId, DateTimeOffset? from, DateTimeOffset? to, int skip, int take, CancellationToken cancellationToken = default)
         {
             TenantId = tenantId;
             Take = take;
             return Task.FromResult<IReadOnlyList<LogEntry>>([]);
         }
+
+        public Task<IReadOnlyList<LogEntry>> GetSystemAsync(DateTimeOffset? from, DateTimeOffset? to, int skip, int take, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<LogEntry>>([]);
     }
 }

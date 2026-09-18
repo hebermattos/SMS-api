@@ -8,11 +8,25 @@ namespace Sms.Infrastructure.Observability;
 
 public sealed class SqlServerLogExporter(string connectionString) : BaseExporter<LogRecord>
 {
-    private const string InsertSql = """
-        INSERT INTO dbo.LogEntries
+    private static readonly HashSet<string> ActivityCategories =
+    [
+        "Sms.Api.Middleware.ClientLoginAuditMiddleware",
+        "Sms.Api.Middleware.PlatformAuditMiddleware",
+        "Sms.Api.Middleware.RequestAuditMiddleware"
+    ];
+
+    private const string InsertActivitySql = """
+        INSERT INTO dbo.UserActivityLogs
             ([Timestamp], TenantId, Severity, Category, Message, TraceId, SpanId, Attributes)
         VALUES
             (@Timestamp, @TenantId, @Severity, @Category, @Message, @TraceId, @SpanId, @Attributes);
+        """;
+
+    private const string InsertSystemSql = """
+        INSERT INTO dbo.SystemLogs
+            ([Timestamp], Severity, Category, Message, TraceId, SpanId, Attributes)
+        VALUES
+            (@Timestamp, @Severity, @Category, @Message, @TraceId, @SpanId, @Attributes);
         """;
 
     public override ExportResult Export(in Batch<LogRecord> batch)
@@ -26,18 +40,23 @@ public sealed class SqlServerLogExporter(string connectionString) : BaseExporter
             foreach (var record in batch)
             {
                 var attributes = record.Attributes?.ToDictionary(x => x.Key, x => x.Value);
-                var tenantId = TryGetTenantId(attributes);
-                connection.Execute(InsertSql, new
+                var values = new
                 {
                     record.Timestamp,
-                    TenantId = tenantId,
+                    TenantId = TryGetTenantId(attributes),
                     Severity = record.LogLevel.ToString(),
                     Category = Limit(record.CategoryName, 256),
                     Message = Limit(record.FormattedMessage ?? record.Body?.ToString() ?? string.Empty, 4000),
                     TraceId = record.TraceId == default ? null : record.TraceId.ToHexString(),
                     SpanId = record.SpanId == default ? null : record.SpanId.ToHexString(),
                     Attributes = attributes is null || attributes.Count == 0 ? null : JsonSerializer.Serialize(attributes)
-                }, transaction);
+                };
+
+                if (IsActivity(record.CategoryName))
+                    connection.Execute(InsertActivitySql, values, transaction);
+
+                if (record.LogLevel is LogLevel.Error or LogLevel.Critical)
+                    connection.Execute(InsertSystemSql, values, transaction);
             }
 
             transaction.Commit();
@@ -48,6 +67,9 @@ public sealed class SqlServerLogExporter(string connectionString) : BaseExporter
             return ExportResult.Failure;
         }
     }
+
+    internal static bool IsActivity(string? category) =>
+        category is not null && ActivityCategories.Contains(category);
 
     private static Guid? TryGetTenantId(IReadOnlyDictionary<string, object?>? attributes)
     {
