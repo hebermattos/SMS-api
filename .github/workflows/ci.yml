@@ -87,3 +87,25 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run build
       - run: npm test
+
+  compose-bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize databases through Docker Compose
+        run: docker compose run --rm db-init
+      - name: Verify both schemas and the example client
+        run: |
+          docker compose exec -T sqlserver bash -c 'export SQLCMDPASSWORD="$MSSQL_SA_PASSWORD"; exec /opt/mssql-tools18/bin/sqlcmd -S tcp:localhost,1433 -U sa -C -b -d master' <<'SQL'
+          IF OBJECT_ID(N'SmsApi.dbo.SmsMessages', N'U') IS NULL THROW 50000, 'Application schema is missing.', 1;
+          IF OBJECT_ID(N'SmsApiLogs.dbo.LogEntries', N'U') IS NULL THROW 50000, 'Observability schema is missing.', 1;
+          IF NOT EXISTS (SELECT 1 FROM SmsApi.dbo.ApiClients c JOIN SmsApi.dbo.Tenants t ON t.Id = c.TenantId WHERE c.ClientId = N'example-client' AND c.IsActive = 1 AND t.IsActive = 1) THROW 50000, 'Example tenant/client is missing.', 1;
+          GO
+          SQL
+      - name: Show initialization logs
+        if: failure()
+        run: docker compose logs sqlserver db-init
+      - name: Clean up
+        if: always()
+        run: docker compose down --remove-orphans
