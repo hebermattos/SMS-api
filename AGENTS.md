@@ -17,6 +17,7 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
   - `Sms.Api`: HTTP endpoints, authentication, authorization, middleware, and composition root.
 - Keep controllers thin. Business rules belong in application services; external API and database details belong in infrastructure.
 - Use asynchronous APIs for HTTP and database I/O and propagate `CancellationToken`.
+- Keep the implementation as simple and readable as possible. Avoid unnecessary abstractions and complexity.
 
 ## SMS providers
 
@@ -99,6 +100,9 @@ dotnet test Sms.Api.sln --configuration Release --no-build --collect:"XPlat Code
 - Do not merge until the GitHub Actions build, tests, and coverage gate succeed.
 - Prefer squash merge so `main` retains one focused commit per PR.
 - Preserve existing user changes and avoid unrelated refactors.
+- Complete every authorized repository change through the full workflow: create a focused branch, implement and validate the change, open a pull request, wait for all required CI checks to pass, and merge it into `main`.
+- Each pull request must contain enough related work to represent a meaningful, cohesive change, while never combining unrelated features or fixes.
+- When a requirement is unclear, incomplete, contradictory, or permits materially different implementations, ask the user for clarification before proceeding.
 
 ## Current known gaps
 
