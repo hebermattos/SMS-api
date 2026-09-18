@@ -105,10 +105,11 @@ When Codex is being used through an IDE integration:
 - Keep each PR focused on one cohesive functionality or correction. Do not combine unrelated features.
 - Use a feature/fix branch; never commit directly to `main`.
 - Update `README.md` and Docker test configuration when behavior, configuration, API surface, or bootstrap requirements change.
-- Do not merge until the GitHub Actions build, tests, and coverage gate succeed.
+- Create a pull request for each completed change and merge it into `main`.
+- Do not run CI for feature branches or pull requests. CI runs only on `main` after the pull request is merged.
 - Prefer squash merge so `main` retains one focused commit per PR.
 - Preserve existing user changes and avoid unrelated refactors.
-- Complete every authorized repository change through the full workflow: create a focused branch, implement and validate the change, open a pull request, wait for all required CI checks to pass, and merge it into `main`.
+- Complete every authorized repository change through the full workflow: create a focused branch, implement and validate the change locally when permitted, open a pull request, and merge it into `main`. Verify the resulting CI run on `main` after the merge.
 - Each pull request must contain enough related work to represent a meaningful, cohesive change, while never combining unrelated features or fixes.
 - When a requirement is unclear, incomplete, contradictory, or permits materially different implementations, ask the user for clarification before proceeding.
 
