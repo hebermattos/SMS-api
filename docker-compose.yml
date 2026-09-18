@@ -29,22 +29,22 @@ services:
         set -euo pipefail
         sqlcmd="/opt/mssql-tools18/bin/sqlcmd"
         database_exists() {
-          local database="$1"
+          local database="$$1"
           local result
-          result="$("$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -h -1 -W -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID(N'$database') IS NULL THEN 0 ELSE 1 END;")"
-          result="$(printf '%s' "$result" | tr -d '[:space:]')"
-          [ "$result" = "1" ]
+          result="$$("$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -h -1 -W -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID(N'$$database') IS NULL THEN 0 ELSE 1 END;")"
+          result="$$(printf '%s' "$$result" | tr -d '[:space:]')"
+          [ "$$result" = "1" ]
         }
 
         if ! database_exists "SmsApi"; then
-          "$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApi];"
-          "$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/schema.sql
-          "$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/seeds/example_tenant.sql
+          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApi];"
+          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/schema.sql
+          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/seeds/example_tenant.sql
         fi
 
         if ! database_exists "SmsApiLogs"; then
-          "$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApiLogs];"
-          "$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApiLogs -i /database/logs-schema.sql
+          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApiLogs];"
+          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApiLogs -i /database/logs-schema.sql
         fi
 
   provider-init:
