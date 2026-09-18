@@ -5,6 +5,7 @@ using Sms.Application.Administration;
 using Sms.Application.Messages;
 using Sms.Application.Logs;
 using Sms.Application.Providers;
+using Sms.Application.Reports;
 using Sms.Application.Security;
 using Sms.Application.Tenants;
 using Sms.Infrastructure.Persistence;
