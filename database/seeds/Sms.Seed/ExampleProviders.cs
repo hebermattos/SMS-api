@@ -11,6 +11,9 @@ public static class ExampleProviders
             "AC00000000000000000000000000000000", "fake-twilio-auth-token",
             "+15005550006", IsDefault: true, IsActive: true), cancellationToken);
 
+        await providers.UpsertAsync(new(tenantId, "Mock",
+            "mock-example", "fake-mock-secret", "+15550000000", IsDefault: false, IsActive: true), cancellationToken);
+
         await providers.UpsertAsync(new(tenantId, "Bandwidth",
             "fake-bandwidth-client-id", "fake-bandwidth-client-secret",
             "+12025550101", IsDefault: false, IsActive: true,
