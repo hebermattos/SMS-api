@@ -5,7 +5,7 @@
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
           <!-- SQL Server/Dapper adapters require integration tests and are not part of unit-test coverage. -->
-          <Exclude>[Sms.Infrastructure]Sms.Infrastructure.Persistence.*</Exclude>
+          <Exclude>[Sms.Infrastructure]Sms.Infrastructure.Persistence.*,[Sms.Infrastructure]Sms.Infrastructure.Observability.SqlServerLogExporter</Exclude>
         </Configuration>
       </DataCollector>
     </DataCollectors>
