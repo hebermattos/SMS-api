@@ -40,6 +40,8 @@ services:
       db-init:
         condition: service_completed_successfully
     environment:
+      Admin__Username: "${ADMIN_USERNAME:-admin}"
+      Admin__Password: "${ADMIN_PASSWORD:-Admin_Local_2026!}"
       ConnectionStrings__SqlServer: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
 

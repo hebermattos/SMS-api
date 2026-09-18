@@ -37,6 +37,7 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 - Every tenant-owned query and mutation must filter by `TenantId` at the database boundary.
 - Never expose records, message history, provider settings, or logs belonging to another tenant.
 - API client secrets must remain PBKDF2-SHA256 hashes with unique random salts. Return a generated secret only once during provisioning.
+- Platform administrators authenticate with individual usernames and passwords. Store only PBKDF2-SHA256 password hashes (600,000 iterations) with random salts; recheck administrator activation on authenticated requests. The provisioning key is only for the legacy tenant-bootstrap endpoint, never console login.
 
 ## Security and sensitive data
 
@@ -116,6 +117,6 @@ When Codex is being used through an IDE integration:
 
 ## Current known gaps
 
-- Individual administrator identities and MFA are not implemented yet. The administration console uses the configured shared administrative key.
+- Administrator MFA, self-service password recovery, and an administrator-account management UI are not implemented yet. Accounts are created through trusted provisioning.
 
 Treat these as separate future PRs. Do not silently implement them as part of an unrelated task.

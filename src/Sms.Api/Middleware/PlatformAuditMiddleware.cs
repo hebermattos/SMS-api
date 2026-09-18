@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Sms.Api.Auth;
+using System.Security.Claims;
 
 namespace Sms.Api.Middleware;
 
@@ -30,8 +31,10 @@ public sealed class PlatformAuditMiddleware(RequestDelegate next, ILogger<Platfo
             var administrator = context.User.Identity?.IsAuthenticated == true
                 && context.User.HasClaim(PortalSecurity.AdminClaim, "true")
                 && !context.User.HasClaim(claim => claim.Type == "tenant_id");
-            var actor = administrator ? "platform-administrator" : "unauthenticated";
-            if (status < 400 && action.ControllerName == "AdminAuth") actor = "platform-administrator";
+            var actor = administrator ? context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? context.User.FindFirstValue("sub") ?? "unauthenticated" : "unauthenticated";
+            if (status < 400 && action.ControllerName == "AdminAuth")
+                actor = context.Items[PortalSecurity.AdministratorLoginIdentityKey] as string ?? "unauthenticated";
             if (status < 400 && action.ControllerName == "AdminTenants" && !administrator) actor = "bootstrap-key";
 
             // Target IDs are metadata only. Never set TenantId on platform audit events:

@@ -29,12 +29,12 @@ describe('Portal sessions', () => {
   });
 
   it('opens a separate administrator session and clears it on logout', () => {
-    auth.loginAdmin('admin-key').subscribe();
+    auth.loginAdmin('admin', 'admin-password').subscribe();
     const request = http.expectOne('/api/v1/admin/auth/token');
-    expect(request.request.body).toEqual({ key: 'admin-key' });
+    expect(request.request.body).toEqual({ username: 'admin', password: 'admin-password' });
     request.flush({ access_token: token() });
     expect(auth.role()).toBe('admin');
-    expect(sessionStorage.getItem('sms-console-session')).not.toContain('admin-key');
+    expect(sessionStorage.getItem('sms-console-session')).not.toContain('admin-password');
     auth.logout(); expect(auth.bearer()).toBeNull(); expect(auth.role()).toBeNull();
     expect(sessionStorage.getItem('sms-console-session')).toBeNull();
   });
@@ -42,7 +42,7 @@ describe('Portal sessions', () => {
   it.each(['tenant', 'admin'] as const)('restores a %s session before route guards after reload', role => {
     const bearer = token();
     if (role === 'tenant') auth.loginTenant('client', 'secret').subscribe();
-    else auth.loginAdmin('admin-key').subscribe();
+    else auth.loginAdmin('admin', 'admin-password').subscribe();
     http.expectOne(role === 'tenant' ? '/api/v1/auth/token' : '/api/v1/admin/auth/token').flush({ access_token: bearer });
     http.verify();
     TestBed.resetTestingModule();
@@ -51,7 +51,7 @@ describe('Portal sessions', () => {
     vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     expect(auth.bearer()).toBe(bearer);
     expect(auth.role()).toBe(role);
-    expect(auth.identity()).toBe(role === 'tenant' ? 'client' : 'Administrator');
+    expect(auth.identity()).toBe(role === 'tenant' ? 'client' : 'admin');
     const route = new ActivatedRouteSnapshot(); route.data = { role };
     expect(TestBed.runInInjectionContext(() => roleGuard(route, {} as RouterStateSnapshot))).toBe(true);
     http.expectNone('/api/v1/auth/token');

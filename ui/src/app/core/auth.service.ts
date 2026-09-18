@@ -35,9 +35,9 @@ export class AuthService implements OnDestroy {
     return this.http.post<TokenResponse>('/api/v1/auth/token', { clientId, clientSecret })
       .pipe(tap(value => this.accept(value.access_token, 'tenant', clientId)));
   }
-  loginAdmin(key: string) {
-    return this.http.post<TokenResponse>('/api/v1/admin/auth/token', { key })
-      .pipe(tap(value => this.accept(value.access_token, 'admin', 'Administrator')));
+  loginAdmin(username: string, password: string) {
+    return this.http.post<TokenResponse>('/api/v1/admin/auth/token', { username, password })
+      .pipe(tap(value => this.accept(value.access_token, 'admin', username)));
   }
   bearer(): string | null { return Date.now() < this.expiresAt ? this.token : null; }
 

@@ -16,22 +16,22 @@ Bandwidth outbound SMS uses OAuth 2.0 Client Credentials. Inbound and delivery-s
 
 ## Administration console
 
-Platform actions are audited through `PlatformAuditMiddleware` into `SmsApiLogs.dbo.LogEntries`. Events include the controller action, actor type, outcome, HTTP status, and valid target tenant/client IDs from the route. Login attempts (including rate limits), company creation and updates, client creation/state changes/secret rotation, provider configuration, and administrative reads are recorded. Bodies, headers, credentials, provider input and exception details are excluded. These support-only records have no `TenantId` and are not exposed to tenant log queries. Administrators share the `platform-administrator` identity; individual attribution is unavailable. Company creation has no target ID in the route. Browser-only actions such as logout are not recorded. Delivery uses the existing batched log exporter, not a durable transactional audit ledger.
+Platform actions are audited through `PlatformAuditMiddleware` into `SmsApiLogs.dbo.LogEntries`. Events include the controller action, verified administrator ID (or bootstrap/unauthenticated actor), outcome, HTTP status, and valid target tenant/client IDs from the route. Login attempts (including rate limits), company creation and updates, client creation/state changes/secret rotation, provider configuration, and administrative reads are recorded. Bodies, headers, credentials, provider input and exception details are excluded. These support-only records have no `TenantId` and are not exposed to tenant log queries. Successful administrator logins and subsequent requests record the individual administrator ID. Failed logins never record a caller-supplied username. Company creation has no target ID in the route. Browser-only actions such as logout are not recorded. Delivery uses the existing batched log exporter, not a durable transactional audit ledger.
 
-The Angular 21 console in `ui/` provides two separate workspaces, in Portuguese:
+The Angular 21 console in `ui/` provides two separate workspaces, in English:
 
 - **Platform administrators:** list/create companies, edit names, suspend/reactivate access, create/disable/reactivate API clients, rotate client secrets, and configure tenant-specific Twilio/Bandwidth credentials and default senders.
 - **Tenant users:** view message totals, send SMS, page through sent/received messages, inspect status history, and query operational logs by date range. The API derives their tenant solely from their JWT.
 
-Start the local stack with `docker compose up --build` and open `http://localhost:4200`. The console proxies `/api/` to the API, so no permissive CORS policy is needed. Use the seeded `example-client` / `example-secret-change-me` for **My company**, or the configured `ADMIN_PROVISIONING_KEY` for **Platform** (local fallback: `local-admin-key-change-me`). These credentials are local-only. TLS termination is required in shared or production environments; Compose is not a production deployment model.
+Start the local stack with `docker compose up --build` and open `http://localhost:4200`. The console proxies `/api/` to the API, so no permissive CORS policy is needed. Use the seeded `example-client` / `example-secret-change-me` for **Client**, or username `admin` and password `Admin_Local_2026!` for **Administrator**. Override the initial administrator through `ADMIN_USERNAME` and `ADMIN_PASSWORD` before initializing the local stack. These credentials are local-only. TLS termination is required in shared or production environments; Compose is not a production deployment model.
 
 For frontend development, use Node.js 20.19+ or 22.12+ (Angular 21 compatible), run `npm ci` and `npm start` from `ui/`, and keep the API running on port 8080. The development proxy defaults to `http://localhost:8080`; set `SMS_API_URL` to change its upstream. `npm run build` compiles the production bundle into `ui/dist/console/browser`. Serve it with an SPA fallback and a same-origin `/api/` reverse proxy. The Angular project is built separately from `Sms.Api.sln`.
 
-Administrator login exchanges the configured `Admin:ProvisioningKey` for a 15-minute JWT carrying only the `platform_admin` privilege, with no tenant claim. Tenant tokens cannot access administrative endpoints; administrator tokens cannot access tenant messages or logs. The existing `X-Admin-Key` tenant-bootstrap endpoint remains supported. Protect and rotate the shared administrative key through deployment configuration; individual administrator accounts and MFA are not implemented.
+Administrator login accepts `username` and `password` at `POST /api/v1/admin/auth/token`. Accounts are stored in `PlatformAdministrators`; passwords use PBKDF2-SHA256 with 600,000 iterations and a unique random salt. Usernames are case-insensitive. Provisioned passwords must contain 15–128 characters. Successful login returns a 15-minute JWT with the administrator ID, username, and `platform_admin` privilege, with no tenant claim. The API rechecks account activation on every authenticated administrator request, so disabling an account also blocks existing tokens. Unknown users, incorrect passwords, and inactive accounts all receive HTTP 401; the existing IP login rate limiter remains enabled. Tenant tokens cannot access administrative endpoints; administrator tokens cannot access tenant messages or logs. Old shared-key administrator sessions are rejected and must sign in again. The `X-Admin-Key` tenant-bootstrap endpoint remains supported separately; its key can no longer be exchanged for a console token.
 
 The responsive Angular sign-in screen provides separate client and administrator access, labeled fields, credential visibility controls, Caps Lock feedback, and accessible validation, loading, and error states. A valid existing session redirects to the appropriate workspace without another login request.
 
-Browser sessions use `sessionStorage` to preserve the token, portal role, and display identity across page reloads in the same tab. The console restores valid sessions before checking protected routes; expired or malformed saved sessions are discarded. Logout, token expiry, and API rejection (HTTP 401) clear the saved session. Passwords and the administrator key are never stored, and password inputs are cleared after submissions. If browser storage is blocked, login still works in memory but cannot survive refresh. Session storage is accessible to same-origin JavaScript; it is not an HttpOnly cookie. The API remains responsible for all authorization.
+Browser sessions use `sessionStorage` to preserve the token, portal role, and display identity across page reloads in the same tab. The console restores valid sessions before checking protected routes; expired or malformed saved sessions are discarded. Logout, token expiry, and API rejection (HTTP 401) clear the saved session. Passwords and client secrets are never stored in browser storage, and password inputs are cleared after submissions. If browser storage is blocked, login still works in memory but cannot survive refresh. Session storage is accessible to same-origin JavaScript; it is not an HttpOnly cookie. The API remains responsible for all authorization.
 
 The API never returns stored provider secrets; blank password fields preserve saved values, and newly generated API-client secrets are displayed once. Disabling a tenant or client blocks existing tokens on subsequent API requests. Rotating a client secret prevents new logins with the old secret; already issued tokens remain valid until expiry unless that client is disabled. Suspending a tenant does not delete messages or stop validated provider callbacks.
 
@@ -166,9 +166,11 @@ SQL_SA_PASSWORD
 JWT_KEY
 ENCRYPTION_MASTER_KEY
 ADMIN_PROVISIONING_KEY
+ADMIN_USERNAME
+ADMIN_PASSWORD
 ```
 
-After `db-init`, the one-shot `provider-init` service runs the application seed in `database/seeds/Sms.Seed`. It saves both providers through the existing repository, encrypting their API secrets and settings with the same `ENCRYPTION_MASTER_KEY` used by the API. The API waits for this step to succeed. The seed uses fictional credentials only and makes no calls to provider APIs.
+After `db-init`, the one-shot `provider-init` service runs the application seed in `database/seeds/Sms.Seed`. It creates the initial platform administrator if that username does not exist, without overwriting an existing password. It saves both providers through the existing repository, encrypting their API secrets and settings with the same `ENCRYPTION_MASTER_KEY` used by the API. The API waits for this step to succeed. The seed uses fictional credentials only and makes no calls to provider APIs.
 
 | Provider | Account/client ID | Sender | Default |
 | --- | --- | --- | --- |
@@ -256,6 +258,18 @@ Sms__PublicBaseUrl
 `Encryption__MasterKey` must be Base64 encoding of exactly 32 bytes. Do not commit production keys.
 `Sms__PublicBaseUrl` must be the externally reachable HTTPS base URL. It is used both when requesting provider status callbacks and when validating webhook signatures, so callback validation does not trust proxy-provided host or scheme headers.
 
+## Administrator provisioning
+
+Outside local Compose, initialize a new database from the canonical schema, then provide `ConnectionStrings__SqlServer`, `Admin__Username`, and `Admin__Password` securely in the provisioning process environment and run:
+
+```bash
+dotnet run --project tools/Sms.Provision -- --admin
+```
+
+The command creates one administrator with a random password salt. It refuses duplicate usernames and never prints the password. Remove the provisioning password from the process environment afterward. No administrator is created automatically by the API, and it has no production fallback password.
+
+This update adds `PlatformAdministrators` to the complete schema. Following the project's no-migrations rule, an older local test database must be recreated with `docker compose down --remove-orphans` followed by `docker compose up -d --build`. **This clears local test data.** Merely rebuilding the API does not create the new table. The existing `provider-init` command requires the updated schema.
+
 ## Tenant provisioning
 
 A tenant and its initial API client are created transactionally. The generated client secret is returned once and cannot be recovered from the database.
@@ -292,7 +306,7 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 
 ## Current limitations
 
-- Individual administrator identities and MFA are not implemented; administration uses the configured shared key.
+- Administrator MFA, self-service password recovery, and an administrator-account management UI are not implemented. Accounts are created through trusted provisioning.
 
 ## Contributing
 

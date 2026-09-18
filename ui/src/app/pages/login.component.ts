@@ -15,7 +15,7 @@ export class LoginComponent {
   readonly admin = signal(false); readonly busy = signal(false); readonly error = signal('');
   readonly showCredential = signal(false);
   readonly capsLock = signal(false);
-  clientId = ''; credential = '';
+  clientId = ''; username = ''; credential = '';
   constructor() {
     if (this.auth.bearer()) void this.router.navigateByUrl(this.auth.role() === 'admin' ? '/admin/tenants' : '/app');
   }
@@ -26,9 +26,9 @@ export class LoginComponent {
   }
   checkCapsLock(event: KeyboardEvent) { this.capsLock.set(event.getModifierState('CapsLock')); }
   submit() {
-    if (this.busy() || !this.credential || (!this.admin() && !this.clientId.trim())) return;
+    if (this.busy() || !this.credential || !(this.admin() ? this.username.trim() : this.clientId.trim())) return;
     this.busy.set(true); this.error.set('');
-    const request = this.admin() ? this.auth.loginAdmin(this.credential) : this.auth.loginTenant(this.clientId.trim(), this.credential);
+    const request = this.admin() ? this.auth.loginAdmin(this.username.trim(), this.credential) : this.auth.loginTenant(this.clientId.trim(), this.credential);
     request.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => { this.busy.set(false); this.credential = ''; this.showCredential.set(false); })).subscribe({
       next: () => void this.router.navigateByUrl(this.admin() ? '/admin/tenants' : '/app'),
       error: error => this.error.set(errorMessage(error))
