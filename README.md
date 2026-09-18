@@ -20,7 +20,7 @@ Platform actions are audited through `PlatformAuditMiddleware` into `SmsApiLogs.
 
 The Angular 21 console in `ui/` provides two separate workspaces, in English:
 
-- **Platform administrators:** list/create companies, edit names, suspend/reactivate access, create/disable/reactivate API clients, rotate client secrets, and configure tenant-specific Twilio/Bandwidth credentials and default senders.
+- **Platform administrators:** manage administrator accounts, list/create companies, edit names, suspend/reactivate access, create/disable/reactivate API clients, rotate client secrets, and configure tenant-specific Twilio/Bandwidth credentials and default senders.
 - **Tenant users:** view message totals, send SMS, page through sent/received messages, inspect status history, and query operational logs by date range. The API derives their tenant solely from their JWT.
 
 Start the local stack with `docker compose up --build` and open `http://localhost:4200`. The console proxies `/api/` to the API, so no permissive CORS policy is needed. Use the seeded `example-client` / `example-secret-change-me` for **Client**, or username `admin` and password `Admin_Local_2026!` for **Administrator**. Override the initial administrator through `ADMIN_USERNAME` and `ADMIN_PASSWORD` before initializing the local stack. These credentials are local-only. TLS termination is required in shared or production environments; Compose is not a production deployment model.
@@ -75,6 +75,10 @@ POST /api/v1/webhooks/bandwidth/inbound
 POST /api/v1/webhooks/bandwidth/status
 
 POST /api/v1/admin/auth/token
+GET  /api/v1/admin/administrators
+POST /api/v1/admin/administrators
+PUT  /api/v1/admin/administrators/{administratorId}/state
+POST /api/v1/admin/administrators/{administratorId}/reset-password
 GET  /api/v1/admin/tenants
 POST /api/v1/admin/tenants
 GET  /api/v1/admin/tenants/{tenantId}
@@ -306,7 +310,7 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 
 ## Current limitations
 
-- Administrator MFA, self-service password recovery, and an administrator-account management UI are not implemented. Accounts are created through trusted provisioning.
+- Administrator MFA and self-service password recovery are not implemented. Authenticated platform administrators can manage accounts through the console; command-line provisioning remains available for bootstrap access.
 
 ## Contributing
 
