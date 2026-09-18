@@ -24,8 +24,7 @@ CREATE TABLE dbo.SmsMessages
 );
 GO
 
-CREATE INDEX IX_SmsMessages_TenantId_CreatedAt
-    ON dbo.SmsMessages(TenantId, CreatedAt DESC);
+CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON dbo.SmsMessages(TenantId, CreatedAt DESC);
 GO
 
 CREATE UNIQUE INDEX UX_SmsMessages_Tenant_Provider_Message

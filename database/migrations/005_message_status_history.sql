@@ -15,6 +15,5 @@ CREATE INDEX IX_SmsMessageStatusHistory_Tenant_Message_CreatedAt
 GO
 
 INSERT INTO dbo.SmsMessageStatusHistory (Id, TenantId, MessageId, Status, CreatedAt)
-SELECT NEWID(), TenantId, Id, Status, COALESCE(UpdatedAt, CreatedAt)
-FROM dbo.SmsMessages;
+SELECT NEWID(), TenantId, Id, Status, COALESCE(UpdatedAt, CreatedAt) FROM dbo.SmsMessages;
 GO

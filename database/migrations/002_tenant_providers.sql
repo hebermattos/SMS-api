@@ -14,8 +14,7 @@ CREATE TABLE dbo.TenantSmsProviders
 );
 GO
 
-CREATE UNIQUE INDEX UX_TenantSmsProviders_Tenant_Provider
-    ON dbo.TenantSmsProviders(TenantId, Provider);
+CREATE UNIQUE INDEX UX_TenantSmsProviders_Tenant_Provider ON dbo.TenantSmsProviders(TenantId, Provider);
 GO
 
 CREATE UNIQUE INDEX UX_TenantSmsProviders_Default

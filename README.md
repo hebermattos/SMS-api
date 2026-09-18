@@ -25,14 +25,10 @@ tests/
   Sms.Infrastructure.Tests/
 tools/
   Sms.Provision/
+  Sms.Migrate/
 database/
-  001_initial.sql
-  002_tenant_providers.sql
-  003_api_clients.sql
-  004_example_tenant.sql
-  005_provider_settings.sql
-  006_message_status_history.sql
-  007_shared_provider_account_routing.sql
+  migrations/          Versioned production schema migrations
+  seeds/               Test-only bootstrap data
 ```
 
 All SMS providers implement the same `ISmsProvider` interface and are selected through `ISmsProviderResolver`. Provider credentials are tenant-specific and secrets are encrypted at rest using AES-256-GCM.
@@ -64,7 +60,7 @@ Twilio accounts may be shared by multiple tenants. Callback ownership is resolve
 
 The tenant provisioning endpoint uses `X-Admin-Key`. It is intended as bootstrap administration and should not be exposed publicly without additional administrative access controls.
 
-## Local development with Docker
+## Test environment with Docker
 
 Requirements: Docker with Docker Compose.
 
@@ -74,7 +70,7 @@ Start the complete environment:
 docker compose up --build
 ```
 
-The first startup creates SQL Server, the `SmsApi` database, applies the current schema scripts and provisions a development tenant.
+Docker Compose is for local testing only and is not the production deployment model. The migration service creates SQL Server database objects, records applied migrations in `dbo.SchemaMigrations`, and provisions the test tenant. Repeated startups apply only pending migrations, verify that previously applied files were not modified, and safely re-run the idempotent test seed.
 
 Development bootstrap credentials:
 
@@ -94,6 +90,19 @@ ADMIN_PROVISIONING_KEY
 ```
 
 The API is exposed on port `8080`.
+
+## Database migrations
+
+Production migrations do not depend on Docker. Publish or run `tools/Sms.Migrate` before starting a new API version:
+
+```bash
+export ConnectionStrings__SqlServer='Server=...;Database=SmsApi;...'
+dotnet run --project tools/Sms.Migrate -- --migrations database/migrations
+```
+
+The target database is created when it does not exist. Every migration runs transactionally and is recorded with a SHA-256 content hash. Applied migration files must never be edited; add a new numbered file instead.
+
+When adopting the migrator on a database created by older project versions, existing schema objects are detected and recorded as the corresponding baseline migrations. The example tenant seed is intentionally excluded from production migrations and is executed only by Docker Compose.
 
 ## Authentication
 
@@ -164,6 +173,7 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 - Secret/signature comparisons use fixed-time comparison where applicable.
 - Twilio error response bodies are not propagated to API callers.
 - Development Docker secrets must never be reused in production.
+- Docker Compose and the example tenant are for testing only.
 - HTTPS termination is required outside local development.
 
 ## Current limitations
@@ -171,7 +181,6 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 - Bandwidth provider transport is still a stub.
 - Bandwidth inbound/status webhooks are not implemented.
 - Angular administration UI is not implemented.
-- CI workflow execution still needs to be verified in repository settings; recent commits have not exposed workflow runs through the available GitHub integration.
 
 ## Contributing
 
