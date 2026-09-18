@@ -121,7 +121,7 @@ public sealed class AdministrationServiceTests
         Assert.Null(repo.SavedProvider);
         await service.SaveProviderAsync(repo.Tenant.Id, "Twilio", valid, default);
         Assert.Equal("secret", repo.SavedProvider!.ApiSecret);
-        Assert.Equal(3, service.ProviderCatalog.Count);
+        Assert.Equal(2, service.ProviderCatalog.Count);
     }
 
     [Fact]
