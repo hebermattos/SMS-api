@@ -4,6 +4,7 @@ using Sms.Api.Auth;
 using Sms.Api.Controllers;
 using Sms.Application.Administration;
 using Sms.Application.Common;
+using Sms.Application.Auth;
 
 namespace Sms.Infrastructure.Tests;
 
@@ -14,7 +15,7 @@ public sealed class AdministrationControllerTests
     {
         var attribute = Assert.Single(typeof(AdministrationController).GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>());
         Assert.Equal(PortalSecurity.AdminPolicy, attribute.Policy);
-        var repo = new AdministrationFakeRepository(); var controller = new AdministrationController(AdministrationServiceTests.Service(repo));
+        var repo = new AdministrationFakeRepository(); var controller = new AdministrationController(AdministrationServiceTests.Service(repo), new AdministratorAuthenticationService(new AdministratorRepositoryFake()));
         Assert.IsType<OkObjectResult>(await controller.ListTenants());
         Assert.IsType<OkObjectResult>(await controller.GetTenant(repo.Tenant.Id, default));
         Assert.IsType<NoContentResult>(await controller.UpdateTenant(repo.Tenant.Id, new("Company", false), default));
@@ -26,6 +27,16 @@ public sealed class AdministrationControllerTests
         Assert.IsType<OkObjectResult>(await controller.Providers(repo.Tenant.Id, default));
         Assert.IsType<NoContentResult>(await controller.SaveProvider(repo.Tenant.Id, "Twilio", new("account", "+15550000001", true, true, "secret", null), default));
         Assert.Equal(repo.Tenant.Id, repo.SavedProvider!.TenantId);
+    }
+
+    private sealed class AdministratorRepositoryFake : IAdministratorRepository
+    {
+        public Task<AdministratorAccount?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default) => Task.FromResult<AdministratorAccount?>(null);
+        public Task<bool> IsActiveAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<IReadOnlyList<AdministratorSummary>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<AdministratorSummary>>([]);
+        public Task CreateAsync(AdministratorAccount account, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<AdministratorStateResult> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default) => Task.FromResult(AdministratorStateResult.NotFound);
+        public Task<bool> ResetPasswordAsync(Guid id, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 
     [Fact]
