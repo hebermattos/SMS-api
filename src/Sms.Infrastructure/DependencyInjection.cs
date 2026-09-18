@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IApiClientRepository, ApiClientRepository>();
         services.AddScoped<IPortalUserRepository, PortalUserRepository>();
         services.AddScoped<IPortalUserManagementRepository, PortalUserManagementRepository>();
+        services.AddScoped<ITenantPortalUserManagementRepository, TenantPortalUserManagementRepository>();
         services.AddScoped<IAdministratorRepository, AdministratorRepository>();
         services.AddScoped<IAdministrationRepository, AdministrationRepository>();
         services.AddScoped<ITenantPortalRepository, TenantPortalRepository>();
