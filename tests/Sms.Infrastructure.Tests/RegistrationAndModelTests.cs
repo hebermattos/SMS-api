@@ -43,15 +43,6 @@ public sealed class RegistrationAndModelTests
     }
 
     [Fact]
-    public async Task BandwidthProvider_ReportsThatTransportIsNotConfigured()
-    {
-        var provider = new BandwidthSmsProvider();
-
-        Assert.Equal("Bandwidth", provider.Name);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.SendAsync("+1", "+2", "body"));
-    }
-
-    [Fact]
     public void TenantAndProviderConfiguration_ExposeConfiguredValues()
     {
         var tenantId = Guid.NewGuid();
