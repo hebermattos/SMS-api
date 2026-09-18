@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using System.Net.Mail;
 
 namespace Sms.Application.Auth;
 
@@ -20,12 +21,13 @@ public sealed class AdministratorAuthenticationService(IAdministratorRepository 
         return valid && account?.IsActive == true ? account : null;
     }
 
-    public async Task<Guid> CreateAsync(string username, string password, CancellationToken cancellationToken = default)
+    public async Task<Guid> CreateAsync(string username, string email, string password, CancellationToken cancellationToken = default)
     {
         ValidateUsername(username);
+        ValidateEmail(email);
         var (hash, salt) = HashPassword(password);
         var id = Guid.NewGuid();
-        await administrators.CreateAsync(new(id, username.Trim(), hash, salt, PasswordIterations, true), cancellationToken);
+        await administrators.CreateAsync(new(id, username.Trim(), email.Trim().ToLowerInvariant(), hash, salt, PasswordIterations, true), cancellationToken);
         return id;
     }
 
@@ -51,6 +53,13 @@ public sealed class AdministratorAuthenticationService(IAdministratorRepository 
     {
         if (string.IsNullOrWhiteSpace(username) || !Regex.IsMatch(username.Trim(), @"\A[a-zA-Z0-9][a-zA-Z0-9._-]{2,99}\z"))
             throw new ArgumentException("Username must contain 3–100 letters, digits, dots, underscores, or hyphens and start with a letter or digit.");
+    }
+
+    private static void ValidateEmail(string email)
+    {
+        try { _ = new MailAddress(email); }
+        catch { throw new ArgumentException("Enter a valid email address."); }
+        if (email.Length > 320) throw new ArgumentException("Email must contain up to 320 characters.");
     }
 
     private static (byte[] Hash, byte[] Salt) HashPassword(string password)
