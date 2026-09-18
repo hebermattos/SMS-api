@@ -23,7 +23,7 @@ public sealed class AdministrationService(IAdministrationRepository repository,
     public async Task UpdateTenantAsync(Guid tenantId, string name, bool isActive, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 200)
-            throw new ArgumentException("Informe um nome com até 200 caracteres.");
+            throw new ArgumentException("Enter a name with up to 200 characters.");
         if (!await repository.UpdateTenantAsync(tenantId, name.Trim(), isActive, cancellationToken))
             throw new KeyNotFoundException();
     }
@@ -40,7 +40,7 @@ public sealed class AdministrationService(IAdministrationRepository repository,
         await GetTenantAsync(tenantId, cancellationToken);
         var clientId = string.IsNullOrWhiteSpace(requestedId) ? $"client_{Guid.NewGuid():N}" : requestedId.Trim();
         if (!Regex.IsMatch(clientId, "^[a-zA-Z0-9_-]{1,100}$"))
-            throw new ArgumentException("O identificador deve ter até 100 letras, números, hífens ou sublinhados.");
+            throw new ArgumentException("The identifier must contain up to 100 letters, numbers, hyphens, or underscores.");
         var secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
         var hashed = ClientSecretHasher.Hash(secret);
         await repository.CreateClientAsync(new(tenantId, clientId, hashed.Hash, hashed.Salt, hashed.Iterations), cancellationToken);
@@ -81,25 +81,25 @@ public sealed class AdministrationService(IAdministrationRepository repository,
         await GetTenantAsync(tenantId, cancellationToken);
         var policy = GetPolicy(provider);
         if (string.IsNullOrWhiteSpace(input.AccountId) || input.AccountId.Trim().Length > 200)
-            throw new ArgumentException("Informe a conta do provedor com até 200 caracteres.");
+            throw new ArgumentException("Enter the provider account with up to 200 characters.");
         if (string.IsNullOrWhiteSpace(input.FromNumber) || !Regex.IsMatch(input.FromNumber, "^\\+[1-9][0-9]{6,14}$"))
-            throw new ArgumentException("Informe o remetente no formato internacional, por exemplo +5511999999999.");
-        if (input.IsDefault && !input.IsActive) throw new ArgumentException("O provedor padrão precisa estar ativo.");
+            throw new ArgumentException("Enter the sender in international format, for example +5511999999999.");
+        if (input.IsDefault && !input.IsActive) throw new ArgumentException("The default provider must be active.");
         var existing = (await repository.ListProvidersAsync(tenantId, cancellationToken))
             .SingleOrDefault(x => x.Provider == policy.Definition.Name);
         var secret = string.IsNullOrWhiteSpace(input.ApiSecret) ? existing?.ApiSecret : input.ApiSecret;
         if (string.IsNullOrWhiteSpace(secret) || Encoding.UTF8.GetByteCount(secret) > 512)
-            throw new ArgumentException("Informe a credencial do provedor, com até 512 bytes em UTF-8.");
+            throw new ArgumentException("Enter the provider credential, up to 512 UTF-8 bytes.");
         var settings = policy.MergeAndValidate(existing?.Settings, input.Settings ?? new());
         await providers.UpsertAsync(new(tenantId, policy.Definition.Name, input.AccountId.Trim(), secret,
             input.FromNumber, input.IsDefault, input.IsActive, settings), cancellationToken);
     }
 
     private IProviderSettingsPolicy GetPolicy(string name) => policies.FirstOrDefault(x => x.Definition.Name == name)
-        ?? throw new ArgumentException("Provedor não suportado.");
+        ?? throw new ArgumentException("Provider is not supported.");
 
     private static void ValidatePage(int skip, int take)
     {
-        if (skip < 0 || take is < 1 or > 100) throw new ArgumentException("Paginação inválida.");
+        if (skip < 0 || take is < 1 or > 100) throw new ArgumentException("Invalid pagination.");
     }
 }
