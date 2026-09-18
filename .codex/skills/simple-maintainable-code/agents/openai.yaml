@@ -1,0 +1,4 @@
+interface:
+  display_name: "Simple Maintainable Code"
+  short_description: "Prioritize readable, simple, maintainable code"
+  default_prompt: "Review or change this code using simplicity, readability, and maintainability as the top priorities."
