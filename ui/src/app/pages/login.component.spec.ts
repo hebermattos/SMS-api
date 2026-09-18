@@ -27,20 +27,19 @@ describe('Login screen', () => {
     component.credential = 'do-not-keep';
     fixture.nativeElement.querySelectorAll('.signin-modes button')[1].click();
     fixture.detectChanges(); await fixture.whenStable();
-    expect(component.admin()).toBe(true); expect(component.credential).toBe('');
+    expect(component.mode()).toBe('platform'); expect(component.credential).toBe('');
     expect(fixture.nativeElement.querySelector('#credential').type).toBe('password');
-    expect(fixture.nativeElement.querySelector('#client-id')).toBeNull();
-    expect(fixture.nativeElement.querySelector('#admin-username')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('#login-identity')).not.toBeNull();
   });
 
   it('requires an administrator username and submits a password instead of a shared key', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     const component = fixture.componentInstance;
-    component.changeMode(true); component.credential = 'administrator-password';
-    component.submit(); http.expectNone('/api/v1/admin/auth/token');
+    component.changeMode('platform'); component.credential = 'administrator-password';
+    component.submit(); http.expectNone('/api/v1/portal/auth/token');
     component.username = ' admin '; component.submit();
-    const request = http.expectOne('/api/v1/admin/auth/token');
-    expect(request.request.body).toEqual({ username: 'admin', password: 'administrator-password' });
+    const request = http.expectOne('/api/v1/portal/auth/token');
+    expect(request.request.body).toEqual({ username: 'admin', password: 'administrator-password', context: 'platform' });
     request.flush({ access_token: `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 900 }))}.s` });
     expect(component.credential).toBe('');
     expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/admin/tenants');
@@ -50,10 +49,10 @@ describe('Login screen', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     const component = fixture.componentInstance;
     component.clientId = ' client '; component.credential = 'secret';
-    component.submit(); component.submit(); component.changeMode(true);
+    component.submit(); component.submit(); component.changeMode('platform');
     const request = http.expectOne('/api/v1/auth/token');
     expect(request.request.body).toEqual({ clientId: 'client', clientSecret: 'secret' });
-    expect(component.busy()).toBe(true); expect(component.admin()).toBe(false);
+    expect(component.busy()).toBe(true); expect(component.mode()).toBe('platform');
     request.flush({}, { status: 401, statusText: 'Unauthorized' });
     fixture.detectChanges();
     expect(component.busy()).toBe(false); expect(component.credential).toBe('');
