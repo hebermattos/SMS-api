@@ -21,7 +21,10 @@ services:
       - ./database:/database:ro
     entrypoint: ["/bin/bash","-c"]
     command: >
-      /opt/mssql-tools/bin/sqlcmd -I -b -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -Q "IF DB_ID(N'SmsApi') IS NOT NULL BEGIN ALTER DATABASE SmsApi SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE SmsApi; END; CREATE DATABASE SmsApi; IF DB_ID(N'SmsApiLogs') IS NOT NULL BEGIN ALTER DATABASE SmsApiLogs SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE SmsApiLogs; END; CREATE DATABASE SmsApiLogs;" &&
+      /opt/mssql-tools/bin/sqlcmd -I -b -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -d master -Q "IF DB_ID(N'SmsApi') IS NOT NULL BEGIN ALTER DATABASE SmsApi SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE SmsApi; END;" &&
+      /opt/mssql-tools/bin/sqlcmd -I -b -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -d master -Q "CREATE DATABASE SmsApi;" &&
+      /opt/mssql-tools/bin/sqlcmd -I -b -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -d master -Q "IF DB_ID(N'SmsApiLogs') IS NOT NULL BEGIN ALTER DATABASE SmsApiLogs SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE SmsApiLogs; END;" &&
+      /opt/mssql-tools/bin/sqlcmd -I -b -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -d master -Q "CREATE DATABASE SmsApiLogs;" &&
       /opt/mssql-tools/bin/sqlcmd -I -b -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -d SmsApi -i /database/schema.sql &&
       /opt/mssql-tools/bin/sqlcmd -I -b -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -d SmsApi -i /database/seeds/example_tenant.sql &&
       /opt/mssql-tools/bin/sqlcmd -I -b -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -d SmsApiLogs -i /database/logs-schema.sql

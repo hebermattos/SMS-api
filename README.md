@@ -152,6 +152,13 @@ ADMIN_PROVISIONING_KEY
 
 The API is exposed on port `8080`, and SQL Server is exposed on host port `1434`.
 
+If an older Compose stack reports that `SmsApi` or `SmsApiLogs` cannot be opened, remove its containers before starting the environment again:
+
+```bash
+docker compose down --remove-orphans
+docker compose up --build
+```
+
 Run the Bandwidth SQL Server integration tests in an isolated local Compose project:
 
 ```bash
