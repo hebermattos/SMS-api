@@ -126,7 +126,7 @@ The API is exposed on port `8080`.
 Run the Bandwidth SQL Server integration tests in an isolated local Compose project:
 
 ```bash
-docker compose -p sms-bandwidth-test --profile tests up --build --abort-on-container-exit --exit-code-from webhook-tests webhook-tests
+docker compose -p sms-bandwidth-test --profile tests run --build --rm webhook-tests
 docker compose -p sms-bandwidth-test --profile tests down
 ```
 
