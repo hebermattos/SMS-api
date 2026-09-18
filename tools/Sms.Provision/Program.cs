@@ -10,13 +10,14 @@ if (args is ["--admin"])
     var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
     var username = configuration["Admin:Username"] ?? throw new InvalidOperationException("Admin:Username is required.");
     var password = configuration["Admin:Password"] ?? throw new InvalidOperationException("Admin:Password is required.");
+    var email = configuration["Admin:Email"] ?? throw new InvalidOperationException("Admin:Email is required.");
     var administrators = new AdministratorRepository(new SqlConnectionFactory(configuration));
     if (await administrators.GetByUsernameAsync(username.Trim()) is not null)
     {
         Console.Error.WriteLine("This administrator username already exists. No credentials were changed.");
         return 1;
     }
-    var id = await new AdministratorAuthenticationService(administrators).CreateAsync(username, password);
+    var id = await new AdministratorAuthenticationService(administrators).CreateAsync(username, email, password);
     Console.WriteLine($"Administrator created: {id}");
     return 0;
 }
