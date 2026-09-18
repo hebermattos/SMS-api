@@ -13,6 +13,7 @@ const routes: Routes = [
       { path: 'tenants', loadComponent: () => import('./app/pages/tenants.component').then(m => m.TenantsComponent) },
       { path: 'tenants/:id', loadComponent: () => import('./app/pages/tenant-detail.component').then(m => m.TenantDetailComponent) },
       { path: 'administrators', loadComponent: () => import('./app/pages/administrators.component').then(m => m.AdministratorsComponent) },
+      { path: 'system-logs', loadComponent: () => import('./app/pages/system-logs.component').then(m => m.SystemLogsComponent) },
       { path: '', pathMatch: 'full', redirectTo: 'tenants' }
     ]
   },

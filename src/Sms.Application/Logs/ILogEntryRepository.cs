@@ -12,8 +12,15 @@ public sealed record LogEntry(
 
 public interface ILogEntryRepository
 {
-    Task<IReadOnlyList<LogEntry>> GetAsync(
+    Task<IReadOnlyList<LogEntry>> GetActivityAsync(
         Guid tenantId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<LogEntry>> GetSystemAsync(
         DateTimeOffset? from,
         DateTimeOffset? to,
         int skip,

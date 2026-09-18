@@ -16,7 +16,7 @@ Bandwidth outbound SMS uses OAuth 2.0 Client Credentials. Inbound and delivery-s
 
 ## Administration console
 
-Platform actions are audited through `PlatformAuditMiddleware` into `SmsApiLogs.dbo.LogEntries`. Events include the controller action, verified administrator ID (or bootstrap/unauthenticated actor), outcome, HTTP status, and valid target tenant/client IDs from the route. Login attempts (including rate limits), company creation and updates, client creation/state changes/secret rotation, provider configuration, and administrative reads are recorded. Bodies, headers, credentials, provider input and exception details are excluded. These support-only records have no `TenantId` and are not exposed to tenant log queries. Successful administrator logins and subsequent requests record the individual administrator ID. Failed logins never record a caller-supplied username. Company creation has no target ID in the route. Browser-only actions such as logout are not recorded. Delivery uses the existing batched log exporter, not a durable transactional audit ledger.
+Platform actions are audited through `PlatformAuditMiddleware` into `SmsApiLogs.dbo.UserActivityLogs`. Events include the controller action, verified administrator ID (or bootstrap/unauthenticated actor), outcome, HTTP status, and valid target tenant/client IDs from the route. Login attempts (including rate limits), company creation and updates, client creation/state changes/secret rotation, provider configuration, system-log reads, and administrative reads are recorded. Bodies, headers, credentials, provider input and exception details are excluded. Platform activity has no `TenantId` and is never returned by tenant queries. Successful administrator logins and subsequent requests record the individual administrator ID. Failed logins never record a caller-supplied username. Company creation has no target ID in the route. Browser-only actions such as logout are not recorded. Delivery uses the existing batched log exporter, not a durable transactional audit ledger.
 
 The Angular 21 console in `ui/` provides two separate workspaces, in English:
 
@@ -99,7 +99,7 @@ Each message status transition is stored in `SmsMessageStatusHistory`. Authentic
 
 OpenTelemetry stores structured operational events in a separate SQL Server database through `ConnectionStrings__LogsSqlServer`. Authenticated clients can query `GET /api/v1/logs`; the `tenant_id` JWT claim is always applied by the server. Events contain request metadata, severity, trace/span identifiers and safe structured attributes. Message bodies, authorization headers, provider credentials, tokens and phone numbers are never added to these events.
 
-The API also writes logs to the console, with one event per line and a UTC timestamp, severity, and category. Client login attempts, authenticated client requests, and platform audit events are included. Console output is independent of SQL log persistence, so it can help diagnose missing database events. `Logging__Console__LogLevel__Sms` controls application console verbosity (default: `Information`).
+The observability database separates user activity from technical failures. `UserActivityLogs` records client and platform audit events at every severity; tenant users can query only rows carrying their authenticated `TenantId`. `SystemLogs` stores only `Error` and `Critical` technical events and is available only to authenticated platform administrators through **System logs** or `GET /api/v1/admin/system-logs`. The API also writes logs to the console, with one event per line and a UTC timestamp, severity, and category. Console output is independent of SQL log persistence, so it can help diagnose missing database events. `Logging__Console__LogLevel__Sms` controls application console verbosity (default: `Information`).
 
 To apply an API logging update locally without rerunning database initialization, rebuild only the API and follow its output:
 
@@ -220,7 +220,7 @@ This project does not use migrations. Treat every target database as new and app
 
 ## Authentication
 
-Client login attempts are audited in `SmsApiLogs.dbo.LogEntries`, including validation failures, rejected credentials, rate limits and server errors. Successful logins record the verified `ClientId` and `TenantId`; failed attempts remain support-only, without a tenant or caller-supplied identifier. Authenticated HTTP activity includes the client identifier from the validated JWT subject, which is visible in the activity log message. Neither secrets nor tokens are logged. Login events use the existing batched exporter and its delivery limitations.
+Client login attempts are audited in `SmsApiLogs.dbo.UserActivityLogs`, including validation failures, rejected credentials, rate limits and server errors. Successful logins record the verified `ClientId` and `TenantId`; failed attempts remain support-only, without a tenant or caller-supplied identifier. Authenticated HTTP activity includes the client identifier from the validated JWT subject, which is visible in the activity log message. Neither secrets nor tokens are logged. Login events use the existing batched exporter and its delivery limitations.
 
 Request a token:
 

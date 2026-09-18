@@ -1,14 +1,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Sms.Application.Common;
+using Sms.Api.Auth;
 using Sms.Application.Logs;
 
 namespace Sms.Api.Controllers;
 
 [ApiController]
-[Authorize]
-[Route("api/v1/logs")]
-public sealed class LogsController(ITenantContext tenantContext, ILogEntryRepository repository) : ControllerBase
+[Authorize(Policy = PortalSecurity.AdminPolicy)]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+[Route("api/v1/admin/system-logs")]
+public sealed class SystemLogsController(ILogEntryRepository repository) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get(
@@ -22,6 +23,6 @@ public sealed class LogsController(ITenantContext tenantContext, ILogEntryReposi
         if (from.HasValue && to.HasValue && from >= to) return BadRequest(new { error = "from must be earlier than to." });
 
         take = Math.Clamp(take, 1, 200);
-        return Ok(await repository.GetActivityAsync(tenantContext.TenantId, from, to, skip, take, cancellationToken));
+        return Ok(await repository.GetSystemAsync(from, to, skip, take, cancellationToken));
     }
 }
