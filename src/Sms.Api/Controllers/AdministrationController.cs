@@ -3,20 +3,49 @@ using Microsoft.AspNetCore.Mvc;
 using Sms.Api.Auth;
 using Sms.Api.Filters;
 using Sms.Application.Administration;
+using Sms.Application.Auth;
 
 namespace Sms.Api.Controllers;
 
 public sealed record UpdateTenantRequest(string Name, bool IsActive);
 public sealed record CreateClientRequest(string? ClientId);
 public sealed record ClientStateRequest(bool IsActive);
+public sealed record CreateAdministratorRequest(string Username, string Password);
+public sealed record AdministratorStateRequest(bool IsActive);
+public sealed record ResetAdministratorPasswordRequest(string Password);
 
 [ApiController]
 [Authorize(Policy = PortalSecurity.AdminPolicy)]
 [ServiceFilter(typeof(PortalExceptionFilter))]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/admin")]
-public sealed class AdministrationController(AdministrationService service) : ControllerBase
+public sealed class AdministrationController(AdministrationService service, AdministratorAuthenticationService administrators) : ControllerBase
 {
+    [HttpGet("administrators")]
+    public async Task<IActionResult> ListAdministrators(CancellationToken cancellationToken) =>
+        Ok(await administrators.ListAsync(cancellationToken));
+
+    [HttpPost("administrators")]
+    public async Task<IActionResult> CreateAdministrator(CreateAdministratorRequest request, CancellationToken cancellationToken)
+    {
+        var id = await administrators.CreateAsync(request.Username, request.Password, cancellationToken);
+        return Created($"/api/v1/admin/administrators/{id}", new { id });
+    }
+
+    [HttpPut("administrators/{administratorId:guid}/state")]
+    public async Task<IActionResult> SetAdministratorState(Guid administratorId, AdministratorStateRequest request, CancellationToken cancellationToken)
+    {
+        await administrators.SetActiveAsync(administratorId, request.IsActive, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("administrators/{administratorId:guid}/reset-password")]
+    public async Task<IActionResult> ResetAdministratorPassword(Guid administratorId, ResetAdministratorPasswordRequest request, CancellationToken cancellationToken)
+    {
+        await administrators.ResetPasswordAsync(administratorId, request.Password, cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("tenants")]
     public async Task<IActionResult> ListTenants(int skip = 0, int take = 25, CancellationToken cancellationToken = default) =>
         Ok(await service.ListTenantsAsync(skip, take, cancellationToken));
