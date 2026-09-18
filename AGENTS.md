@@ -92,6 +92,14 @@ dotnet test Sms.Api.sln --configuration Release --no-build --collect:"XPlat Code
 
 - When persistence behavior changes, also validate it against SQL Server; unit tests alone are not sufficient for Dapper SQL correctness.
 
+## Codex IDE restrictions
+
+When Codex is being used through an IDE integration:
+
+- Do not run tests.
+- Do not create commits.
+- Leave changes uncommitted for the user to review and handle. These restrictions override repository workflow instructions that would otherwise require Codex to run tests or create commits.
+
 ## Change and PR discipline
 
 - Keep each PR focused on one cohesive functionality or correction. Do not combine unrelated features.
