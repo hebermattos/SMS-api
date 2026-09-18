@@ -1,4 +1,6 @@
 using Dapper;
+using Microsoft.Data.SqlClient;
+using Sms.Application.Administration;
 using Sms.Application.Providers;
 using Sms.Application.Security;
 
@@ -35,15 +37,27 @@ public sealed class TenantSmsProviderRepository(SqlConnectionFactory connectionF
     public async Task UpsertAsync(TenantSmsProviderConfiguration configuration,CancellationToken cancellationToken=default)
     {
         const string sql = """
+            SET XACT_ABORT ON;
+            BEGIN TRANSACTION;
+            -- Serialize configuration writes for this tenant, including default-provider changes.
+            SELECT Id FROM dbo.Tenants WITH (UPDLOCK, HOLDLOCK) WHERE Id=@TenantId;
+            IF @IsDefault=1 AND @IsActive=1
+                UPDATE dbo.TenantSmsProviders SET IsDefault=0, UpdatedAt=@Now
+                WHERE TenantId=@TenantId AND Provider<>@Provider AND IsDefault=1;
             UPDATE dbo.TenantSmsProviders
             SET AccountId=@AccountId,ApiSecret=@ApiSecret,FromNumber=@FromNumber,IsDefault=@IsDefault,IsActive=@IsActive,Settings=@Settings,UpdatedAt=@Now
             WHERE TenantId=@TenantId AND Provider=@Provider;
             IF @@ROWCOUNT=0
                 INSERT dbo.TenantSmsProviders(Id,TenantId,Provider,AccountId,ApiSecret,FromNumber,IsDefault,IsActive,Settings,CreatedAt)
                 VALUES(@Id,@TenantId,@Provider,@AccountId,@ApiSecret,@FromNumber,@IsDefault,@IsActive,@Settings,@Now);
+            COMMIT TRANSACTION;
             """;
         using var connection=connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(sql,new {Id=Guid.NewGuid(),configuration.TenantId,configuration.Provider,configuration.AccountId,ApiSecret=secretProtector.Protect(configuration.ApiSecret),FromNumber=configuration.FromNumber?.Trim(),configuration.IsDefault,configuration.IsActive,Settings=ProtectOptional(configuration.Settings),Now=DateTimeOffset.UtcNow},cancellationToken:cancellationToken));
+        try
+        {
+            await connection.ExecuteAsync(new CommandDefinition(sql,new {Id=Guid.NewGuid(),configuration.TenantId,configuration.Provider,configuration.AccountId,ApiSecret=secretProtector.Protect(configuration.ApiSecret),FromNumber=configuration.FromNumber?.Trim(),configuration.IsDefault,configuration.IsActive,Settings=ProtectOptional(configuration.Settings),Now=DateTimeOffset.UtcNow},cancellationToken:cancellationToken));
+        }
+        catch (SqlException exception) when (exception.Number is 2601 or 2627) { throw new AdministrationConflictException(); }
     }
 
     private string? ProtectOptional(string? value)=>string.IsNullOrWhiteSpace(value)?null:secretProtector.Protect(value);

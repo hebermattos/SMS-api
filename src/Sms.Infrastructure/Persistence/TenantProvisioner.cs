@@ -2,6 +2,7 @@ using Dapper;
 using Microsoft.Data.SqlClient;
 using Sms.Application.Auth;
 using Sms.Application.Tenants;
+using Sms.Application.Administration;
 
 namespace Sms.Infrastructure.Persistence;
 
@@ -32,6 +33,11 @@ public sealed class TenantProvisioner(SqlConnectionFactory connectionFactory) : 
                 }, transaction, cancellationToken: cancellationToken));
 
             await transaction.CommitAsync(cancellationToken);
+        }
+        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw new AdministrationConflictException();
         }
         catch
         {

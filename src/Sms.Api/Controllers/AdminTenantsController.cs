@@ -2,12 +2,16 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sms.Application.Tenants;
+using Sms.Api.Auth;
+using Sms.Api.Filters;
 
 namespace Sms.Api.Controllers;
 
 public sealed record CreateTenantRequest(string Name, string? ClientId);
 
 [ApiController]
+[ServiceFilter(typeof(PortalExceptionFilter))]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/admin/tenants")]
 public sealed class AdminTenantsController(TenantProvisioningService provisioning, IConfiguration configuration) : ControllerBase
 {
@@ -16,7 +20,9 @@ public sealed class AdminTenantsController(TenantProvisioningService provisionin
     public async Task<IActionResult> Create([FromBody] CreateTenantRequest request, CancellationToken cancellationToken)
     {
         var expected = configuration["Admin:ProvisioningKey"];
-        if (string.IsNullOrWhiteSpace(expected) || !TryValidateKey(expected, Request.Headers["X-Admin-Key"].ToString()))
+        var isAdministrator = User.Identity?.IsAuthenticated == true && User.HasClaim(PortalSecurity.AdminClaim, "true")
+            && !User.HasClaim(x => x.Type == "tenant_id");
+        if (!isAdministrator && (string.IsNullOrWhiteSpace(expected) || !TryValidateKey(expected, Request.Headers["X-Admin-Key"].ToString())))
             return Unauthorized();
 
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequest(new { error = "Name is required." });

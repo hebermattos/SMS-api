@@ -50,6 +50,25 @@ public sealed class AdminTenantsControllerTests
         Assert.IsType<UnauthorizedResult>(await CreateController(null).Create(new CreateTenantRequest("Tenant", null), default));
     }
 
+    [Fact]
+    public async Task Create_AcceptsAuthenticatedAdministratorWithoutBootstrapHeader()
+    {
+        var controller = CreateController(null);
+        controller.HttpContext.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            [new System.Security.Claims.Claim(Sms.Api.Auth.PortalSecurity.AdminClaim, "true")], "Bearer"));
+        Assert.IsType<CreatedResult>(await controller.Create(new CreateTenantRequest("Company", null), default));
+    }
+
+    [Fact]
+    public async Task Create_RejectsTenantTokensEvenWhenTheyCarryAnAdminClaim()
+    {
+        var controller = CreateController(null);
+        controller.HttpContext.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            [new System.Security.Claims.Claim(Sms.Api.Auth.PortalSecurity.AdminClaim, "true"),
+             new System.Security.Claims.Claim("tenant_id", Guid.NewGuid().ToString())], "Bearer"));
+        Assert.IsType<UnauthorizedResult>(await controller.Create(new CreateTenantRequest("Company", null), default));
+    }
+
     private static AdminTenantsController CreateController(string? adminKey, Provisioner? provisioner = null)
     {
         var values = new Dictionary<string, string?> { ["Admin:ProvisioningKey"] = adminKey };

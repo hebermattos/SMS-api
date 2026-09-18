@@ -1,4 +1,8 @@
 using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
+using Sms.Api.Filters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry;
@@ -30,11 +34,13 @@ if (string.IsNullOrWhiteSpace(jwt.Key) || jwt.Key.Length < 32) throw new Invalid
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddControllers();
+builder.Services.AddScoped<PortalExceptionFilter>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
+    options.Events = new JwtBearerEvents { OnTokenValidated = PortalSecurity.ValidateTenantAsync };
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true, ValidIssuer = jwt.Issuer,
@@ -43,12 +49,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidateLifetime = true, ClockSkew = TimeSpan.FromMinutes(1)
     };
 });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(PortalSecurity.ConfigureAuthorization);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
+        { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 app.UseHttpsRedirection();
+app.UseRouting();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<RequestAuditMiddleware>();
 app.UseAuthorization();

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sms.Application.Auth;
+using Sms.Application.Administration;
 using Sms.Application.Messages;
 using Sms.Application.Logs;
 using Sms.Application.Providers;
@@ -23,6 +24,10 @@ public static class DependencyInjection
         services.AddScoped<BandwidthWebhookParser>();
         services.AddSingleton<ISmsWebhookUrlProvider, ConfiguredSmsWebhookUrlProvider>();
         services.AddScoped<IApiClientRepository, ApiClientRepository>();
+        services.AddScoped<IAdministrationRepository, AdministrationRepository>();
+        services.AddScoped<ITenantPortalRepository, TenantPortalRepository>();
+        services.AddSingleton<IProviderSettingsPolicy, TwilioSettingsPolicy>();
+        services.AddSingleton<IProviderSettingsPolicy, BandwidthSettingsPolicy>();
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ITenantProvisioner, TenantProvisioner>();
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();

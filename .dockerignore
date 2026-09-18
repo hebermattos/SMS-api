@@ -4,3 +4,9 @@
 .git
 .vs
 .env
+
+**/node_modules
+**/.angular
+**/dist
+.env.*
+**/appsettings.Development.json
