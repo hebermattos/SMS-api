@@ -53,6 +53,6 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
         message.Id, message.TenantId, message.From, message.To, message.Body, message.Provider,
         message.ProviderMessageId, message.Direction, message.Status,
         CreatedAt = TimeZoneInfo.ConvertTime(message.CreatedAt, zone),
-        UpdatedAt = message.UpdatedAt.HasValue ? TimeZoneInfo.ConvertTime(message.UpdatedAt.Value, zone) : null
+        UpdatedAt = message.UpdatedAt.HasValue ? (DateTimeOffset?)TimeZoneInfo.ConvertTime(message.UpdatedAt.Value, zone) : null
     };
 }
