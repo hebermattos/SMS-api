@@ -30,7 +30,7 @@ public sealed class ExampleProviderSeedSqlTests
             await ExampleProviders.SeedAsync(providers, tenant);
             var rows = (await connection.QueryAsync<(string Provider, string ApiSecret, string? Settings)>(
                 "SELECT Provider,ApiSecret,Settings FROM dbo.TenantSmsProviders WHERE TenantId=@Tenant;", new { Tenant = tenant })).ToList();
-            Assert.Equal(2, rows.Count);
+            Assert.Equal(3, rows.Count);
             Assert.Equal("Twilio", (await providers.GetDefaultAsync(tenant))!.Provider);
             Assert.Null(await providers.GetAsync(Guid.NewGuid(), "Twilio"));
             foreach (var row in rows)
