@@ -13,6 +13,7 @@ const routes: Routes = [
       { path: 'tenants', loadComponent: () => import('./app/pages/tenants.component').then(m => m.TenantsComponent) },
       { path: 'tenants/:id', loadComponent: () => import('./app/pages/tenant-detail.component').then(m => m.TenantDetailComponent) },
       { path: 'administrators', loadComponent: () => import('./app/pages/administrators.component').then(m => m.AdministratorsComponent) },
+      { path: 'reports', loadComponent: () => import('./app/pages/sms-reports.component').then(m => m.SmsReportsComponent) },
       { path: 'system-logs', loadComponent: () => import('./app/pages/system-logs.component').then(m => m.SystemLogsComponent) },
       { path: '', pathMatch: 'full', redirectTo: 'tenants' }
     ]
@@ -23,6 +24,7 @@ const routes: Routes = [
       { path: 'send', loadComponent: () => import('./app/pages/send.component').then(m => m.SendComponent) },
       { path: 'messages', loadComponent: () => import('./app/pages/messages.component').then(m => m.MessagesComponent) },
       { path: 'messages/:id', loadComponent: () => import('./app/pages/message-detail.component').then(m => m.MessageDetailComponent) },
+      { path: 'reports', loadComponent: () => import('./app/pages/sms-reports.component').then(m => m.SmsReportsComponent) },
       { path: 'logs', loadComponent: () => import('./app/pages/logs.component').then(m => m.LogsComponent) }
     ]
   },
