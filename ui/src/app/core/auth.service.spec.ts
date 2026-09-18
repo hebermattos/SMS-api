@@ -24,7 +24,7 @@ describe('Portal sessions', () => {
     expect(request.request.headers.has('Authorization')).toBe(false);
     const bearer = token(); request.flush({ access_token: bearer, token_type: 'Bearer' });
     expect(auth.bearer()).toBe(bearer); expect(auth.role()).toBe('tenant');
-    expect(JSON.parse(sessionStorage.getItem('sms-console-session')!)).toEqual({ token: bearer, role: 'tenant', identity: 'client' });
+    expect(JSON.parse(sessionStorage.getItem('sms-console-session')!)).toEqual({ token: bearer, role: 'tenant', identity: 'client', context: 'tenant', permissionRole: 'user' });
     expect(localStorage.getItem('sms-console-session')).toBeNull();
   });
 

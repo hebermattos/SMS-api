@@ -47,7 +47,7 @@ public sealed class TenantPortalUserManagementService(
     private static void ValidateUsername(string username)
     {
         if (string.IsNullOrWhiteSpace(username)
-            || !Regex.IsMatch(username.Trim(), @"A[a-zA-Z0-9][a-zA-Z0-9._-]{2,99}z"))
+            || !Regex.IsMatch(username.Trim(), @"\A[a-zA-Z0-9][a-zA-Z0-9._-]{2,99}\z"))
             throw new ArgumentException("Username must contain 3–100 letters, digits, dots, underscores, or hyphens.");
     }
 
