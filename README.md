@@ -168,7 +168,6 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 
 ## Current limitations
 
-- Bandwidth provider transport is still a stub.
 - Bandwidth inbound/status webhooks are not implemented.
 - Angular administration UI is not implemented.
 
