@@ -48,7 +48,7 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
 
     public async Task<AdministratorStateResult> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default)
     {
-        using var connection = connections.CreateConnection();
+        using var connection = connections.CreateSqlConnection();
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction(System.Data.IsolationLevel.Serializable);
         var currentState = await connection.QuerySingleOrDefaultAsync<bool?>(new CommandDefinition(
