@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using System.Net.Mail;
 
 namespace Sms.Application.Auth;
 
@@ -11,16 +12,17 @@ public sealed class TenantPortalUserManagementService(
         repository.ListAsync(tenantId, cancellationToken);
 
     public async Task<Guid> CreateAsync(
-        Guid tenantId, string username, string password, string role,
+        Guid tenantId, string username, string email, string password, string role,
         CancellationToken cancellationToken = default)
     {
         ValidateUsername(username);
+        ValidateEmail(email);
         ValidatePassword(password);
         ValidateRole(role);
 
         var (hash, salt) = HashPassword(password);
         return await repository.CreateAsync(new(
-            Guid.NewGuid(), tenantId, username.Trim(), hash, salt, 600_000,
+            Guid.NewGuid(), tenantId, username.Trim(), email.Trim().ToLowerInvariant(), hash, salt, 600_000,
             "tenant", role), cancellationToken);
     }
 
@@ -47,6 +49,13 @@ public sealed class TenantPortalUserManagementService(
         if (string.IsNullOrWhiteSpace(username)
             || !Regex.IsMatch(username.Trim(), @"A[a-zA-Z0-9][a-zA-Z0-9._-]{2,99}z"))
             throw new ArgumentException("Username must contain 3–100 letters, digits, dots, underscores, or hyphens.");
+    }
+
+    private static void ValidateEmail(string email)
+    {
+        try { _ = new MailAddress(email); }
+        catch { throw new ArgumentException("Enter a valid email address."); }
+        if (email.Length > 320) throw new ArgumentException("Email must contain up to 320 characters.");
     }
 
     private static void ValidatePassword(string password)
