@@ -26,6 +26,7 @@ describe('Authenticated requests', () => {
     client.get('/api/v1/messages').subscribe({ error: () => undefined });
     http.expectOne('/api/v1/messages').flush({}, { status: 401, statusText: 'Unauthorized' });
     expect(auth.role()).toBeNull(); expect(auth.expired()).toBe(true);
+    expect(sessionStorage.getItem('sms-console-session')).toBeNull();
   });
   it('never renders provider or server error bodies', () => {
     const error = new HttpErrorResponse({ status: 502, error: 'provider-secret-body' });

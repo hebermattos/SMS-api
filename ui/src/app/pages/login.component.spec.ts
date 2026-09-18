@@ -1,0 +1,56 @@
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter, Router } from '@angular/router';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { LoginComponent } from './login.component';
+import { AuthService } from '../core/auth.service';
+
+describe('Login screen', () => {
+  let http: HttpTestingController;
+  beforeEach(() => {
+    sessionStorage.clear();
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
+    http = TestBed.inject(HttpTestingController);
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+  });
+  afterEach(() => { TestBed.inject(AuthService).logout(); http.verify(); vi.restoreAllMocks(); });
+
+  it('toggles password visibility and resets credentials when switching account type', async () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges(); await fixture.whenStable();
+    const component = fixture.componentInstance;
+    expect(fixture.nativeElement.querySelector('#credential').type).toBe('password');
+    fixture.nativeElement.querySelector('.signin-reveal').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#credential').type).toBe('text');
+    component.credential = 'do-not-keep';
+    fixture.nativeElement.querySelectorAll('.signin-modes button')[1].click();
+    fixture.detectChanges(); await fixture.whenStable();
+    expect(component.admin()).toBe(true); expect(component.credential).toBe('');
+    expect(fixture.nativeElement.querySelector('#credential').type).toBe('password');
+    expect(fixture.nativeElement.querySelector('#client-id')).toBeNull();
+  });
+
+  it('prevents duplicate requests and clears credentials after a login error', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    component.clientId = ' client '; component.credential = 'secret';
+    component.submit(); component.submit(); component.changeMode(true);
+    const request = http.expectOne('/api/v1/auth/token');
+    expect(request.request.body).toEqual({ clientId: 'client', clientSecret: 'secret' });
+    expect(component.busy()).toBe(true); expect(component.admin()).toBe(false);
+    request.flush({}, { status: 401, statusText: 'Unauthorized' });
+    fixture.detectChanges();
+    expect(component.busy()).toBe(false); expect(component.credential).toBe('');
+    expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('Invalid credentials');
+  });
+
+  it('redirects an existing session to the workspace without logging in again', () => {
+    const token = `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 900 }))}.s`;
+    sessionStorage.setItem('sms-console-session', JSON.stringify({ token, role: 'tenant', identity: 'client' }));
+    TestBed.createComponent(LoginComponent);
+    expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/app');
+    http.expectNone('/api/v1/auth/token');
+  });
+});
