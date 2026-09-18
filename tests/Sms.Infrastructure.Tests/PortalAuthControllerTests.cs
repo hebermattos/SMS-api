@@ -63,7 +63,7 @@ public sealed class PortalAuthControllerTests
 
     private static PortalUserAccount Account(string context, string role) =>
         new(Guid.NewGuid(), Guid.NewGuid(), "portal", "portal@example.com",
-            ClientSecretHasher.Pbkdf2(Password, out var salt), salt, 600000, context, role, true);
+            ClientSecretHasher.Hash(Password).Hash, ClientSecretHasher.Hash(Password).Salt, ClientSecretHasher.DefaultIterations, context, role, true);
 
     private sealed class Users(PortalUserAccount? account) : IPortalUserRepository
     {
