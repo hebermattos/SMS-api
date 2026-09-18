@@ -30,6 +30,6 @@ describe('Authenticated requests', () => {
   it('never renders provider or server error bodies', () => {
     const error = new HttpErrorResponse({ status: 502, error: 'provider-secret-body' });
     expect(errorMessage(error)).not.toContain('provider-secret-body');
-    expect(errorMessage(new HttpErrorResponse({ status: 429 }))).toContain('minuto');
+    expect(errorMessage(new HttpErrorResponse({ status: 429 }))).toContain('minute');
   });
 });

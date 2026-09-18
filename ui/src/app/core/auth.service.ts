@@ -21,7 +21,7 @@ export class AuthService {
   }
   loginAdmin(key: string) {
     return this.http.post<TokenResponse>('/api/v1/admin/auth/token', { key })
-      .pipe(tap(value => this.accept(value.access_token, 'admin', 'Administrador')));
+      .pipe(tap(value => this.accept(value.access_token, 'admin', 'Administrator')));
   }
   bearer(): string | null { return Date.now() < this.expiresAt ? this.token : null; }
 
@@ -32,14 +32,14 @@ export class AuthService {
     this.role.set(null);
     this.identity.set('');
     this.expired.set(expired);
-    void this.router.navigateByUrl('/entrar');
+    void this.router.navigateByUrl('/login');
   }
 
   private accept(token: string, role: PortalRole, identity: string) {
     // Decode expiry only for UX. All authorization is performed by the API.
     const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const claims = JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, '='))) as { exp: number };
-    if (!Number.isFinite(claims.exp) || claims.exp * 1000 <= Date.now()) throw new Error('Sessão inválida.');
+    if (!Number.isFinite(claims.exp) || claims.exp * 1000 <= Date.now()) throw new Error('Invalid session.');
     clearTimeout(this.timer);
     this.token = token;
     this.expiresAt = claims.exp * 1000;
@@ -54,6 +54,6 @@ export class AuthService {
 export const roleGuard: CanActivateFn = route => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  if (!auth.bearer()) return router.parseUrl('/entrar');
+  if (!auth.bearer()) return router.parseUrl('/login');
   return auth.role() === route.data['role'] || router.parseUrl(auth.role() === 'admin' ? '/admin/tenants' : '/app');
 };

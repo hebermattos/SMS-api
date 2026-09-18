@@ -12,22 +12,22 @@ import { IconComponent } from '../shared/icon.component';
     <section class="login-story" aria-label="SMS Console">
       <a class="brand" href="/"><span class="brand-mark"><sms-icon name="message"/></span>SMS<span class="brand-light">console</span></a>
       <div class="login-story-content"><span class="eyebrow light">CONVERSAS QUE CONECTAM</span>
-        <h1>Cada mensagem.<br>Uma conexão.</h1><p>Um só lugar para cuidar dos seus envios, acompanhar entregas e manter tudo sob controle.</p>
+        <h1>Every message.<br>One connection.</h1><p>One place to manage sends, track deliveries, and keep everything under control.</p>
         <div class="message-illustration" aria-hidden="true"><span class="orbit orbit-one"></span><span class="orbit orbit-two"></span><div class="illustration-card"><span class="illustration-icon"><sms-icon name="message"/></span><div><span class="illustration-line"></span><span class="illustration-line short"></span></div><span class="illustration-check"><sms-icon name="check"/></span></div></div>
-      </div><div class="login-story-footer"><sms-icon name="shield"/> Um espaço separado para cada empresa.</div>
+      </div><div class="login-story-footer"><sms-icon name="shield"/> A separate workspace for every company.</div>
     </section>
     <section class="login-form-panel"><div class="login-form-wrap">
-      <span class="eyebrow">BEM-VINDO AO SMS CONSOLE</span><h2>Vamos começar.</h2><p class="muted">Entre no seu espaço de trabalho.</p>
-      <div class="segmented" aria-label="Tipo de acesso"><button type="button" [class.selected]="!admin()" (click)="changeMode(false)" [disabled]="busy()" [attr.aria-pressed]="!admin()">Minha empresa</button><button type="button" [class.selected]="admin()" (click)="changeMode(true)" [disabled]="busy()" [attr.aria-pressed]="admin()">Plataforma</button></div>
-      @if (auth.expired()) { <div class="notice" role="status">Sua sessão terminou. Entre novamente para continuar.</div> }
+      <span class="eyebrow">WELCOME TO SMS CONSOLE</span><h2>Let's get started.</h2><p class="muted">Sign in to your workspace.</p>
+      <div class="segmented" aria-label="Access type"><button type="button" [class.selected]="!admin()" (click)="changeMode(false)" [disabled]="busy()" [attr.aria-pressed]="!admin()">My company</button><button type="button" [class.selected]="admin()" (click)="changeMode(true)" [disabled]="busy()" [attr.aria-pressed]="admin()">Platform</button></div>
+      @if (auth.expired()) { <div class="notice" role="status">Your session has ended. Sign in again to continue.</div> }
       @if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
       <form #form="ngForm" (ngSubmit)="submit()">
-        @if (!admin()) { <label for="client-id">Identificador do cliente</label><input id="client-id" name="clientId" [(ngModel)]="clientId" autocomplete="username" required maxlength="100" placeholder="Seu client ID"/> }
-        <label for="credential">{{ admin() ? 'Chave de administração' : 'Segredo do cliente' }}</label><input id="credential" name="credential" type="password" [(ngModel)]="credential" autocomplete="current-password" required maxlength="1024" [placeholder]="admin() ? 'Informe sua chave de acesso' : 'Informe seu client secret'"/>
-        <button class="button primary full" type="submit" [disabled]="form.invalid || busy()">{{ busy() ? 'Entrando…' : 'Entrar no painel' }}<sms-icon name="arrow"/></button>
+        @if (!admin()) { <label for="client-id">Client identifier</label><input id="client-id" name="clientId" [(ngModel)]="clientId" autocomplete="username" required maxlength="100" placeholder="Your client ID"/> }
+        <label for="credential">{{ admin() ? 'Administration key' : 'Client secret' }}</label><input id="credential" name="credential" type="password" [(ngModel)]="credential" autocomplete="current-password" required maxlength="1024" [placeholder]="admin() ? 'Enter your access key' : 'Enter your client secret'"/>
+        <button class="button primary full" type="submit" [disabled]="form.invalid || busy()">{{ busy() ? 'Signing in…' : 'Sign in to console' }}<sms-icon name="arrow"/></button>
       </form>
-      <p class="login-help"><sms-icon name="shield"/>{{ admin() ? 'Acesso exclusivo à administração da plataforma.' : 'Precisa de acesso? Solicite suas credenciais ao administrador.' }}</p>
-      <p class="fine-print">Por segurança, uma nova entrada é necessária ao recarregar ou fechar esta página.</p>
+      <p class="login-help"><sms-icon name="shield"/>{{ admin() ? 'Exclusive access to platform administration.' : 'Need access? Request credentials from your administrator.' }}</p>
+      <p class="fine-print">For security, you must sign in again after reloading or closing this page.</p>
     </div></section>
   </main>` })
 export class LoginComponent {
