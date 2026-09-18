@@ -16,6 +16,8 @@ Bandwidth outbound SMS uses OAuth 2.0 Client Credentials. Inbound and delivery-s
 
 ## Administration console
 
+Platform actions are audited through `PlatformAuditMiddleware` into `SmsApiLogs.dbo.LogEntries`. Events include the controller action, actor type, outcome, HTTP status, and valid target tenant/client IDs from the route. Login attempts (including rate limits), company creation and updates, client creation/state changes/secret rotation, provider configuration, and administrative reads are recorded. Bodies, headers, credentials, provider input and exception details are excluded. These support-only records have no `TenantId` and are not exposed to tenant log queries. Administrators share the `platform-administrator` identity; individual attribution is unavailable. Company creation has no target ID in the route. Browser-only actions such as logout are not recorded. Delivery uses the existing batched log exporter, not a durable transactional audit ledger.
+
 The Angular 21 console in `ui/` provides two separate workspaces, in Portuguese:
 
 - **Platform administrators:** list/create companies, edit names, suspend/reactivate access, create/disable/reactivate API clients, rotate client secrets, and configure tenant-specific Twilio/Bandwidth credentials and default senders.
