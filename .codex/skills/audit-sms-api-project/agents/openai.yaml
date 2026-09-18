@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit SMS API Project"
+  short_description: "Verify the SMS API against project requirements"
+  default_prompt: "Audit the current SMS API project against all project instructions and report evidence-backed compliance findings."
