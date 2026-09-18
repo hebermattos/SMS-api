@@ -27,7 +27,7 @@ describe('Login screen', () => {
     component.credential = 'do-not-keep';
     fixture.nativeElement.querySelectorAll('.signin-modes button')[1].click();
     fixture.detectChanges(); await fixture.whenStable();
-    expect(component.mode()).toBe('client'); expect(component.credential).toBe('');
+    expect(component.mode()).toBe('platform'); expect(component.credential).toBe('');
     expect(fixture.nativeElement.querySelector('#credential').type).toBe('password');
     expect(fixture.nativeElement.querySelector('#login-identity')).not.toBeNull();
   });
@@ -52,7 +52,7 @@ describe('Login screen', () => {
     component.submit(); component.submit(); component.changeMode('platform');
     const request = http.expectOne('/api/v1/auth/token');
     expect(request.request.body).toEqual({ clientId: 'client', clientSecret: 'secret' });
-    expect(component.busy()).toBe(true); expect(component.mode()).toBe('platform');
+    expect(component.busy()).toBe(true); expect(component.mode()).toBe('client');
     request.flush({}, { status: 401, statusText: 'Unauthorized' });
     fixture.detectChanges();
     expect(component.busy()).toBe(false); expect(component.credential).toBe('');
