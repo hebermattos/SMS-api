@@ -8,6 +8,7 @@ Multi-tenant REST API for sending, receiving, tracking, and querying SMS message
 - SQL Server + Dapper
 - JWT bearer authentication
 - Twilio
+- OpenTelemetry logs, traces and metrics
 - Docker Compose
 - xUnit + Coverlet
 
@@ -43,6 +44,7 @@ POST /api/v1/messages
 GET  /api/v1/messages
 GET  /api/v1/messages/{id}
 GET  /api/v1/messages/{id}/status-history
+GET  /api/v1/logs
 
 POST /api/v1/webhooks/twilio/inbound
 POST /api/v1/webhooks/twilio/status
@@ -52,7 +54,9 @@ POST /api/v1/admin/tenants
 
 Message endpoints require a JWT. The authenticated `tenant_id` claim controls database access; callers do not supply a tenant ID.
 
-Each message status transition is stored in `SmsMessageStatusHistory`. Authenticated clients can query the chronological status history only for messages belonging to their tenant. Technical application logs remain separate from customer-visible message history and must not expose message bodies, credentials, tokens, or complete phone numbers.
+Each message status transition is stored in `SmsMessageStatusHistory`. Authenticated clients can query the chronological status history only for messages belonging to their tenant.
+
+OpenTelemetry stores structured operational events in a separate SQL Server database through `ConnectionStrings__LogsSqlServer`. Authenticated clients can query `GET /api/v1/logs`; the `tenant_id` JWT claim is always applied by the server. Events contain request metadata, severity, trace/span identifiers and safe structured attributes. Message bodies, authorization headers, provider credentials, tokens and phone numbers are never added to these events.
 
 Twilio webhook endpoints are anonymous by design and validate `X-Twilio-Signature` using the tenant provider secret.
 Twilio accounts may be shared by multiple tenants. Callback ownership is resolved by the unique active combination of provider, account ID, and configured sender number. A tenant cannot override its configured sender number when sending.
@@ -69,7 +73,7 @@ Start the complete environment:
 docker compose up --build
 ```
 
-Docker Compose is for local testing only and is not the production deployment model. Every Compose startup recreates the `SmsApi` database from `database/schema.sql` and then provisions the example tenant. Its SQL Server storage is intentionally ephemeral.
+Docker Compose is for local testing only and is not the production deployment model. Every Compose startup recreates the `SmsApi` database from `database/schema.sql`, recreates the separate `SmsApiLogs` database from `database/logs-schema.sql`, and then provisions the example tenant. Its SQL Server storage is intentionally ephemeral.
 
 Development bootstrap credentials:
 
@@ -122,6 +126,7 @@ Runtime configuration is supplied using ASP.NET Core configuration/environment v
 
 ```text
 ConnectionStrings__SqlServer
+ConnectionStrings__LogsSqlServer
 Jwt__Issuer
 Jwt__Audience
 Jwt__Key
@@ -158,6 +163,8 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 ## Security notes
 
 - Tenant isolation is derived from authenticated claims.
+- Customer-visible logs are isolated by the authenticated tenant claim and stored in a separate database.
+- Log events must never contain SMS bodies, authorization headers, credentials, tokens, or phone numbers.
 - Provider API secrets are encrypted at rest.
 - API client secrets use PBKDF2-SHA256.
 - Secret/signature comparisons use fixed-time comparison where applicable.
