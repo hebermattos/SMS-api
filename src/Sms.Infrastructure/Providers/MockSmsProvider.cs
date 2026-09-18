@@ -10,6 +10,8 @@ public sealed class MockSmsProvider : ISmsProvider
     public Task<ProviderSendResult> SendAsync(string from, string to, string body, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(new ProviderSendResult($"mock-{Guid.NewGuid():N}", "sent"));
+        var statuses = new[] { "queued", "sent", "delivered", "failed" };
+        var status = statuses[Random.Shared.Next(statuses.Length)];
+        return Task.FromResult(new ProviderSendResult($"mock-{Guid.NewGuid():N}", status));
     }
 }
