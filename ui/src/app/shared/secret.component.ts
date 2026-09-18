@@ -3,11 +3,11 @@ import { IssuedSecret } from '../core/models';
 import { IconComponent } from './icon.component';
 
 @Component({ selector: 'sms-secret', imports: [IconComponent], template: `
-  <section class="secret-box" aria-label="Credencial gerada" role="status"><div class="section-heading"><div><span class="eyebrow">CREDENCIAL GERADA</span><h3>Guarde este segredo agora.</h3></div><sms-icon name="key"/></div>
-    <p>Esta é a única exibição do segredo. Salve-o em um local seguro antes de sair desta tela.</p>
+  <section class="secret-box" aria-label="Generated credential" role="status"><div class="section-heading"><div><span class="eyebrow">GENERATED CREDENTIAL</span><h3>Save this secret now.</h3></div><sms-icon name="key"/></div>
+    <p>This is the only time the secret will be displayed. Store it securely before leaving this screen.</p>
     <label>Client ID</label><code class="secret-value">{{ secret().clientId }}</code><label>Client secret</label><code class="secret-value">{{ secret().clientSecret }}</code>
-    <div class="button-row"><button class="button" type="button" (click)="copy()">{{ copied() ? 'Copiado' : 'Copiar segredo' }}</button><button class="button primary" type="button" (click)="dismiss.emit()">Já guardei, ocultar</button></div>
-    @if (copyError()) { <p class="muted">Selecione e copie o segredo manualmente. A cópia automática não está disponível.</p> }
+    <div class="button-row"><button class="button" type="button" (click)="copy()">{{ copied() ? 'Copied' : 'Copy secret' }}</button><button class="button primary" type="button" (click)="dismiss.emit()">I saved it, hide</button></div>
+    @if (copyError()) { <p class="muted">Select and copy the secret manually. Automatic copying is unavailable.</p> }
   </section>` })
 export class SecretComponent {
   readonly secret = input.required<IssuedSecret>(); readonly dismiss = output<void>();

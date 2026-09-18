@@ -29,8 +29,8 @@ export class TenantDetailComponent {
   changeTab(tab: 'settings' | 'clients' | 'providers') { if (this.busy()) return; this.tab.set(tab); this.error.set(''); this.success.set(''); this.closeProvider(); }
   updateTenant(isActive = this.tenant()?.isActive ?? true) {
     const tenant = this.tenant(); if (!tenant || this.busy() || !this.tenantName.trim()) return;
-    if (tenant.isActive && !isActive && !confirm('Suspender o acesso desta empresa? Os clientes de API e sessões abertas perderão acesso. Os dados serão preservados.')) return;
-    this.start(); this.http.put<void>(this.base, { name: this.tenantName.trim(), isActive }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({ next: () => { this.tenant.set({ ...tenant, name: this.tenantName.trim(), isActive }); this.success.set('Empresa atualizada.'); }, error: error => this.error.set(errorMessage(error)) });
+    if (tenant.isActive && !isActive && !confirm("Suspend this company's access? API clients and active sessions will lose access. Data will be preserved.")) return;
+    this.start(); this.http.put<void>(this.base, { name: this.tenantName.trim(), isActive }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({ next: () => { this.tenant.set({ ...tenant, name: this.tenantName.trim(), isActive }); this.success.set('Company updated.'); }, error: error => this.error.set(errorMessage(error)) });
   }
   loadClients(page = this.page()) {
     this.start(); this.http.get<Client[]>(`${this.base}/clients`, { params: { skip: page * 20, take: 21 } }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({ next: rows => { this.clients.set(rows.slice(0,20)); this.hasNext.set(rows.length > 20); this.page.set(page); }, error: error => this.error.set(errorMessage(error)) });
@@ -44,11 +44,11 @@ export class TenantDetailComponent {
     ).subscribe({ next: rows => { this.clients.set(rows.slice(0, 20)); this.hasNext.set(rows.length > 20); this.page.set(0); }, error: error => this.error.set(errorMessage(error)) });
   }
   setClientState(client: Client) {
-    if (this.busy() || (client.isActive && !confirm('Desativar este cliente? Suas sessões perderão acesso à API.'))) return;
-    this.start(); this.http.put<void>(`${this.base}/clients/${client.id}/state`, { isActive: !client.isActive }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({ next: () => { this.clients.update(rows => rows.map(row => row.id === client.id ? { ...row, isActive: !row.isActive } : row)); this.success.set('Acesso do cliente atualizado.'); }, error: error => this.error.set(errorMessage(error)) });
+    if (this.busy() || (client.isActive && !confirm("Deactivate this client? Its sessions will lose API access."))) return;
+    this.start(); this.http.put<void>(`${this.base}/clients/${client.id}/state`, { isActive: !client.isActive }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({ next: () => { this.clients.update(rows => rows.map(row => row.id === client.id ? { ...row, isActive: !row.isActive } : row)); this.success.set('Client access updated.'); }, error: error => this.error.set(errorMessage(error)) });
   }
   rotate(client: Client) {
-    if (this.busy() || this.secret() || !confirm('Gerar outro segredo? O segredo anterior deixará de funcionar para novas autenticações. Atualize as integrações que usam este cliente.')) return;
+    if (this.busy() || this.secret() || !confirm('Generate another secret? The previous secret will stop working for new authentications. Update integrations that use this client.')) return;
     this.start(); this.http.post<IssuedSecret>(`${this.base}/clients/${client.id}/rotate-secret`, {}).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({ next: secret => this.secret.set(secret), error: error => this.error.set(errorMessage(error)) });
   }
   providerFor(name: string) { return this.providers().find(x => x.provider === name); }
@@ -62,7 +62,7 @@ export class TenantDetailComponent {
   saveProvider() {
     const definition = this.editingProvider(); if (!definition || this.busy()) return;
     this.start(); this.http.put<void>(`${this.base}/providers/${encodeURIComponent(definition.name)}`, { accountId: this.accountId, fromNumber: this.fromNumber, isActive: this.providerActive, isDefault: this.providerActive && this.providerDefault, apiSecret: this.apiSecret || null, settings: this.settings })
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => { this.busy.set(false); this.apiSecret = ''; for (const field of definition.fields.filter(x => x.secret)) this.settings[field.key] = ''; })).subscribe({ next: () => { this.closeProvider(); this.success.set('Configuração salva com segurança.'); this.http.get<ProviderConfig[]>(`${this.base}/providers`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: rows => this.providers.set(rows), error: error => this.error.set(errorMessage(error)) }); }, error: error => this.error.set(errorMessage(error)) });
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => { this.busy.set(false); this.apiSecret = ''; for (const field of definition.fields.filter(x => x.secret)) this.settings[field.key] = ''; })).subscribe({ next: () => { this.closeProvider(); this.success.set('Configuration saved securely.'); this.http.get<ProviderConfig[]>(`${this.base}/providers`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: rows => this.providers.set(rows), error: error => this.error.set(errorMessage(error)) }); }, error: error => this.error.set(errorMessage(error)) });
   }
   private start() { this.busy.set(true); this.error.set(''); this.success.set(''); }
 }

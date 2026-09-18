@@ -16,13 +16,13 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 };
 
 export function errorMessage(error: unknown): string {
-  if (!(error instanceof HttpErrorResponse)) return 'Não foi possível concluir. Tente novamente.';
-  if (error.status === 0) return 'Não foi possível conectar à API. Verifique sua conexão e tente novamente.';
-  if (error.status === 401) return 'Credenciais inválidas ou acesso inativo.';
-  if (error.status === 403) return 'Seu acesso não permite esta operação.';
-  if (error.status === 404) return 'O cadastro não foi encontrado.';
-  if (error.status === 429) return 'Muitas tentativas. Aguarde um minuto e tente novamente.';
-  if (error.status === 409) return 'Já existe um cadastro com estes identificadores.';
-  if (error.status === 400) return typeof error.error?.error === 'string' ? error.error.error : 'Confira os campos e tente novamente.';
-  return 'O serviço está indisponível no momento. Tente novamente mais tarde.';
+  if (!(error instanceof HttpErrorResponse)) return 'The request could not be completed. Please try again.';
+  if (error.status === 0) return 'The API could not be reached. Check your connection and try again.';
+  if (error.status === 401) return 'Invalid credentials or inactive access.';
+  if (error.status === 403) return 'Your account is not allowed to perform this operation.';
+  if (error.status === 404) return 'The requested record was not found.';
+  if (error.status === 429) return 'Too many attempts. Wait one minute and try again.';
+  if (error.status === 409) return 'A record with these identifiers already exists.';
+  if (error.status === 400) return typeof error.error?.error === 'string' ? error.error.error : 'Check the fields and try again.';
+  return 'The service is currently unavailable. Please try again later.';
 }

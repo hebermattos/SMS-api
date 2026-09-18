@@ -52,6 +52,6 @@ describe('Portal sessions', () => {
 
   it('routes anonymous visitors to login', () => {
     const route = new ActivatedRouteSnapshot(); route.data = { role: 'tenant' };
-    expect(String(TestBed.runInInjectionContext(() => roleGuard(route, {} as RouterStateSnapshot)))).toBe('/entrar');
+    expect(String(TestBed.runInInjectionContext(() => roleGuard(route, {} as RouterStateSnapshot)))).toBe('/login');
   });
 });
