@@ -1,11 +1,22 @@
 ---
 name: simple-maintainable-code
-description: Review, write, refactor, or improve code with simplicity, readability, and maintainability as the highest priorities. Use for code reviews, implementation, refactoring, bug fixes, test design, and architecture decisions in this project, especially when choosing between a straightforward solution and abstractions, optimizations, or patterns.
+description: Execute a code-quality review and generate a structured report when called, while also guiding code writing, refactoring, bug fixes, test design, and architecture decisions. Prioritize simple, readable, and maintainable code over abstractions, optimizations, or patterns in this project.
 ---
 
 # Simple and Maintainable Code
 
 Apply this skill whenever changing or reviewing project code.
+
+## Execution contract
+
+When this skill is called, execute a review and generate a report in the response. Do not only state that the skill is active.
+
+- Review the files, diff, pull request, or code scope provided by the user.
+- If no scope is provided, inspect the current project changes and the most relevant code for the request. If the project cannot be accessed, state that limitation in the report.
+- Check correctness, security, data isolation, readability, maintainability, testability, and evidence-based performance concerns.
+- Report findings even when the result is clean: explicitly state that no findings were found and list any remaining uncertainty.
+- Do not modify code unless the user also asks for a fix.
+
 
 ## Priorities
 
@@ -56,6 +67,18 @@ Before finishing, verify:
 - Are tests focused on externally visible behavior?
 - Did the change avoid unrelated refactoring?
 - Is any performance claim supported by evidence?
+
+## Report format
+
+Always generate a report with these sections:
+
+- **Scope**: files, diff, or behavior reviewed.
+- **Summary**: overall assessment in a few sentences.
+- **Findings**: ordered by priority. For each finding, include severity, location, problem, impact, and the smallest clear improvement.
+- **Tests and verification**: existing tests reviewed or checks that should be run.
+- **Remaining uncertainty**: information or validation still missing. Write “None” when there is none.
+
+Use “No findings” when the code meets the priorities.
 
 ## Output format for reviews
 
