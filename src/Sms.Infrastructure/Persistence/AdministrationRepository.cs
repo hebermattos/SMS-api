@@ -14,7 +14,7 @@ public sealed class AdministrationRepository(SqlConnectionFactory factory, ISecr
         // This cross-tenant metadata query is exposed only by the PlatformAdmin policy.
         using var connection = factory.CreateConnection();
         return (await connection.QueryAsync<TenantSummary>(new CommandDefinition("""
-            SELECT Id, Name, IsActive, CreatedAt FROM dbo.Tenants
+            SELECT Id, Name, TimeZoneId, IsActive, CreatedAt FROM dbo.Tenants
             ORDER BY CreatedAt DESC, Id OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;
             """, new { Skip = skip, Take = take }, cancellationToken: cancellationToken))).AsList();
     }
@@ -23,15 +23,15 @@ public sealed class AdministrationRepository(SqlConnectionFactory factory, ISecr
     {
         using var connection = factory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<TenantSummary>(new CommandDefinition(
-            "SELECT Id, Name, IsActive, CreatedAt FROM dbo.Tenants WHERE Id=@TenantId;", new { TenantId = tenantId }, cancellationToken: cancellationToken));
+            "SELECT Id, Name, TimeZoneId, IsActive, CreatedAt FROM dbo.Tenants WHERE Id=@TenantId;", new { TenantId = tenantId }, cancellationToken: cancellationToken));
     }
 
-    public async Task<bool> UpdateTenantAsync(Guid tenantId, string name, bool isActive, CancellationToken cancellationToken)
+    public async Task<bool> UpdateTenantAsync(Guid tenantId, string name, string timeZoneId, bool isActive, CancellationToken cancellationToken)
     {
         using var connection = factory.CreateConnection();
         return await connection.ExecuteAsync(new CommandDefinition(
-            "UPDATE dbo.Tenants SET Name=@Name, IsActive=@IsActive WHERE Id=@TenantId;",
-            new { TenantId = tenantId, Name = name, IsActive = isActive }, cancellationToken: cancellationToken)) == 1;
+            "UPDATE dbo.Tenants SET Name=@Name, TimeZoneId=@TimeZoneId, IsActive=@IsActive WHERE Id=@TenantId;",
+            new { TenantId = tenantId, Name = name, TimeZoneId = timeZoneId, IsActive = isActive }, cancellationToken: cancellationToken)) == 1;
     }
 
     public async Task<IReadOnlyList<ClientSummary>> ListClientsAsync(Guid tenantId, int skip, int take, CancellationToken cancellationToken)

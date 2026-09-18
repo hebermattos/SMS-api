@@ -3,7 +3,7 @@ export type PortalContext = 'platform' | 'tenant';
 export type PortalPermissionRole = 'user' | 'administrator';
 export interface TokenResponse { access_token: string; token_type: string; }
 export interface PortalSession { token: string; identity: string; role: PortalRole; context: PortalContext; permissionRole: PortalPermissionRole; }
-export interface Tenant { id: string; name: string; isActive: boolean; createdAt: string; }
+export interface Tenant { id: string; name: string; timeZoneId: string; isActive: boolean; createdAt: string; }
 export interface Client { id: string; clientId: string; isActive: boolean; createdAt: string; }
 export interface Administrator { id: string; username: string; isActive: boolean; createdAt: string; }
 export interface PortalUser { id: string; tenantId: string | null; username: string; context: PortalContext; role: PortalPermissionRole; isActive: boolean; createdAt: string; }

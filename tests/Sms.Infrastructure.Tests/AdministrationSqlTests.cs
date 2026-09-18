@@ -51,9 +51,9 @@ public sealed class AdministrationSqlTests
             await service.SetClientActiveAsync(tenant, client.Id, false, default);
             Assert.Null(await credentials.GetActiveByClientIdAsync(issued.ClientId));
             await service.SetClientActiveAsync(tenant, client.Id, true, default);
-            await service.UpdateTenantAsync(tenant, "Renamed", false, default);
+            await service.UpdateTenantAsync(tenant, "Renamed", "America/Sao_Paulo", false, default);
             Assert.Null(await credentials.GetActiveByClientIdAsync(issued.ClientId));
-            await service.UpdateTenantAsync(tenant, "Renamed", true, default);
+            await service.UpdateTenantAsync(tenant, "Renamed", "UTC", true, default);
             Assert.NotNull(await credentials.GetActiveByClientIdAsync(issued.ClientId));
 
             var twilio = new ProviderEdit(account, "+15550000001", true, true, "local-test-secret", null);

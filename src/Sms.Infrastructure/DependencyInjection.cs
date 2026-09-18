@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddSingleton<IProviderSettingsPolicy, TwilioSettingsPolicy>();
         services.AddSingleton<IProviderSettingsPolicy, BandwidthSettingsPolicy>();
         services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<ITenantTimeZoneProvider, TenantTimeZoneProvider>();
         services.AddScoped<ITenantProvisioner, TenantProvisioner>();
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();
         services.AddScoped<ISmsReportRepository, SmsReportRepository>();

@@ -34,7 +34,7 @@ public sealed class AdministrationServiceTests
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.CreateClientAsync(missing, null, default));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.ListClientsAsync(missing, 0, 20, default));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.ListProvidersAsync(missing, default));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateTenantAsync(missing, "Name", true, default));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateTenantAsync(missing, "Name", "UTC", true, default));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.SetClientActiveAsync(missing, repo.ClientId, false, default));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.RotateClientSecretAsync(missing, repo.ClientId, default));
         Assert.Null(repo.CreatedClient);
@@ -55,7 +55,7 @@ public sealed class AdministrationServiceTests
         var repo = new AdministrationFakeRepository(); var service = Service(repo); using var source = new CancellationTokenSource();
         Assert.Single(await service.ListTenantsAsync(0, 20, source.Token));
         Assert.Single(await service.ListClientsAsync(repo.Tenant.Id, 0, 20, source.Token));
-        await service.UpdateTenantAsync(repo.Tenant.Id, " Renamed ", false, source.Token);
+        await service.UpdateTenantAsync(repo.Tenant.Id, " Renamed ", "America/Sao_Paulo", false, source.Token);
         Assert.Equal("Renamed", repo.Tenant.Name); Assert.False(repo.Tenant.IsActive);
         await service.SetClientActiveAsync(repo.Tenant.Id, repo.ClientId, false, source.Token);
         Assert.False(repo.ClientActive); Assert.Equal(source.Token, repo.LastToken);
@@ -66,14 +66,14 @@ public sealed class AdministrationServiceTests
     public async Task BlankNames_AreRejected(string name)
     {
         var repo = new AdministrationFakeRepository();
-        await Assert.ThrowsAsync<ArgumentException>(() => Service(repo).UpdateTenantAsync(repo.Tenant.Id, name, true, default));
+        await Assert.ThrowsAsync<ArgumentException>(() => Service(repo).UpdateTenantAsync(repo.Tenant.Id, name, "UTC", true, default));
     }
 
     [Fact]
     public async Task InvalidClientIdentifiersAndLongNames_AreRejected()
     {
         var repo = new AdministrationFakeRepository(); var service = Service(repo);
-        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateTenantAsync(repo.Tenant.Id, new string('x', 201), true, default));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateTenantAsync(repo.Tenant.Id, new string('x', 201), "UTC", true, default));
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateClientAsync(repo.Tenant.Id, "not valid", default));
         Assert.Null(repo.CreatedClient);
     }
@@ -135,7 +135,7 @@ public sealed class AdministrationServiceTests
 
 internal sealed class AdministrationFakeRepository : IAdministrationRepository, ITenantSmsProviderRepository
 {
-    public TenantSummary Tenant { get; set; } = new(Guid.NewGuid(), "Company", true, DateTimeOffset.UtcNow);
+    public TenantSummary Tenant { get; set; } = new(Guid.NewGuid(), "Company", "UTC", true, DateTimeOffset.UtcNow);
     public Guid ClientId { get; } = Guid.NewGuid();
     public Guid LastTenant { get; private set; } public Guid LastClient { get; private set; }
     public CancellationToken LastToken { get; private set; } public bool ClientActive { get; private set; } = true;
@@ -145,7 +145,7 @@ internal sealed class AdministrationFakeRepository : IAdministrationRepository, 
     public TenantSmsProviderConfiguration? SavedProvider { get; private set; }
     public Task<IReadOnlyList<TenantSummary>> ListTenantsAsync(int skip, int take, CancellationToken c) => Task.FromResult<IReadOnlyList<TenantSummary>>([Tenant]);
     public Task<TenantSummary?> GetTenantAsync(Guid id, CancellationToken c) => Task.FromResult(id == Tenant.Id ? Tenant : null);
-    public Task<bool> UpdateTenantAsync(Guid id, string name, bool active, CancellationToken c) { if (id != Tenant.Id) return Task.FromResult(false); Tenant = Tenant with { Name = name, IsActive = active }; return Task.FromResult(true); }
+    public Task<bool> UpdateTenantAsync(Guid id, string name, string timeZoneId, bool active, CancellationToken c) { if (id != Tenant.Id) return Task.FromResult(false); Tenant = Tenant with { Name = name, TimeZoneId = timeZoneId, IsActive = active }; return Task.FromResult(true); }
     public Task<IReadOnlyList<ClientSummary>> ListClientsAsync(Guid tenant, int skip, int take, CancellationToken c) => Task.FromResult<IReadOnlyList<ClientSummary>>([new(ClientId, "client", true, DateTimeOffset.UtcNow)]);
     public Task CreateClientAsync(CreateApiClient client, CancellationToken c) { CreatedClient = client; return Task.CompletedTask; }
     public Task<bool> SetClientActiveAsync(Guid tenant, Guid id, bool active, CancellationToken c) { LastTenant = tenant; LastClient = id; LastToken = c; if (tenant != Tenant.Id || id != ClientId) return Task.FromResult(false); ClientActive = active; return Task.FromResult(true); }

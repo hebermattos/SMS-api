@@ -17,7 +17,7 @@ public sealed class TenantProvisioner(SqlConnectionFactory connectionFactory) : 
         {
             var now = DateTimeOffset.UtcNow;
             await connection.ExecuteAsync(new CommandDefinition(
-                "INSERT INTO dbo.Tenants (Id, Name, IsActive, CreatedAt) VALUES (@Id, @Name, 1, @Now);",
+                "INSERT INTO dbo.Tenants (Id, Name, TimeZoneId, IsActive, CreatedAt) VALUES (@Id, @Name, 'UTC', 1, @Now);",
                 new { Id = tenantId, Name = name, Now = now }, transaction, cancellationToken: cancellationToken));
 
             await connection.ExecuteAsync(new CommandDefinition("""

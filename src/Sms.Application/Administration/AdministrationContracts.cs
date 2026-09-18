@@ -3,7 +3,7 @@ using Sms.Application.Providers;
 
 namespace Sms.Application.Administration;
 
-public sealed record TenantSummary(Guid Id, string Name, bool IsActive, DateTimeOffset CreatedAt);
+public sealed record TenantSummary(Guid Id, string Name, string TimeZoneId, bool IsActive, DateTimeOffset CreatedAt);
 public sealed record ClientSummary(Guid Id, string ClientId, bool IsActive, DateTimeOffset CreatedAt);
 public sealed record IssuedClientSecret(string ClientId, string ClientSecret);
 public sealed record ProviderField(string Key, string Label, bool Secret, bool Required);
@@ -25,7 +25,7 @@ public interface IAdministrationRepository
 {
     Task<IReadOnlyList<TenantSummary>> ListTenantsAsync(int skip, int take, CancellationToken cancellationToken);
     Task<TenantSummary?> GetTenantAsync(Guid tenantId, CancellationToken cancellationToken);
-    Task<bool> UpdateTenantAsync(Guid tenantId, string name, bool isActive, CancellationToken cancellationToken);
+    Task<bool> UpdateTenantAsync(Guid tenantId, string name, string timeZoneId, bool isActive, CancellationToken cancellationToken);
     Task<IReadOnlyList<ClientSummary>> ListClientsAsync(Guid tenantId, int skip, int take, CancellationToken cancellationToken);
     Task CreateClientAsync(CreateApiClient client, CancellationToken cancellationToken);
     Task<bool> SetClientActiveAsync(Guid tenantId, Guid clientId, bool isActive, CancellationToken cancellationToken);

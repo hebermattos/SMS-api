@@ -20,13 +20,17 @@ public sealed class AdministrationService(IAdministrationRepository repository,
     public async Task<TenantSummary> GetTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
         await repository.GetTenantAsync(tenantId, cancellationToken) ?? throw new KeyNotFoundException();
 
-    public async Task UpdateTenantAsync(Guid tenantId, string name, bool isActive, CancellationToken cancellationToken)
+    public async Task UpdateTenantAsync(Guid tenantId, string name, string timeZoneId, bool isActive, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 200)
             throw new ArgumentException("Enter a name with up to 200 characters.");
-        if (!await repository.UpdateTenantAsync(tenantId, name.Trim(), isActive, cancellationToken))
+        if (!TimeZoneCatalog.IsValid(timeZoneId))
+            throw new ArgumentException("Enter a valid IANA time zone identifier.");
+        if (!await repository.UpdateTenantAsync(tenantId, name.Trim(), timeZoneId.Trim(), isActive, cancellationToken))
             throw new KeyNotFoundException();
     }
+
+    public static IReadOnlyList<string> TimeZones => TimeZoneCatalog.Ids;
 
     public async Task<IReadOnlyList<ClientSummary>> ListClientsAsync(Guid tenantId, int skip, int take, CancellationToken cancellationToken)
     {
