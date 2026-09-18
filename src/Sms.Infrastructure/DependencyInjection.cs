@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sms.Application.Auth;
+using Sms.Application.Common;
 using Sms.Application.Administration;
 using Sms.Application.Messages;
 using Sms.Application.Logs;
