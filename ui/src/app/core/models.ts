@@ -1,8 +1,12 @@
 export type PortalRole = 'admin' | 'tenant';
+export type PortalContext = 'platform' | 'tenant';
+export type PortalPermissionRole = 'user' | 'administrator';
 export interface TokenResponse { access_token: string; token_type: string; }
+export interface PortalSession { token: string; identity: string; role: PortalRole; context: PortalContext; permissionRole: PortalPermissionRole; }
 export interface Tenant { id: string; name: string; isActive: boolean; createdAt: string; }
 export interface Client { id: string; clientId: string; isActive: boolean; createdAt: string; }
 export interface Administrator { id: string; username: string; isActive: boolean; createdAt: string; }
+export interface PortalUser { id: string; tenantId: string | null; username: string; context: PortalContext; role: PortalPermissionRole; isActive: boolean; createdAt: string; }
 export interface IssuedSecret { clientId: string; clientSecret: string; }
 export interface ProvisionedTenant { tenant_id: string; name: string; client_id: string; client_secret: string; }
 export interface ProviderField { key: string; label: string; secret: boolean; required: boolean; }
@@ -20,7 +24,6 @@ export interface Message {
 export interface StatusHistory { id: string; messageId: string; status: number; createdAt: string; }
 export interface LogEntry { id: number; timestamp: string; severity: string; category: string; message: string; traceId: string | null; spanId: string | null; }
 export interface SendResult { id: string; provider: string; status: string; }
-
 export interface SmsReportProviderSummary { provider: string; totalMessages: number; delivered: number; failed: number; }
 export interface SmsReportSummary { totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; outbound: number; inbound: number; byProvider: SmsReportProviderSummary[]; }
 export interface PlatformSmsReportTenantSummary { tenantId: string; tenantName: string; totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; }
