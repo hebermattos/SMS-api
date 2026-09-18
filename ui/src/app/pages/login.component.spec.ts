@@ -27,7 +27,7 @@ describe('Login screen', () => {
     component.credential = 'do-not-keep';
     fixture.nativeElement.querySelectorAll('.signin-modes button')[1].click();
     fixture.detectChanges(); await fixture.whenStable();
-    expect(component.mode()).toBe('platform'); expect(component.credential).toBe('');
+    expect(component.mode()).toBe('client'); expect(component.credential).toBe('');
     expect(fixture.nativeElement.querySelector('#credential').type).toBe('password');
     expect(fixture.nativeElement.querySelector('#login-identity')).not.toBeNull();
   });
