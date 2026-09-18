@@ -127,6 +127,8 @@ jobs:
               time.sleep(2)
           else: raise RuntimeError('API did not become healthy')
           assert request('/api/v1/admin/auth/token', {'key': 'local-admin-key-change-me'})[0] == 400
+          assert request('/api/v1/admin/auth/token', {'username': 'admin'})[0] == 400
+          assert request('/api/v1/admin/auth/token', {'username': 'admin', 'password': 'x' * 129})[0] == 400
           assert request('/api/v1/admin/auth/token', {'username': 'admin', 'password': 'wrong'})[0] == 401
           status, body = request('/api/v1/admin/auth/token', {'username': 'ADMIN', 'password': 'Admin_Local_2026!'})
           assert status == 200, 'Administrator login failed'
