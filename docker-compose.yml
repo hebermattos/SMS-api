@@ -16,16 +16,15 @@ services:
       start_period: 20s
 
   db-init:
-    image: mcr.microsoft.com/mssql-tools
+    build:
+      context: .
+      dockerfile: tools/Sms.Migrate/Dockerfile
     depends_on:
       sqlserver:
         condition: service_healthy
-    volumes:
-      - ./database:/database:ro
-    entrypoint: ["/bin/bash","-c"]
-    command: >
-      /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}"
-      -i /database/docker-init.sql
+    environment:
+      ConnectionStrings__SqlServer: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
+    command: ["--migrations", "/app/database/migrations", "--seed", "/app/database/seeds/example_tenant.sql"]
 
   api:
     build:
