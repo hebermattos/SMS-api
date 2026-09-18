@@ -27,7 +27,7 @@ public sealed class AdministratorSqlTests
             Assert.True(await repository.IsActiveAsync(id));
             Assert.NotNull(await authentication.AuthenticateAsync(username.ToUpperInvariant(), "local-admin-test-password"));
             Assert.Null(await authentication.AuthenticateAsync(username, "wrong-password"));
-            await Assert.ThrowsAsync<SqlException>(() => authentication.CreateAsync(username.ToUpperInvariant(), "another-local-password"));
+            await Assert.ThrowsAsync<AdministratorConflictException>(() => authentication.CreateAsync(username.ToUpperInvariant(), "another-local-password"));
             await connection.ExecuteAsync("UPDATE dbo.PlatformAdministrators SET IsActive=0 WHERE Id=@Id;", new { Id = id });
             Assert.False(await repository.IsActiveAsync(id));
             Assert.False(await repository.IsActiveAsync(Guid.NewGuid()));
