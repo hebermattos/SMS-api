@@ -35,7 +35,8 @@ public sealed class BandwidthWebhookSqlTests
         }).Build();
         var factory = new SqlConnectionFactory(configuration);
         var providers = new TenantSmsProviderRepository(factory, new AesGcmSecretProtector(configuration));
-        var messages = new SmsMessageRepository(factory);
+        var contentProtector = new AesGcmSmsContentProtector(configuration);
+        var messages = new SmsMessageRepository(factory, contentProtector);
         var service = new ReceiveSmsWebhookService(messages);
         var parser = new BandwidthWebhookParser(providers);
         var tenant = Guid.NewGuid();
@@ -65,6 +66,12 @@ public sealed class BandwidthWebhookSqlTests
             await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => Receive(BandwidthWebhooksControllerTests.Payload(), SmsDirection.Inbound)));
             var inbound = Assert.Single(await messages.GetHistoryAsync(tenant, 0, 100));
             Assert.Equal(SmsStatus.Received, inbound.Status);
+            Assert.Equal("hello", inbound.Body);
+            var encrypted = await connection.QuerySingleAsync<(string From, string To, string Body)>(
+                "SELECT [From], [To], Body FROM dbo.SmsMessages WHERE Id=@Id;", new { inbound.Id });
+            Assert.DoesNotContain(inbound.From, encrypted.From);
+            Assert.DoesNotContain(inbound.To, encrypted.To);
+            Assert.DoesNotContain(inbound.Body, encrypted.Body);
             Assert.Single(await messages.GetStatusHistoryAsync(tenant, inbound.Id));
             Assert.Empty(await messages.GetHistoryAsync(otherTenant, 0, 100));
             Assert.Null(await messages.GetByIdAsync(otherTenant, inbound.Id));

@@ -1,16 +1,18 @@
 using Dapper;
 using Sms.Application.Messages;
+using Sms.Application.Security;
 using Sms.Domain.Messages;
 
 namespace Sms.Infrastructure.Persistence;
 
-public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory) : ISmsMessageRepository
+public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory, ISmsContentProtector protector) : ISmsMessageRepository
 {
     public async Task<SmsMessage?> GetByIdAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default)
     {
         const string sql = """SELECT Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, UpdatedAt FROM dbo.SmsMessages WHERE TenantId = @TenantId AND Id = @Id;""";
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<SmsMessage>(new CommandDefinition(sql, new { TenantId = tenantId, Id = id }, cancellationToken: cancellationToken));
+        var message = await connection.QuerySingleOrDefaultAsync<SmsMessage>(new CommandDefinition(sql, new { TenantId = tenantId, Id = id }, cancellationToken: cancellationToken));
+        return message is null ? null : Decrypt(message);
     }
 
     public async Task<IReadOnlyList<SmsMessage>> GetHistoryAsync(Guid tenantId, int skip, int take, CancellationToken cancellationToken = default)
@@ -18,7 +20,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
         const string sql = """SELECT Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, UpdatedAt FROM dbo.SmsMessages WHERE TenantId = @TenantId ORDER BY CreatedAt DESC OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;""";
         using var connection = connectionFactory.CreateConnection();
         var rows = await connection.QueryAsync<SmsMessage>(new CommandDefinition(sql, new { TenantId = tenantId, Skip = skip, Take = take }, cancellationToken: cancellationToken));
-        return rows.AsList();
+        return rows.Select(Decrypt).ToArray();
     }
 
     public async Task<IReadOnlyList<SmsStatusHistory>> GetStatusHistoryAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
@@ -49,7 +51,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
             COMMIT TRANSACTION;
             """;
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(sql, message, cancellationToken: cancellationToken));
+        await connection.ExecuteAsync(new CommandDefinition(sql, EncryptedParameters(message), cancellationToken: cancellationToken));
     }
 
     public async Task InsertInboundIfNotExistsAsync(SmsMessage message, CancellationToken cancellationToken = default)
@@ -76,7 +78,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
             COMMIT TRANSACTION;
             """;
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(sql, message, cancellationToken: cancellationToken));
+        await connection.ExecuteAsync(new CommandDefinition(sql, EncryptedParameters(message), cancellationToken: cancellationToken));
     }
 
     public async Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
@@ -134,4 +136,34 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory)
             Queued = SmsStatus.Queued, Sent = SmsStatus.Sent, Delivered = SmsStatus.Delivered, Failed = SmsStatus.Failed
         }, cancellationToken: cancellationToken));
     }
+
+    private object EncryptedParameters(SmsMessage message) => new
+    {
+        message.Id,
+        message.TenantId,
+        From = protector.Protect(message.TenantId, message.Id, nameof(message.From), message.From),
+        To = protector.Protect(message.TenantId, message.Id, nameof(message.To), message.To),
+        Body = protector.Protect(message.TenantId, message.Id, nameof(message.Body), message.Body),
+        message.Provider,
+        message.ProviderMessageId,
+        message.Direction,
+        message.Status,
+        message.CreatedAt,
+        message.UpdatedAt
+    };
+
+    private SmsMessage Decrypt(SmsMessage message) => new()
+    {
+        Id = message.Id,
+        TenantId = message.TenantId,
+        From = protector.Unprotect(message.TenantId, message.Id, nameof(message.From), message.From),
+        To = protector.Unprotect(message.TenantId, message.Id, nameof(message.To), message.To),
+        Body = protector.Unprotect(message.TenantId, message.Id, nameof(message.Body), message.Body),
+        Provider = message.Provider,
+        ProviderMessageId = message.ProviderMessageId,
+        Direction = message.Direction,
+        Status = message.Status,
+        CreatedAt = message.CreatedAt,
+        UpdatedAt = message.UpdatedAt
+    };
 }
