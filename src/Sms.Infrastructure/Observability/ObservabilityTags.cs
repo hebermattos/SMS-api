@@ -15,6 +15,13 @@ internal static class ObservabilityTags
         "error.type"
     ];
 
+    internal static string? Serialize(OpenTelemetry.ReadOnlyTagCollection tags)
+    {
+        var values = new Dictionary<string, object?>();
+        foreach (var tag in tags) values[tag.Key] = tag.Value;
+        return Serialize(values);
+    }
+
     internal static string? Serialize(IEnumerable<KeyValuePair<string, object?>> tags)
     {
         var safe = tags
