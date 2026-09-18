@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<BandwidthWebhookParser>();
         services.AddSingleton<ISmsWebhookUrlProvider, ConfiguredSmsWebhookUrlProvider>();
         services.AddScoped<IApiClientRepository, ApiClientRepository>();
+        services.AddScoped<IPortalUserRepository, PortalUserRepository>();
         services.AddScoped<IAdministratorRepository, AdministratorRepository>();
         services.AddScoped<IAdministrationRepository, AdministrationRepository>();
         services.AddScoped<ITenantPortalRepository, TenantPortalRepository>();
