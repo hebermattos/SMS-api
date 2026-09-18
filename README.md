@@ -48,7 +48,7 @@ database/
   seeds/               Test-only bootstrap data
 ```
 
-All SMS providers implement the same `ISmsProvider` interface and are selected through `ISmsProviderResolver`. Provider credentials are tenant-specific and secrets are encrypted at rest using AES-256-GCM.
+All SMS providers implement the same `ISmsProvider` interface and are selected through `ISmsProviderResolver`. Provider credentials are tenant-specific and secrets are encrypted at rest using AES-256-GCM. SMS sender, recipient and body are also encrypted by the application before SQL persistence and decrypted only after tenant-scoped retrieval.
 
 ## Implemented API
 
@@ -233,6 +233,7 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 - Customer-visible logs are isolated by the authenticated tenant claim and stored in a separate database.
 - Log events must never contain SMS bodies, authorization headers, credentials, tokens, or phone numbers.
 - Provider API secrets are encrypted at rest.
+- SMS sender, recipient and body are encrypted at rest with tenant-derived AES-256-GCM keys and authenticated field binding.
 - API client secrets use PBKDF2-SHA256.
 - Secret/signature comparisons use fixed-time comparison where applicable.
 - Twilio error response bodies are not propagated to API callers.

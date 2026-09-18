@@ -41,6 +41,7 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 ## Security and sensitive data
 
 - Encrypt provider secrets and sensitive provider settings in the application with AES-256-GCM before database persistence.
+- Encrypt SMS sender, recipient, and body in the application before database persistence. Decrypt them only after a tenant-scoped query succeeds.
 - Keep the Base64 master key outside SQL Server and outside the repository. Plaintext secrets may exist only in memory while required.
 - Never commit credentials, tokens, production connection strings, encryption keys, or real customer data.
 - Use fixed-time comparison for secrets and webhook signatures where applicable.
