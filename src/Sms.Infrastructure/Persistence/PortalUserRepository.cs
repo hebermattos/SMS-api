@@ -11,7 +11,7 @@ public sealed class PortalUserRepository(SqlConnectionFactory connections) : IPo
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-            SELECT Id, TenantId, Username, PasswordHash, PasswordSalt, PasswordIterations,
+            SELECT Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations,
                    Context, Role, IsActive
             FROM dbo.PortalUsers
             WHERE Username = @Username
