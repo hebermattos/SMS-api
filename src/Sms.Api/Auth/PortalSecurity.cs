@@ -10,16 +10,23 @@ namespace Sms.Api.Auth;
 
 public static class PortalSecurity
 {
-    public const string AdminPolicy = "PlatformAdmin";
+    public const string AdminPolicy = "PlatformAdministrator";
+    public const string UserPolicy = "User";
     public const string AdminClaim = "platform_admin";
+    public const string RoleClaim = "role";
+    public const string UserRole = "user";
+    public const string AdministratorRole = "administrator";
     public static readonly object AdministratorLoginIdentityKey = new();
 
     public static void ConfigureAuthorization(AuthorizationOptions options)
     {
         options.DefaultPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
+            .RequireClaim(RoleClaim, UserRole)
             .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _)
                 && !context.User.HasClaim(AdminClaim, "true")).Build();
-        options.AddPolicy(AdminPolicy, policy => policy.RequireAuthenticatedUser().RequireClaim(AdminClaim, "true")
+        options.AddPolicy(UserPolicy, policy => policy.RequireAuthenticatedUser().RequireClaim(RoleClaim, UserRole)
+            .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _)));
+        options.AddPolicy(AdminPolicy, policy => policy.RequireAuthenticatedUser().RequireClaim(AdminClaim, "true").RequireClaim(RoleClaim, AdministratorRole)
             .RequireAssertion(context => !context.User.HasClaim(x => x.Type == "tenant_id")));
     }
 
