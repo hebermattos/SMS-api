@@ -1,0 +1,52 @@
+using System.Diagnostics;
+using Dapper;
+using Microsoft.Data.SqlClient;
+using OpenTelemetry;
+
+namespace Sms.Infrastructure.Observability;
+
+public sealed class SqlServerTraceExporter(string connectionString) : BaseExporter<Activity>
+{
+    private const string InsertSql = """
+        INSERT INTO dbo.Traces
+            (StartedAt, DurationMilliseconds, TraceId, SpanId, ParentSpanId, Name, Source, Kind, Status, StatusDescription, Attributes)
+        VALUES
+            (@StartedAt, @DurationMilliseconds, @TraceId, @SpanId, @ParentSpanId, @Name, @Source, @Kind, @Status, @StatusDescription, @Attributes);
+        """;
+
+    public override ExportResult Export(in Batch<Activity> batch)
+    {
+        try
+        {
+            using var connection = new SqlConnection(connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            foreach (var activity in batch)
+            {
+                connection.Execute(InsertSql, new
+                {
+                    StartedAt = new DateTimeOffset(activity.StartTimeUtc),
+                    DurationMilliseconds = activity.Duration.TotalMilliseconds,
+                    TraceId = activity.TraceId.ToHexString(),
+                    SpanId = activity.SpanId.ToHexString(),
+                    ParentSpanId = activity.ParentSpanId == default ? null : activity.ParentSpanId.ToHexString(),
+                    Name = Limit(activity.DisplayName, 256),
+                    Source = Limit(activity.Source.Name, 256),
+                    Kind = activity.Kind.ToString(),
+                    Status = activity.Status.ToString(),
+                    StatusDescription = Limit(activity.StatusDescription, 1000),
+                    Attributes = ObservabilityTags.Serialize(activity.TagObjects)
+                }, transaction);
+            }
+            transaction.Commit();
+            return ExportResult.Success;
+        }
+        catch
+        {
+            return ExportResult.Failure;
+        }
+    }
+
+    private static string? Limit(string? value, int maxLength) =>
+        string.IsNullOrEmpty(value) || value.Length <= maxLength ? value : value[..maxLength];
+}

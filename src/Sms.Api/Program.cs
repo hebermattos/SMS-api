@@ -32,8 +32,12 @@ builder.Logging.AddOpenTelemetry(options =>
     options.AddProcessor(new BatchLogRecordExportProcessor(new SqlServerLogExporter(logsConnectionString)));
 });
 builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation())
-    .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation());
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddProcessor(new BatchActivityExportProcessor(new SqlServerTraceExporter(logsConnectionString))))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddReader(new PeriodicExportingMetricReader(new SqlServerMetricExporter(logsConnectionString))));
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 if (string.IsNullOrWhiteSpace(jwt.Key) || jwt.Key.Length < 32) throw new InvalidOperationException("Jwt:Key must be configured with at least 32 characters.");
 
