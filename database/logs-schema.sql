@@ -50,7 +50,6 @@ CREATE TABLE dbo.Traces
     Source NVARCHAR(256) NOT NULL,
     Kind NVARCHAR(32) NOT NULL,
     Status NVARCHAR(32) NOT NULL,
-    StatusDescription NVARCHAR(1000) NULL,
     Attributes NVARCHAR(MAX) NULL,
     CONSTRAINT CK_Traces_AttributesJson CHECK (Attributes IS NULL OR ISJSON(Attributes) = 1)
 );
