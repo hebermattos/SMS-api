@@ -37,7 +37,7 @@ public sealed class AdministratorAuthenticationService(IAdministratorRepository 
         var result = await administrators.SetActiveAsync(id, isActive, cancellationToken);
         if (result == AdministratorStateResult.NotFound) throw new KeyNotFoundException();
         if (result == AdministratorStateResult.LastActive)
-            throw new InvalidOperationException("The last active administrator cannot be deactivated.");
+            throw new LastActiveAdministratorException();
     }
 
     public async Task ResetPasswordAsync(Guid id, string password, CancellationToken cancellationToken = default)

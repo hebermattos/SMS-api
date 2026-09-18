@@ -98,7 +98,7 @@ public sealed class AdministratorAuthenticationTests
     {
         var repository = new Administrators { StateResult = AdministratorStateResult.LastActive };
         var service = new AdministratorAuthenticationService(repository);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SetActiveAsync(Guid.NewGuid(), false));
+        await Assert.ThrowsAsync<LastActiveAdministratorException>(() => service.SetActiveAsync(Guid.NewGuid(), false));
     }
 
     [Theory]

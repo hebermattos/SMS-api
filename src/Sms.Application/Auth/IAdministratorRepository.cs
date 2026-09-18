@@ -5,6 +5,7 @@ public sealed record AdministratorAccount(Guid Id, string Username, byte[] Passw
 public sealed record AdministratorSummary(Guid Id, string Username, bool IsActive, DateTimeOffset CreatedAt);
 public enum AdministratorStateResult { Updated, NotFound, LastActive }
 public sealed class AdministratorConflictException : Exception { }
+public sealed class LastActiveAdministratorException : Exception { }
 
 public interface IAdministratorRepository
 {
