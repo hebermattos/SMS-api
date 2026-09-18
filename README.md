@@ -91,6 +91,18 @@ Each message status transition is stored in `SmsMessageStatusHistory`. Authentic
 
 OpenTelemetry stores structured operational events in a separate SQL Server database through `ConnectionStrings__LogsSqlServer`. Authenticated clients can query `GET /api/v1/logs`; the `tenant_id` JWT claim is always applied by the server. Events contain request metadata, severity, trace/span identifiers and safe structured attributes. Message bodies, authorization headers, provider credentials, tokens and phone numbers are never added to these events.
 
+The API also writes logs to the console, with one event per line and a UTC timestamp, severity, and category. Client login attempts, authenticated client requests, and platform audit events are included. Console output is independent of SQL log persistence, so it can help diagnose missing database events. `Logging__Console__LogLevel__Sms` controls application console verbosity (default: `Information`).
+
+To apply an API logging update locally without rerunning database initialization, rebuild only the API and follow its output:
+
+```bash
+git pull
+docker compose up -d --build --no-deps api
+docker compose logs -f --tail 100 api
+```
+
+Sign in again and perform an action to generate new audit events; existing sessions do not replay their login event.
+
 Twilio webhook endpoints are anonymous by design and validate `X-Twilio-Signature` using the tenant provider secret.
 Twilio accounts may be shared by multiple tenants. Callback ownership is resolved by the unique active combination of provider, account ID, and configured sender number. A tenant cannot override its configured sender number when sending.
 

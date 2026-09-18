@@ -17,6 +17,12 @@ using Sms.Infrastructure;
 using Sms.Infrastructure.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.SingleLine = true;
+    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss 'UTC' ";
+    options.UseUtcTimestamp = true;
+});
 var logsConnectionString = builder.Configuration.GetConnectionString("LogsSqlServer")
     ?? throw new InvalidOperationException("Connection string 'LogsSqlServer' is not configured.");
 builder.Logging.AddOpenTelemetry(options =>
