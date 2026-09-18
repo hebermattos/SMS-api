@@ -13,6 +13,39 @@ CREATE TABLE dbo.PlatformAdministrators
 );
 GO
 
+CREATE TABLE dbo.PortalUsers
+(
+    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_PortalUsers PRIMARY KEY,
+    TenantId UNIQUEIDENTIFIER NULL,
+    Username NVARCHAR(100) COLLATE Latin1_General_100_CI_AS NOT NULL,
+    PasswordHash VARBINARY(32) NOT NULL,
+    PasswordSalt VARBINARY(32) NOT NULL,
+    PasswordIterations INT NOT NULL CONSTRAINT CK_PortalUsers_Iterations CHECK (PasswordIterations >= 100000),
+    Context NVARCHAR(20) NOT NULL,
+    Role NVARCHAR(20) NOT NULL,
+    IsActive BIT NOT NULL CONSTRAINT DF_PortalUsers_IsActive DEFAULT (1),
+    CreatedAt DATETIMEOFFSET NOT NULL,
+    UpdatedAt DATETIMEOFFSET NULL,
+    CONSTRAINT CK_PortalUsers_Context CHECK (Context IN ('tenant', 'platform')),
+    CONSTRAINT CK_PortalUsers_Role CHECK (Role IN ('user', 'administrator')),
+    CONSTRAINT CK_PortalUsers_TenantContext CHECK
+    (
+        (Context = 'tenant' AND TenantId IS NOT NULL)
+        OR (Context = 'platform' AND TenantId IS NULL)
+    )
+);
+GO
+CREATE UNIQUE INDEX UX_PortalUsers_PlatformUsername
+    ON dbo.PortalUsers(Username)
+    WHERE Context = 'platform';
+GO
+CREATE UNIQUE INDEX UX_PortalUsers_TenantUsername
+    ON dbo.PortalUsers(TenantId, Username)
+    WHERE Context = 'tenant';
+GO
+CREATE INDEX IX_PortalUsers_TenantId ON dbo.PortalUsers(TenantId) WHERE TenantId IS NOT NULL;
+GO
+
 CREATE TABLE dbo.Tenants
 (
     Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_Tenants PRIMARY KEY,
