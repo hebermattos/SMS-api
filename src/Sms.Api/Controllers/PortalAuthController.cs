@@ -12,6 +12,7 @@ public sealed record PortalTokenRequest(string Username, string Password, string
 [Route("api/v1/portal/auth")]
 public sealed class PortalAuthController(
     IPortalUserRepository users,
+    AdministratorAuthenticationService administrators,
     TokenService tokens) : ControllerBase
 {
     [AllowAnonymous]
@@ -34,14 +35,27 @@ public sealed class PortalAuthController(
         var user = await users.GetActiveByUsernameAsync(
             request.Username.Trim(), request.Context, cancellationToken);
 
-        if (user is null
-            || !ClientSecretHasher.Verify(
+        if (user is not null
+            && ClientSecretHasher.Verify(
                 request.Password, user.PasswordHash, user.PasswordSalt, user.PasswordIterations))
-            return Unauthorized();
+        {
+            var portalToken = tokens.CreatePortalUser(
+                user.Id, user.Username, user.TenantId, user.Context, user.Role);
+            return Ok(new { access_token = portalToken, token_type = "Bearer" });
+        }
 
-        var token = tokens.CreatePortalUser(
-            user.Id, user.Username, user.TenantId, user.Context, user.Role);
+        if (request.Context == PortalSecurity.PlatformContext)
+        {
+            var administrator = await administrators.AuthenticateAsync(
+                request.Username.Trim(), request.Password, cancellationToken);
+            if (administrator is not null)
+            {
+                var administratorToken = tokens.CreateAdministrator(
+                    administrator.Id, administrator.Username);
+                return Ok(new { access_token = administratorToken, token_type = "Bearer" });
+            }
+        }
 
-        return Ok(new { access_token = token, token_type = "Bearer" });
+        return Unauthorized();
     }
 }
