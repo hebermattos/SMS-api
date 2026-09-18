@@ -66,7 +66,7 @@ public sealed class BandwidthWebhookSqlTests
             await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => Receive(BandwidthWebhooksControllerTests.Payload(), SmsDirection.Inbound)));
             var inbound = Assert.Single(await messages.GetHistoryAsync(tenant, 0, 100));
             Assert.Equal(SmsStatus.Received, inbound.Status);
-            Assert.Equal("hello", inbound.Body);
+            Assert.Equal("test body", inbound.Body);
             var encrypted = await connection.QuerySingleAsync<(string From, string To, string Body)>(
                 "SELECT [From], [To], Body FROM dbo.SmsMessages WHERE Id=@Id;", new { inbound.Id });
             Assert.DoesNotContain(inbound.From, encrypted.From);
