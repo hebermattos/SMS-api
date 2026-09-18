@@ -115,6 +115,6 @@ When Codex is being used through an IDE integration:
 
 ## Current known gaps
 
-- The Angular administration UI is not implemented yet.
+- Individual administrator identities and MFA are not implemented yet. The administration console uses the configured shared administrative key.
 
 Treat these as separate future PRs. Do not silently implement them as part of an unrelated task.
