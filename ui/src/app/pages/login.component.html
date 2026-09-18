@@ -7,16 +7,8 @@
       <p class="signin-subtitle">Your messages and activity, all in one place.</p>
       <div class="signin-modes" role="group" aria-label="Account type">
         <button type="button" [class.active]="mode() === 'client'" [disabled]="busy()" (click)="changeMode('client')">Client</button>
-        <button type="button" [class.active]="mode() === 'account'" [disabled]="busy()" (click)="changeMode('account')">Portal account</button>
-        <button type="button" [class.active]="mode() === 'administrator'" [disabled]="busy()" (click)="changeMode('administrator')">Administrator</button>
+        <button type="button" [class.active]="mode() === 'platform'" [disabled]="busy()" (click)="changeMode('platform')">Platform</button>
       </div>
-      @if (mode() === 'account') {
-        <label for="portal-context">Workspace</label>
-        <select id="portal-context" name="context" [(ngModel)]="context" [disabled]="busy()">
-          <option value="tenant">Tenant</option>
-          <option value="platform">Platform</option>
-        </select>
-      }
       @if (error()) { <div class="signin-notice signin-error" role="alert"><sms-icon name="alert"/><span>{{ error() }}</span></div> }
       <form #form="ngForm" (ngSubmit)="submit()" [attr.aria-busy]="busy()" novalidate>
         <label for="login-identity">{{ mode() === 'client' ? 'Client ID' : 'Username' }}</label>
@@ -27,7 +19,7 @@
         } @else {
           <input id="login-identity" name="username" [(ngModel)]="username" autocomplete="username"
             autocapitalize="none" spellcheck="false" required maxlength="100"
-            placeholder="Enter your username" [readOnly]="busy()"/>
+            placeholder="Enter your platform username" [readOnly]="busy()"/>
         }
         <label for="credential">{{ mode() === 'client' ? 'Client secret' : 'Password' }}</label>
         <div class="signin-password">
