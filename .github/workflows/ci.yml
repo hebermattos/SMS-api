@@ -145,4 +145,4 @@ jobs:
         run: docker compose logs sqlserver db-init provider-init api
       - name: Clean up
         if: always()
-        run: docker compose down --remove-orphans
+        run: docker compose down --remove-orphans --volumes

@@ -153,7 +153,12 @@ Start the complete environment:
 docker compose up --build
 ```
 
-Docker Compose is for local testing only and is not the production deployment model. Every Compose startup recreates the `SmsApi` database from `database/schema.sql`, recreates the separate `SmsApiLogs` database from `database/logs-schema.sql`, and then provisions the example tenant and its Twilio and Bandwidth configurations. Its SQL Server storage is intentionally ephemeral.
+Docker Compose is for local testing only and is not the production deployment model. SQL Server data is stored in the named `sqlserver-data` volume. On first initialization, `db-init` creates `SmsApi` and `SmsApiLogs`, applies the complete schemas, and seeds the example tenant. Subsequent `docker compose up --build` runs preserve existing databases; the idempotent `provider-init` service ensures the local administrator and provider fixtures are present. To intentionally reset local databases and remove the volume, run:
+
+```bash
+docker compose down --remove-orphans --volumes
+docker compose up --build
+```
 
 Development bootstrap credentials:
 
@@ -192,16 +197,9 @@ Test-account availability checked on September 18, 2026:
 
 The API is exposed on port `8080`, and SQL Server is exposed on host port `1434`.
 
-If an older Compose stack reports that `SmsApi` or `SmsApiLogs` cannot be opened, remove its containers before starting the environment again:
+If an older Compose stack reports that `SmsApi` or `SmsApiLogs` cannot be opened, perform the explicit reset above. Database creation is performed by the one-shot `db-init` service with the SQL Server 2022 `sqlcmd` tools. If initialization still fails, inspect its output with `docker compose logs db-init`.
 
-```bash
-docker compose down --remove-orphans
-docker compose up --build
-```
-
-Database creation is performed by the one-shot `db-init` service with the SQL Server 2022 `sqlcmd` tools. If initialization still fails, inspect its output with `docker compose logs db-init`.
-
-The initializer connects to `tcp:sqlserver,1433` inside the Compose network; host applications such as SSMS use `localhost,1434`. Its Bash command must remain a single list item so `bash -c` receives the complete script. A scalar command can lose the connection arguments and produce a login timeout against the initializer container hostname. The password is supplied through `SQLCMDPASSWORD`, rather than inserted into shell code. After updating an older checkout, use the recreation commands above (this clears local test data).
+The initializer connects to `tcp:sqlserver,1433` inside the Compose network; host applications such as SSMS use `localhost,1434`. Its Bash command must remain a single list item so `bash -c` receives the complete script. A scalar command can lose the connection arguments and produce a login timeout against the initializer container hostname. The password is supplied through `SQLCMDPASSWORD`, rather than inserted into shell code. After updating an older checkout, use the explicit reset commands above only when the local database must be recreated; this clears local test data.
 
 CI checks the actual Compose initializers against SQL Server, including both schemas, the example tenant/client, and both encrypted provider configurations. SQL integration tests also verify seed repetition and decryption with a custom encryption key.
 
