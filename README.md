@@ -25,9 +25,8 @@ tests/
   Sms.Infrastructure.Tests/
 tools/
   Sms.Provision/
-  Sms.Migrate/
 database/
-  migrations/          Versioned production schema migrations
+  schema.sql            Complete schema for a new database
   seeds/               Test-only bootstrap data
 ```
 
@@ -70,7 +69,7 @@ Start the complete environment:
 docker compose up --build
 ```
 
-Docker Compose is for local testing only and is not the production deployment model. The migration service creates SQL Server database objects, records applied migrations in `dbo.SchemaMigrations`, and provisions the test tenant. Repeated startups apply only pending migrations, verify that previously applied files were not modified, and safely re-run the idempotent test seed.
+Docker Compose is for local testing only and is not the production deployment model. Every Compose startup recreates the `SmsApi` database from `database/schema.sql` and then provisions the example tenant. Its SQL Server storage is intentionally ephemeral.
 
 Development bootstrap credentials:
 
@@ -91,18 +90,9 @@ ADMIN_PROVISIONING_KEY
 
 The API is exposed on port `8080`.
 
-## Database migrations
+## Database initialization
 
-Production migrations do not depend on Docker. Publish or run `tools/Sms.Migrate` before starting a new API version:
-
-```bash
-export ConnectionStrings__SqlServer='Server=...;Database=SmsApi;...'
-dotnet run --project tools/Sms.Migrate -- --migrations database/migrations
-```
-
-The target database is created when it does not exist. Every migration runs transactionally and is recorded with a SHA-256 content hash. Applied migration files must never be edited; add a new numbered file instead.
-
-When adopting the migrator on a database created by older project versions, existing schema objects are detected and recorded as the corresponding baseline migrations. The example tenant seed is intentionally excluded from production migrations and is executed only by Docker Compose.
+This project does not use migrations. Treat every target database as new and apply the complete `database/schema.sql` script once during provisioning. The example tenant seed is for Docker-based tests only and must not be executed in production.
 
 ## Authentication
 

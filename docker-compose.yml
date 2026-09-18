@@ -5,7 +5,6 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}"
     ports: ["1433:1433"]
-    volumes: [sqlserver-data:/var/opt/mssql]
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1"]
       interval: 10s
@@ -22,7 +21,7 @@ services:
       - ./database:/database:ro
     entrypoint: ["/bin/bash","-c"]
     command: >
-      /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -Q "IF DB_ID(N'SmsApi') IS NULL CREATE DATABASE SmsApi;" &&
+      /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -Q "IF DB_ID(N'SmsApi') IS NOT NULL BEGIN ALTER DATABASE SmsApi SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE SmsApi; END; CREATE DATABASE SmsApi;" &&
       /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -d SmsApi -i /database/schema.sql &&
       /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}" -d SmsApi -i /database/seeds/example_tenant.sql
 
@@ -41,6 +40,3 @@ services:
       Admin__ProvisioningKey: "${ADMIN_PROVISIONING_KEY:-local-admin-key-change-me}"
       Sms__PublicBaseUrl: "${SMS_PUBLIC_BASE_URL:-https://localhost:8080}"
     ports: ["8080:8080"]
-
-volumes:
-  sqlserver-data:

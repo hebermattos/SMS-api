@@ -14,8 +14,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sms.Infrastructure.Tests", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{1633AE39-DF7D-4922-B667-0707E05176EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sms.Migrate", "tools\Sms.Migrate\Sms.Migrate.csproj", "{D708A58B-4148-49B9-A7C8-BFE0FE00A11C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,12 +40,5 @@ Global
 		{A5555555-5555-4555-8555-555555555555}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5555555-5555-4555-8555-555555555555}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5555555-5555-4555-8555-555555555555}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D708A58B-4148-49B9-A7C8-BFE0FE00A11C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D708A58B-4148-49B9-A7C8-BFE0FE00A11C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D708A58B-4148-49B9-A7C8-BFE0FE00A11C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D708A58B-4148-49B9-A7C8-BFE0FE00A11C}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{D708A58B-4148-49B9-A7C8-BFE0FE00A11C} = {1633AE39-DF7D-4922-B667-0707E05176EF}
 	EndGlobalSection
 EndGlobal
