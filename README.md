@@ -11,7 +11,7 @@ Multi-tenant REST API for sending, receiving, tracking, and querying SMS message
 - Docker Compose
 - xUnit + Coverlet
 
-Bandwidth is planned but its transport and webhook endpoints are not implemented yet.
+Bandwidth outbound SMS is implemented with OAuth 2.0 Client Credentials. Bandwidth webhook endpoints are not implemented yet.
 
 ## Architecture
 
