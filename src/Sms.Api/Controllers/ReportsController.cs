@@ -9,18 +9,21 @@ namespace Sms.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/reports")]
-public sealed class ReportsController(ITenantContext tenantContext, ISmsReportRepository reports) : ControllerBase
+public sealed class ReportsController(ITenantContext tenantContext, ISmsReportRepository reports, ITenantTimeZoneProvider? timeZones = null) : ControllerBase
 {
     [HttpGet("sms")]
-    public Task<SmsReportSummary> Sms(
+    public async Task<SmsReportSummary> Sms(
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
         [FromQuery] SmsStatus? status,
         [FromQuery] SmsDirection? direction,
         [FromQuery] string? provider,
-        CancellationToken cancellationToken) =>
-        reports.GetTenantSummaryAsync(tenantContext.TenantId,
-            new(from, to, status, direction, NormalizeProvider(provider)), cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        var range = TenantDateRange.ToUtc(timeZones is null ? TimeZoneInfo.Utc : await timeZones.GetAsync(tenantContext.TenantId, cancellationToken), from, to);
+        return await reports.GetTenantSummaryAsync(tenantContext.TenantId,
+            new(range.From, range.To, status, direction, NormalizeProvider(provider)), cancellationToken);
+    }
 
     private static string? NormalizeProvider(string? provider) =>
         string.IsNullOrWhiteSpace(provider) ? null : provider.Trim();

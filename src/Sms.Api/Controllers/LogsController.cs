@@ -8,7 +8,7 @@ namespace Sms.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/logs")]
-public sealed class LogsController(ITenantContext tenantContext, ILogEntryRepository repository) : ControllerBase
+public sealed class LogsController(ITenantContext tenantContext, ILogEntryRepository repository, ITenantTimeZoneProvider? timeZones = null) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get(
@@ -22,6 +22,9 @@ public sealed class LogsController(ITenantContext tenantContext, ILogEntryReposi
         if (from.HasValue && to.HasValue && from >= to) return BadRequest(new { error = "from must be earlier than to." });
 
         take = Math.Clamp(take, 1, 200);
-        return Ok(await repository.GetActivityAsync(tenantContext.TenantId, from, to, skip, take, cancellationToken));
+        var range = TenantDateRange.ToUtc(timeZones is null ? TimeZoneInfo.Utc : await timeZones.GetAsync(tenantContext.TenantId, cancellationToken), from, to);
+        var rows = await repository.GetActivityAsync(tenantContext.TenantId, range.From, range.To, skip, take, cancellationToken);
+        var zone = timeZones is null ? TimeZoneInfo.Utc : await timeZones.GetAsync(tenantContext.TenantId, cancellationToken);
+        return Ok(rows.Select(row => row with { Timestamp = TimeZoneInfo.ConvertTime(row.Timestamp, zone) }));
     }
 }

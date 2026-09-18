@@ -8,7 +8,7 @@ namespace Sms.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/messages")]
-public sealed class MessagesController(ITenantContext tenantContext, ISmsMessageRepository repository, SendSmsService sendSmsService) : ControllerBase
+public sealed class MessagesController(ITenantContext tenantContext, ISmsMessageRepository repository, SendSmsService sendSmsService, ITenantTimeZoneProvider? timeZones = null) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Send([FromBody] SendSmsRequest request, CancellationToken cancellationToken)
@@ -21,7 +21,7 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var message = await repository.GetByIdAsync(tenantContext.TenantId, id, cancellationToken);
-        return message is null ? NotFound() : Ok(message);
+        return message is null ? NotFound() : Ok(ToResponse(message, await Zone(cancellationToken)));
     }
 
     [HttpGet("{id:guid}/status-history")]
@@ -30,7 +30,9 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
         var message = await repository.GetByIdAsync(tenantContext.TenantId, id, cancellationToken);
         if (message is null) return NotFound();
 
-        return Ok(await repository.GetStatusHistoryAsync(tenantContext.TenantId, id, cancellationToken));
+        var zone = await Zone(cancellationToken);
+        return Ok((await repository.GetStatusHistoryAsync(tenantContext.TenantId, id, cancellationToken))
+            .Select(item => new { item.Id, item.MessageId, item.Status, CreatedAt = TimeZoneInfo.ConvertTime(item.CreatedAt, zone) }));
     }
 
     [HttpGet]
@@ -38,6 +40,19 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
     {
         if (skip < 0) return BadRequest("skip must be zero or greater.");
         take = Math.Clamp(take, 1, 200);
-        return Ok(await repository.GetHistoryAsync(tenantContext.TenantId, skip, take, cancellationToken));
+        var zone = await Zone(cancellationToken);
+        return Ok((await repository.GetHistoryAsync(tenantContext.TenantId, skip, take, cancellationToken))
+            .Select(item => ToResponse(item, zone)));
     }
+
+    private async Task<TimeZoneInfo> Zone(CancellationToken cancellationToken) =>
+        timeZones is null ? TimeZoneInfo.Utc : await timeZones.GetAsync(tenantContext.TenantId, cancellationToken);
+
+    private static object ToResponse(Sms.Domain.Messages.SmsMessage message, TimeZoneInfo zone) => new
+    {
+        message.Id, message.TenantId, message.From, message.To, message.Body, message.Provider,
+        message.ProviderMessageId, message.Direction, message.Status,
+        CreatedAt = TimeZoneInfo.ConvertTime(message.CreatedAt, zone),
+        UpdatedAt = message.UpdatedAt.HasValue ? TimeZoneInfo.ConvertTime(message.UpdatedAt.Value, zone) : null
+    };
 }

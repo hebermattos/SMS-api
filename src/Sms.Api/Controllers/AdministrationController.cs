@@ -7,7 +7,7 @@ using Sms.Application.Auth;
 
 namespace Sms.Api.Controllers;
 
-public sealed record UpdateTenantRequest(string Name, bool IsActive);
+public sealed record UpdateTenantRequest(string Name, string TimeZoneId, bool IsActive);
 public sealed record CreateClientRequest(string? ClientId);
 public sealed record ClientStateRequest(bool IsActive);
 public sealed record CreateAdministratorRequest(string Username, string Email, string Password);
@@ -57,9 +57,12 @@ public sealed class AdministrationController(AdministrationService service, Admi
     [HttpPut("tenants/{tenantId:guid}")]
     public async Task<IActionResult> UpdateTenant(Guid tenantId, UpdateTenantRequest request, CancellationToken cancellationToken)
     {
-        await service.UpdateTenantAsync(tenantId, request.Name, request.IsActive, cancellationToken);
+        await service.UpdateTenantAsync(tenantId, request.Name, request.TimeZoneId, request.IsActive, cancellationToken);
         return NoContent();
     }
+
+    [HttpGet("time-zones")]
+    public IActionResult TimeZones() => Ok(AdministrationService.TimeZones);
 
     [HttpGet("tenants/{tenantId:guid}/clients")]
     public async Task<IActionResult> Clients(Guid tenantId, int skip = 0, int take = 25, CancellationToken cancellationToken = default) =>

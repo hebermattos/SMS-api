@@ -243,6 +243,8 @@ Client secrets are stored as PBKDF2-SHA256 hashes with per-client random salts. 
 
 ## Configuration
 
+Tenant dates are persisted in UTC using `DATETIMEOFFSET`. Each tenant has a required IANA time-zone identifier, defaulting to `UTC`. Platform administrators configure it through `PUT /api/v1/admin/tenants/{tenantId}` using `timeZoneId`, for example `America/Sao_Paulo`. The API must use the tenant time zone when presenting dates to tenant users; request filters are interpreted as tenant-local dates and converted to UTC before querying.
+
 Runtime configuration is supplied using ASP.NET Core configuration/environment variables. Important settings include:
 
 ```text

@@ -8,8 +8,8 @@ public sealed class TenantRepository(SqlConnectionFactory connectionFactory) : I
     public async Task CreateAsync(Guid id, string name, CancellationToken cancellationToken = default)
     {
         const string sql = """
-            INSERT INTO dbo.Tenants (Id, Name, IsActive, CreatedAt)
-            VALUES (@Id, @Name, 1, @CreatedAt);
+            INSERT INTO dbo.Tenants (Id, Name, TimeZoneId, IsActive, CreatedAt)
+            VALUES (@Id, @Name, 'UTC', 1, @CreatedAt);
             """;
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id, Name = name, CreatedAt = DateTimeOffset.UtcNow }, cancellationToken: cancellationToken));

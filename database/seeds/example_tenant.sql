@@ -3,7 +3,7 @@
 -- client_secret: example-secret-change-me
 IF NOT EXISTS (SELECT 1 FROM dbo.Tenants WHERE Id='11111111-1111-4111-8111-111111111111')
 BEGIN
- INSERT dbo.Tenants(Id,Name,IsActive,CreatedAt) VALUES('11111111-1111-4111-8111-111111111111',N'Example Tenant',1,SYSDATETIMEOFFSET());
+ INSERT dbo.Tenants(Id,Name,TimeZoneId,IsActive,CreatedAt) VALUES('11111111-1111-4111-8111-111111111111',N'Example Tenant',N'America/Sao_Paulo',1,SYSUTCDATETIME());
 END
 GO
 IF NOT EXISTS (SELECT 1 FROM dbo.ApiClients WHERE ClientId=N'example-client')
