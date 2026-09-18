@@ -20,12 +20,12 @@ public sealed class AdministratorAuthenticationTests
     {
         var repository = new Administrators();
         var service = new AdministratorAuthenticationService(repository);
-        var id = await service.CreateAsync(" admin ", Password);
+        var id = await service.CreateAsync(" admin ", "admin@example.com", Password);
         var first = repository.Account!;
         Assert.Equal(id, first.Id); Assert.Equal("admin", first.Username);
         Assert.Equal(600000, first.PasswordIterations); Assert.Equal(32, first.PasswordHash.Length);
         Assert.True(ClientSecretHasher.Verify(Password, first.PasswordHash, first.PasswordSalt, first.PasswordIterations));
-        await service.CreateAsync("another-admin", Password);
+        await service.CreateAsync("another-admin", "another@example.com", Password);
         Assert.NotEqual(first.PasswordSalt, repository.Account!.PasswordSalt);
         Assert.NotEqual(first.PasswordHash, repository.Account.PasswordHash);
     }
@@ -38,7 +38,7 @@ public sealed class AdministratorAuthenticationTests
     public async Task ProvisioningRejectsInvalidCredentials(string username, string password)
     {
         var repository = new Administrators();
-        await Assert.ThrowsAsync<ArgumentException>(() => new AdministratorAuthenticationService(repository).CreateAsync(username, password));
+        await Assert.ThrowsAsync<ArgumentException>(() => new AdministratorAuthenticationService(repository).CreateAsync(username, "admin@example.com", password));
         Assert.Null(repository.Account);
     }
 
@@ -50,7 +50,7 @@ public sealed class AdministratorAuthenticationTests
     {
         var repository = new Administrators();
         var authentication = new AdministratorAuthenticationService(repository);
-        await authentication.CreateAsync("admin", Password);
+        await authentication.CreateAsync("admin", "admin@example.com", Password);
         repository.Account = repository.Account! with { IsActive = active };
         var tokens = new TokenService(Options.Create(new JwtOptions { Key = "local-test-key-at-least-32-characters", Issuer = "test", Audience = "test" }));
         var controller = new AdminAuthController(tokens, authentication) { ControllerContext = new() { HttpContext = new DefaultHttpContext() } };
@@ -77,7 +77,7 @@ public sealed class AdministratorAuthenticationTests
         Assert.Null(await authentication.AuthenticateAsync("admin", ""));
         Assert.Null(await authentication.AuthenticateAsync(new string('x', 101), Password));
         Assert.Null(await authentication.AuthenticateAsync("admin", new string('x', 129)));
-        await Assert.ThrowsAsync<ArgumentException>(() => authentication.CreateAsync("admin", new string('x', 129)));
+        await Assert.ThrowsAsync<ArgumentException>(() => authentication.CreateAsync("admin", "admin@example.com", new string('x', 129)));
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public sealed class AdministratorAuthenticationTests
     {
         var repository = new Administrators();
         var service = new AdministratorAuthenticationService(repository);
-        var id = await service.CreateAsync("admin", Password);
+        var id = await service.CreateAsync("admin", "admin@example.com", Password);
         Assert.Single(await service.ListAsync());
         await service.ResetPasswordAsync(id, "replacement-password");
         Assert.NotNull(await service.AuthenticateAsync("admin", "replacement-password"));
@@ -105,7 +105,7 @@ public sealed class AdministratorAuthenticationTests
     [InlineData(true)] [InlineData(false)]
     public async Task TokenValidationRechecksAdministratorStatus(bool active)
     {
-        var account = new AdministratorAccount(Guid.NewGuid(), "admin", [], [], 600000, active);
+        var account = new AdministratorAccount(Guid.NewGuid(), "admin", "admin@example.com", [], [], 600000, active);
         var repository = new Administrators { Account = account };
         var http = new DefaultHttpContext { RequestServices = new ServiceCollection().AddSingleton<IAdministratorRepository>(repository).BuildServiceProvider() };
         var context = new TokenValidatedContext(http, new AuthenticationScheme("Bearer", null, typeof(JwtBearerHandler)), new JwtBearerOptions())
@@ -126,7 +126,7 @@ public sealed class AdministratorAuthenticationTests
         public Task<AdministratorAccount?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default) => Task.FromResult(Account?.Username == username ? Account : null);
         public Task<bool> IsActiveAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(Account?.Id == id && Account.IsActive);
         public Task<IReadOnlyList<AdministratorSummary>> ListAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<AdministratorSummary>>(Account is null ? [] : [new(Account.Id, Account.Username, Account.IsActive, DateTimeOffset.UtcNow)]);
+            Task.FromResult<IReadOnlyList<AdministratorSummary>>(Account is null ? [] : [new(Account.Id, Account.Username, Account.Email, Account.IsActive, DateTimeOffset.UtcNow)]);
         public Task CreateAsync(AdministratorAccount account, CancellationToken cancellationToken = default) { Account = account; return Task.CompletedTask; }
         public Task<AdministratorStateResult> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default)
         { if (StateResult != AdministratorStateResult.Updated) return Task.FromResult(StateResult); if (Account?.Id != id) return Task.FromResult(AdministratorStateResult.NotFound); Account = Account with { IsActive = isActive }; return Task.FromResult(AdministratorStateResult.Updated); }
