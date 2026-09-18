@@ -5,7 +5,7 @@ using Sms.Application.Auth;
 
 namespace Sms.Api.Controllers;
 
-public sealed record CreatePlatformUserRequest(string Username, string Password, string Role);
+public sealed record CreatePlatformUserRequest(string Username, string Email, string Password, string Role);
 public sealed record PortalUserStateRequest(bool IsActive);
 public sealed record PortalUserPasswordRequest(string Password);
 
@@ -24,7 +24,7 @@ public sealed class PlatformUsersController(PortalUserManagementService users) :
         CancellationToken cancellationToken)
     {
         var id = await users.CreatePlatformUserAsync(
-            request.Username, request.Password, request.Role, cancellationToken);
+            request.Username, request.Email, request.Password, request.Role, cancellationToken);
         return Created($"/api/v1/admin/platform-users/{id}", new { id });
     }
 
