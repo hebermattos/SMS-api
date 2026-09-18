@@ -6,31 +6,69 @@ import { finalize } from 'rxjs';
 import { AuthService } from '../core/auth.service';
 import { errorMessage } from '../core/api';
 import { IconComponent } from '../shared/icon.component';
+import { PortalContext } from '../core/models';
 
-@Component({ selector: 'sms-login', imports: [FormsModule, IconComponent], templateUrl: './login.component.html', styleUrl: './login.component.css' })
+type LoginMode = 'client' | 'administrator' | 'account';
+
+@Component({
+  selector: 'sms-login',
+  imports: [FormsModule, IconComponent],
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.css'
+})
 export class LoginComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
-  readonly admin = signal(false); readonly busy = signal(false); readonly error = signal('');
+  readonly mode = signal<LoginMode>('client');
+  readonly context = signal<PortalContext>('tenant');
+  readonly busy = signal(false);
+  readonly error = signal('');
   readonly showCredential = signal(false);
   readonly capsLock = signal(false);
-  clientId = ''; username = ''; credential = '';
+
+  clientId = '';
+  username = '';
+  credential = '';
+
   constructor() {
     if (this.auth.bearer()) void this.router.navigateByUrl(this.auth.role() === 'admin' ? '/admin/tenants' : '/app');
   }
-  changeMode(admin: boolean) {
+
+  changeMode(mode: LoginMode) {
     if (this.busy()) return;
-    this.admin.set(admin); this.credential = ''; this.error.set('');
-    this.showCredential.set(false); this.capsLock.set(false);
+    this.mode.set(mode);
+    this.credential = '';
+    this.error.set('');
+    this.showCredential.set(false);
+    this.capsLock.set(false);
   }
-  checkCapsLock(event: KeyboardEvent) { this.capsLock.set(event.getModifierState('CapsLock')); }
+
+  checkCapsLock(event: KeyboardEvent) {
+    this.capsLock.set(event.getModifierState('CapsLock'));
+  }
+
   submit() {
-    if (this.busy() || !this.credential || !(this.admin() ? this.username.trim() : this.clientId.trim())) return;
-    this.busy.set(true); this.error.set('');
-    const request = this.admin() ? this.auth.loginAdmin(this.username.trim(), this.credential) : this.auth.loginTenant(this.clientId.trim(), this.credential);
-    request.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => { this.busy.set(false); this.credential = ''; this.showCredential.set(false); })).subscribe({
-      next: () => void this.router.navigateByUrl(this.admin() ? '/admin/tenants' : '/app'),
+    const identifier = this.mode() === 'client' ? this.clientId.trim() : this.username.trim();
+    if (this.busy() || !this.credential || !identifier) return;
+
+    this.busy.set(true);
+    this.error.set('');
+    const request = this.mode() === 'client'
+      ? this.auth.loginTenant(identifier, this.credential)
+      : this.mode() === 'administrator'
+        ? this.auth.loginAdmin(identifier, this.credential)
+        : this.auth.loginPortal(identifier, this.credential, this.context());
+
+    request.pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => {
+        this.busy.set(false);
+        this.credential = '';
+        this.showCredential.set(false);
+      })
+    ).subscribe({
+      next: () => void this.router.navigateByUrl(this.auth.role() === 'admin' ? '/admin/tenants' : '/app'),
       error: error => this.error.set(errorMessage(error))
     });
   }
