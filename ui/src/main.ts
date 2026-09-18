@@ -12,6 +12,7 @@ const routes: Routes = [
     path: 'admin', component: ShellComponent, canActivate: [roleGuard], data: { role: 'admin' }, children: [
       { path: 'tenants', loadComponent: () => import('./app/pages/tenants.component').then(m => m.TenantsComponent) },
       { path: 'tenants/:id', loadComponent: () => import('./app/pages/tenant-detail.component').then(m => m.TenantDetailComponent) },
+      { path: 'administrators', loadComponent: () => import('./app/pages/administrators.component').then(m => m.AdministratorsComponent) },
       { path: '', pathMatch: 'full', redirectTo: 'tenants' }
     ]
   },

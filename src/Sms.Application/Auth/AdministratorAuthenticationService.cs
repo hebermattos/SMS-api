@@ -22,14 +22,42 @@ public sealed class AdministratorAuthenticationService(IAdministratorRepository 
 
     public async Task<Guid> CreateAsync(string username, string password, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(username) || !Regex.IsMatch(username.Trim(), @"\A[a-zA-Z0-9][a-zA-Z0-9._-]{2,99}\z"))
-            throw new ArgumentException("Username must contain 3–100 letters, digits, dots, underscores, or hyphens and start with a letter or digit.");
-        if (string.IsNullOrWhiteSpace(password) || password.Length is < 15 or > 128)
-            throw new ArgumentException("Administrator passwords must contain 15–128 characters.");
-        var salt = RandomNumberGenerator.GetBytes(32);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, PasswordIterations, HashAlgorithmName.SHA256, 32);
+        ValidateUsername(username);
+        var (hash, salt) = HashPassword(password);
         var id = Guid.NewGuid();
         await administrators.CreateAsync(new(id, username.Trim(), hash, salt, PasswordIterations, true), cancellationToken);
         return id;
+    }
+
+    public Task<IReadOnlyList<AdministratorSummary>> ListAsync(CancellationToken cancellationToken = default) =>
+        administrators.ListAsync(cancellationToken);
+
+    public async Task SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default)
+    {
+        var result = await administrators.SetActiveAsync(id, isActive, cancellationToken);
+        if (result == AdministratorStateResult.NotFound) throw new KeyNotFoundException();
+        if (result == AdministratorStateResult.LastActive)
+            throw new InvalidOperationException("The last active administrator cannot be deactivated.");
+    }
+
+    public async Task ResetPasswordAsync(Guid id, string password, CancellationToken cancellationToken = default)
+    {
+        var (hash, salt) = HashPassword(password);
+        if (!await administrators.ResetPasswordAsync(id, hash, salt, PasswordIterations, cancellationToken))
+            throw new KeyNotFoundException();
+    }
+
+    private static void ValidateUsername(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username) || !Regex.IsMatch(username.Trim(), @"\A[a-zA-Z0-9][a-zA-Z0-9._-]{2,99}\z"))
+            throw new ArgumentException("Username must contain 3–100 letters, digits, dots, underscores, or hyphens and start with a letter or digit.");
+    }
+
+    private static (byte[] Hash, byte[] Salt) HashPassword(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password) || password.Length is < 15 or > 128)
+            throw new ArgumentException("Administrator passwords must contain 15–128 characters.");
+        var salt = RandomNumberGenerator.GetBytes(32);
+        return (Rfc2898DeriveBytes.Pbkdf2(password, salt, PasswordIterations, HashAlgorithmName.SHA256, 32), salt);
     }
 }

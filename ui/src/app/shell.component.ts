@@ -13,6 +13,7 @@ import { IconComponent } from './shared/icon.component';
       <nav aria-label="Main menu" (click)="menuOpen.set(false)">
         @if (auth.role() === 'admin') {
           <a routerLink="/admin/tenants" routerLinkActive="active"><sms-icon name="users"/>Companies <span class="nav-arrow">↗</span></a>
+          <a routerLink="/admin/administrators" routerLinkActive="active"><sms-icon name="shield"/>Administrators</a>
         } @else {
           <a routerLink="/app" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}"><sms-icon name="grid"/>Overview</a>
           <a routerLink="/app/messages" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}"><sms-icon name="message"/>Messages</a>

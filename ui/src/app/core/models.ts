@@ -2,6 +2,7 @@ export type PortalRole = 'admin' | 'tenant';
 export interface TokenResponse { access_token: string; token_type: string; }
 export interface Tenant { id: string; name: string; isActive: boolean; createdAt: string; }
 export interface Client { id: string; clientId: string; isActive: boolean; createdAt: string; }
+export interface Administrator { id: string; username: string; isActive: boolean; createdAt: string; }
 export interface IssuedSecret { clientId: string; clientSecret: string; }
 export interface ProvisionedTenant { tenant_id: string; name: string; client_id: string; client_secret: string; }
 export interface ProviderField { key: string; label: string; secret: boolean; required: boolean; }

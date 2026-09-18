@@ -80,6 +80,27 @@ public sealed class AdministratorAuthenticationTests
         await Assert.ThrowsAsync<ArgumentException>(() => authentication.CreateAsync("admin", new string('x', 129)));
     }
 
+    [Fact]
+    public async Task AdministratorsCanBeListedDeactivatedAndHavePasswordsReset()
+    {
+        var repository = new Administrators();
+        var service = new AdministratorAuthenticationService(repository);
+        var id = await service.CreateAsync("admin", Password);
+        Assert.Single(await service.ListAsync());
+        await service.ResetPasswordAsync(id, "replacement-password");
+        Assert.NotNull(await service.AuthenticateAsync("admin", "replacement-password"));
+        await service.SetActiveAsync(id, false);
+        Assert.False(repository.Account!.IsActive);
+    }
+
+    [Fact]
+    public async Task LastActiveAdministratorCannotBeDeactivated()
+    {
+        var repository = new Administrators { StateResult = AdministratorStateResult.LastActive };
+        var service = new AdministratorAuthenticationService(repository);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SetActiveAsync(Guid.NewGuid(), false));
+    }
+
     [Theory]
     [InlineData(true)] [InlineData(false)]
     public async Task TokenValidationRechecksAdministratorStatus(bool active)
@@ -101,8 +122,15 @@ public sealed class AdministratorAuthenticationTests
     private sealed class Administrators : IAdministratorRepository
     {
         public AdministratorAccount? Account { get; set; }
+        public AdministratorStateResult StateResult { get; set; } = AdministratorStateResult.Updated;
         public Task<AdministratorAccount?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default) => Task.FromResult(Account?.Username == username ? Account : null);
         public Task<bool> IsActiveAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(Account?.Id == id && Account.IsActive);
+        public Task<IReadOnlyList<AdministratorSummary>> ListAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<AdministratorSummary>>(Account is null ? [] : [new(Account.Id, Account.Username, Account.IsActive, DateTimeOffset.UtcNow)]);
         public Task CreateAsync(AdministratorAccount account, CancellationToken cancellationToken = default) { Account = account; return Task.CompletedTask; }
+        public Task<AdministratorStateResult> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default)
+        { if (StateResult != AdministratorStateResult.Updated) return Task.FromResult(StateResult); if (Account?.Id != id) return Task.FromResult(AdministratorStateResult.NotFound); Account = Account with { IsActive = isActive }; return Task.FromResult(AdministratorStateResult.Updated); }
+        public Task<bool> ResetPasswordAsync(Guid id, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken = default)
+        { if (Account?.Id != id) return Task.FromResult(false); Account = Account with { PasswordHash = hash, PasswordSalt = salt, PasswordIterations = iterations }; return Task.FromResult(true); }
     }
 }
