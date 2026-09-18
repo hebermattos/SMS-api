@@ -2,7 +2,7 @@ import { Injectable, OnDestroy, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router, CanActivateFn } from '@angular/router';
 import { tap } from 'rxjs';
-import { PortalRole, TokenResponse } from './models';
+import { PortalContext, PortalPermissionRole, PortalRole, TokenResponse } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService implements OnDestroy {
@@ -13,6 +13,8 @@ export class AuthService implements OnDestroy {
   private expiresAt = 0;
   private timer?: ReturnType<typeof setTimeout>;
   readonly role = signal<PortalRole | null>(null);
+  readonly context = signal<PortalContext | null>(null);
+  readonly permissionRole = signal<PortalPermissionRole | null>(null);
   readonly identity = signal('');
   readonly expired = signal(false);
 
@@ -21,9 +23,9 @@ export class AuthService implements OnDestroy {
       const saved = sessionStorage.getItem(this.storageKey);
       if (!saved) return;
       const session = JSON.parse(saved);
-      if (!session || typeof session.token !== 'string' || typeof session.identity !== 'string'
-        || !['tenant', 'admin'].includes(session.role)) throw new Error('Invalid session.');
-      this.accept(session.token, session.role, session.identity);
+      if (!session || typeof session.token !== 'string' || typeof session.identity !== 'string')
+        throw new Error('Invalid session.');
+      this.accept(session.token, session.identity);
     } catch {
       this.clearStoredSession();
     }
@@ -33,12 +35,19 @@ export class AuthService implements OnDestroy {
 
   loginTenant(clientId: string, clientSecret: string) {
     return this.http.post<TokenResponse>('/api/v1/auth/token', { clientId, clientSecret })
-      .pipe(tap(value => this.accept(value.access_token, 'tenant', clientId)));
+      .pipe(tap(value => this.accept(value.access_token, clientId)));
   }
+
   loginAdmin(username: string, password: string) {
     return this.http.post<TokenResponse>('/api/v1/admin/auth/token', { username, password })
-      .pipe(tap(value => this.accept(value.access_token, 'admin', username)));
+      .pipe(tap(value => this.accept(value.access_token, username)));
   }
+
+  loginPortal(username: string, password: string, context: PortalContext) {
+    return this.http.post<TokenResponse>('/api/v1/portal/auth/token', { username, password, context })
+      .pipe(tap(value => this.accept(value.access_token, username)));
+  }
+
   bearer(): string | null { return Date.now() < this.expiresAt ? this.token : null; }
 
   logout(expired = false) {
@@ -47,26 +56,39 @@ export class AuthService implements OnDestroy {
     this.token = null;
     this.expiresAt = 0;
     this.role.set(null);
+    this.context.set(null);
+    this.permissionRole.set(null);
     this.identity.set('');
     this.expired.set(expired);
     void this.router.navigateByUrl('/login');
   }
 
-  private accept(token: string, role: PortalRole, identity: string) {
-    // Decode expiry only for UX. All authorization is performed by the API.
+  private accept(token: string, identity: string) {
     if (token.split('.').length !== 3) throw new Error('Invalid session.');
     const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-    const claims = JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, '='))) as { exp: number };
+    const claims = JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, '='))) as {
+      exp: number; context?: PortalContext; role?: PortalPermissionRole; platform_admin?: string;
+    };
     if (!Number.isFinite(claims.exp) || claims.exp * 1000 <= Date.now()) throw new Error('Invalid session.');
+
+    const context = claims.context ?? (claims.platform_admin === 'true' ? 'platform' : 'tenant');
+    const permissionRole = claims.role ?? (claims.platform_admin === 'true' ? 'administrator' : 'user');
+    const portalRole: PortalRole = context === 'platform' ? 'admin' : 'tenant';
+
     clearTimeout(this.timer);
     this.token = token;
     this.expiresAt = claims.exp * 1000;
-    this.role.set(role);
+    this.role.set(portalRole);
+    this.context.set(context);
+    this.permissionRole.set(permissionRole);
     this.identity.set(identity);
     this.expired.set(false);
     this.timer = setTimeout(() => this.logout(true), this.expiresAt - Date.now());
+
     try {
-      sessionStorage.setItem(this.storageKey, JSON.stringify({ token, role, identity }));
+      sessionStorage.setItem(this.storageKey, JSON.stringify({
+        token, identity, role: portalRole, context, permissionRole
+      }));
     } catch {
       // Storage may be blocked; the current in-memory session still works.
     }
