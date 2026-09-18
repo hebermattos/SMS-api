@@ -56,3 +56,14 @@ public sealed class BandwidthSettingsPolicy : IProviderSettingsPolicy
         catch (JsonException) { throw new ArgumentException("As configurações existentes do provedor são inválidas."); }
     }
 }
+
+public sealed class MockSettingsPolicy : IProviderSettingsPolicy
+{
+    public ProviderDefinition Definition => new("Mock", "Test identifier", "Test secret", []);
+    public string? MergeAndValidate(string? existing, IReadOnlyDictionary<string, string?> changes)
+    {
+        if (changes.Count != 0) throw new ArgumentException("Mock provider does not support additional settings.");
+        return existing;
+    }
+    public (IReadOnlyDictionary<string, string?>, IReadOnlyList<string>) Describe(string? settings) => (new Dictionary<string, string?>(), []);
+}
