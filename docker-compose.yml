@@ -42,3 +42,14 @@ services:
       Admin__ProvisioningKey: "${ADMIN_PROVISIONING_KEY:-local-admin-key-change-me}"
       Sms__PublicBaseUrl: "${SMS_PUBLIC_BASE_URL:-https://localhost:8080}"
     ports: ["8080:8080"]
+
+  webhook-tests:
+    profiles: [tests]
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      SMS_TEST_SQLSERVER: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
