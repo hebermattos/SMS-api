@@ -45,7 +45,7 @@ export class AuthService implements OnDestroy {
 
   loginPortal(username: string, password: string, context: PortalContext) {
     return this.http.post<TokenResponse>('/api/v1/portal/auth/token', { username, password, context })
-      .pipe(tap(value => this.accept(value.access_token, username)));
+      .pipe(tap(value => this.accept(value.access_token, username, context)));
   }
 
   bearer(): string | null { return Date.now() < this.expiresAt ? this.token : null; }
