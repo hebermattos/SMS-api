@@ -35,7 +35,9 @@ public sealed class RegistrationAndModelTests
 
         services.AddInfrastructure(configuration);
 
-        Assert.Contains(services, x => x.ServiceType == typeof(ISmsProvider) && x.ImplementationType == typeof(BandwidthSmsProvider));
+        Assert.Equal(2, services.Count(x => x.ServiceType == typeof(ISmsProvider)));
+        Assert.Contains(services, x => x.ServiceType == typeof(BandwidthSmsProvider));
+        Assert.Contains(services, x => x.ServiceType == typeof(IHttpClientFactory));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsProviderResolver));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsMessageRepository));
         Assert.Contains(services, x => x.ServiceType == typeof(ITenantSmsProviderRepository));

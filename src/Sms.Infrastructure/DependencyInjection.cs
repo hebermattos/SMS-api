@@ -31,7 +31,17 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(30);
         });
         services.AddScoped<ISmsProvider>(sp => sp.GetRequiredService<TwilioSmsProvider>());
-        services.AddScoped<ISmsProvider, BandwidthSmsProvider>();
+        services.AddHttpClient<BandwidthSmsProvider>(client =>
+        {
+            client.BaseAddress = new Uri("https://messaging.bandwidth.com/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddHttpClient("BandwidthOAuth", client =>
+        {
+            client.BaseAddress = new Uri("https://api.bandwidth.com/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddScoped<ISmsProvider>(sp => sp.GetRequiredService<BandwidthSmsProvider>());
         return services;
     }
 }
