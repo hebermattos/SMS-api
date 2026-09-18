@@ -36,9 +36,9 @@ public sealed class AesGcmSmsContentProtectorTests
         var protector = new AesGcmSmsContentProtector(Configuration);
         var encrypted = protector.Protect(tenantId, messageId, "Body", "private text");
 
-        Assert.Throws<CryptographicException>(() => protector.Unprotect(Guid.NewGuid(), messageId, "Body", encrypted));
-        Assert.Throws<CryptographicException>(() => protector.Unprotect(tenantId, Guid.NewGuid(), "Body", encrypted));
-        Assert.Throws<CryptographicException>(() => protector.Unprotect(tenantId, messageId, "To", encrypted));
+        Assert.ThrowsAny<CryptographicException>(() => protector.Unprotect(Guid.NewGuid(), messageId, "Body", encrypted));
+        Assert.ThrowsAny<CryptographicException>(() => protector.Unprotect(tenantId, Guid.NewGuid(), "Body", encrypted));
+        Assert.ThrowsAny<CryptographicException>(() => protector.Unprotect(tenantId, messageId, "To", encrypted));
     }
 
     [Fact]
