@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ITenantProvisioner, TenantProvisioner>();
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();
+        services.AddScoped<ISmsReportRepository, SmsReportRepository>();
         services.AddScoped<ILogEntryRepository, LogEntryRepository>();
         services.AddScoped<ITenantSmsProviderRepository, TenantSmsProviderRepository>();
         services.AddScoped<ISmsProviderResolver, SmsProviderResolver>();
