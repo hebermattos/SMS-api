@@ -145,7 +145,7 @@ Start the complete environment:
 docker compose up --build
 ```
 
-Docker Compose is for local testing only and is not the production deployment model. Every Compose startup recreates the `SmsApi` database from `database/schema.sql`, recreates the separate `SmsApiLogs` database from `database/logs-schema.sql`, and then provisions the example tenant. Its SQL Server storage is intentionally ephemeral.
+Docker Compose is for local testing only and is not the production deployment model. Every Compose startup recreates the `SmsApi` database from `database/schema.sql`, recreates the separate `SmsApiLogs` database from `database/logs-schema.sql`, and then provisions the example tenant and its Twilio and Bandwidth configurations. Its SQL Server storage is intentionally ephemeral.
 
 Development bootstrap credentials:
 
@@ -164,6 +164,22 @@ ENCRYPTION_MASTER_KEY
 ADMIN_PROVISIONING_KEY
 ```
 
+After `db-init`, the one-shot `provider-init` service runs the application seed in `database/seeds/Sms.Seed`. It saves both providers through the existing repository, encrypting their API secrets and settings with the same `ENCRYPTION_MASTER_KEY` used by the API. The API waits for this step to succeed. The seed uses fictional credentials only and makes no calls to provider APIs.
+
+| Provider | Account/client ID | Sender | Default |
+| --- | --- | --- | --- |
+| Twilio | `AC00000000000000000000000000000000` | `+15005550006` | Yes |
+| Bandwidth | `fake-bandwidth-client-id` | `+12025550101` | No |
+
+Both configurations are active and visible in the console, but **fictional credentials cannot send real SMS**. They are not a mock delivery service. Select `Twilio` or `Bandwidth` in the send request's `provider` parameter as usual. Replace credentials and sender settings through the administration console before testing delivery with a real account. Bandwidth also needs its messaging account ID, application ID, and a separate webhook password.
+
+Test-account availability checked on September 18, 2026:
+
+- [Twilio test credentials](https://www.twilio.com/docs/iam/test-credentials) are account-specific. Existing legacy-console test credentials continue to work; the documentation says new ones cannot be created in the new console and directs new users to a trial account. Test credentials simulate SMS without delivery or status callbacks. The seeded SID/token are fictional, even though the sender is Twilio's documented test number.
+- [Bandwidth offers a trial](https://www.bandwidth.com/request-trial/) for its messaging and other APIs, requested through registration. No public shared credentials were found for automatic bootstrap; the seed uses a fictional OAuth client, messaging account, application, and webhook password.
+
+`provider-init` is intended for a new local/test database. Rerunning it replaces the example tenant's provider settings with the fixtures. To populate an existing local test database deliberately without recreating it, run `docker compose run --build --rm --no-deps provider-init` while SQL Server is running. Inspect failures with `docker compose logs provider-init`.
+
 The API is exposed on port `8080`, and SQL Server is exposed on host port `1434`.
 
 If an older Compose stack reports that `SmsApi` or `SmsApiLogs` cannot be opened, remove its containers before starting the environment again:
@@ -177,7 +193,7 @@ Database creation is performed by the one-shot `db-init` service with the SQL Se
 
 The initializer connects to `tcp:sqlserver,1433` inside the Compose network; host applications such as SSMS use `localhost,1434`. Its Bash command must remain a single list item so `bash -c` receives the complete script. A scalar command can lose the connection arguments and produce a login timeout against the initializer container hostname. The password is supplied through `SQLCMDPASSWORD`, rather than inserted into shell code. After updating an older checkout, use the recreation commands above (this clears local test data).
 
-CI checks the actual Compose initializer against SQL Server, including both schemas and the example tenant/client.
+CI checks the actual Compose initializers against SQL Server, including both schemas, the example tenant/client, and both encrypted provider configurations. SQL integration tests also verify seed repetition and decryption with a custom encryption key.
 
 Run the Bandwidth SQL Server integration tests in an isolated local Compose project:
 

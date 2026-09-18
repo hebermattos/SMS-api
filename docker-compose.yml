@@ -32,12 +32,23 @@ services:
         /opt/mssql-tools18/bin/sqlcmd -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/seeds/example_tenant.sql &&
         /opt/mssql-tools18/bin/sqlcmd -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApiLogs -i /database/logs-schema.sql
 
+  provider-init:
+    build:
+      context: .
+      dockerfile: database/seeds/Sms.Seed/Dockerfile
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      ConnectionStrings__SqlServer: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
+      Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
+
   api:
     build:
       context: .
       dockerfile: src/Sms.Api/Dockerfile
     depends_on:
-      db-init:
+      provider-init:
         condition: service_completed_successfully
     environment:
       ASPNETCORE_URLS: "http://+:8080"
