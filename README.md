@@ -161,6 +161,10 @@ docker compose up --build
 
 Database creation is performed by the one-shot `db-init` service with the SQL Server 2022 `sqlcmd` tools. If initialization still fails, inspect its output with `docker compose logs db-init`.
 
+The initializer connects to `tcp:sqlserver,1433` inside the Compose network; host applications such as SSMS use `localhost,1434`. Its Bash command must remain a single list item so `bash -c` receives the complete script. A scalar command can lose the connection arguments and produce a login timeout against the initializer container hostname. The password is supplied through `SQLCMDPASSWORD`, rather than inserted into shell code. After updating an older checkout, use the recreation commands above (this clears local test data).
+
+CI checks the actual Compose initializer against SQL Server, including both schemas and the example tenant/client.
+
 Run the Bandwidth SQL Server integration tests in an isolated local Compose project:
 
 ```bash
