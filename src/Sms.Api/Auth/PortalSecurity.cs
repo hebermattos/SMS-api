@@ -11,9 +11,14 @@ namespace Sms.Api.Auth;
 public static class PortalSecurity
 {
     public const string AdminPolicy = "PlatformAdministrator";
-    public const string UserPolicy = "User";
+    public const string UserPolicy = "TenantUser";
+    public const string PlatformUserPolicy = "PlatformUser";
+    public const string TenantAdministratorPolicy = "TenantAdministrator";
     public const string AdminClaim = "platform_admin";
     public const string RoleClaim = "role";
+    public const string ContextClaim = "context";
+    public const string TenantContext = "tenant";
+    public const string PlatformContext = "platform";
     public const string UserRole = "user";
     public const string AdministratorRole = "administrator";
     public static readonly object AdministratorLoginIdentityKey = new();
@@ -21,12 +26,31 @@ public static class PortalSecurity
     public static void ConfigureAuthorization(AuthorizationOptions options)
     {
         options.DefaultPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
+            .RequireClaim(ContextClaim, TenantContext)
             .RequireClaim(RoleClaim, UserRole)
             .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _)
                 && !context.User.HasClaim(AdminClaim, "true")).Build();
-        options.AddPolicy(UserPolicy, policy => policy.RequireAuthenticatedUser().RequireClaim(RoleClaim, UserRole)
+
+        options.AddPolicy(UserPolicy, policy => policy.RequireAuthenticatedUser()
+            .RequireClaim(ContextClaim, TenantContext)
+            .RequireClaim(RoleClaim, UserRole)
             .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _)));
-        options.AddPolicy(AdminPolicy, policy => policy.RequireAuthenticatedUser().RequireClaim(AdminClaim, "true").RequireClaim(RoleClaim, AdministratorRole)
+
+        options.AddPolicy(TenantAdministratorPolicy, policy => policy.RequireAuthenticatedUser()
+            .RequireClaim(ContextClaim, TenantContext)
+            .RequireClaim(RoleClaim, AdministratorRole)
+            .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _))
+            .RequireAssertion(context => !context.User.HasClaim(AdminClaim, "true")));
+
+        options.AddPolicy(PlatformUserPolicy, policy => policy.RequireAuthenticatedUser()
+            .RequireClaim(ContextClaim, PlatformContext)
+            .RequireClaim(RoleClaim, UserRole)
+            .RequireAssertion(context => !context.User.HasClaim(x => x.Type == "tenant_id")));
+
+        options.AddPolicy(AdminPolicy, policy => policy.RequireAuthenticatedUser()
+            .RequireClaim(ContextClaim, PlatformContext)
+            .RequireClaim(AdminClaim, "true")
+            .RequireClaim(RoleClaim, AdministratorRole)
             .RequireAssertion(context => !context.User.HasClaim(x => x.Type == "tenant_id")));
     }
 
