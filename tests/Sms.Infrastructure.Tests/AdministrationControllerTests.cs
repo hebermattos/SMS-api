@@ -18,7 +18,7 @@ public sealed class AdministrationControllerTests
         var repo = new AdministrationFakeRepository(); var controller = new AdministrationController(AdministrationServiceTests.Service(repo), new AdministratorAuthenticationService(new AdministratorRepositoryFake()));
         Assert.IsType<OkObjectResult>(await controller.ListTenants());
         Assert.IsType<OkObjectResult>(await controller.GetTenant(repo.Tenant.Id, default));
-        Assert.IsType<NoContentResult>(await controller.UpdateTenant(repo.Tenant.Id, new("Company", false), default));
+        Assert.IsType<NoContentResult>(await controller.UpdateTenant(repo.Tenant.Id, new("Company", "UTC", false), default));
         Assert.IsType<OkObjectResult>(await controller.Clients(repo.Tenant.Id));
         Assert.IsType<OkObjectResult>(await controller.CreateClient(repo.Tenant.Id, new("client"), default));
         Assert.IsType<NoContentResult>(await controller.SetClientState(repo.Tenant.Id, repo.ClientId, new(false), default));
