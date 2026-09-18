@@ -10,21 +10,22 @@ describe('Portal sessions', () => {
   let auth: AuthService; let http: HttpTestingController;
   const token = () => `header.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 900 }))}.signature`;
   beforeEach(() => {
+    sessionStorage.clear();
     TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting(), provideRouter([])] });
     auth = TestBed.inject(AuthService); http = TestBed.inject(HttpTestingController);
     vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
-  afterEach(() => { auth.logout(); http.verify(); });
+  afterEach(() => { auth.logout(); http.verify(); vi.restoreAllMocks(); vi.useRealTimers(); sessionStorage.clear(); });
 
-  it('authenticates tenants without persisting the bearer in browser storage', () => {
-    const storage = vi.spyOn(Storage.prototype, 'setItem');
+  it('persists only session details in tab storage, never the client secret', () => {
     auth.loginTenant('client', 'secret').subscribe();
     const request = http.expectOne('/api/v1/auth/token');
     expect(request.request.body).toEqual({ clientId: 'client', clientSecret: 'secret' });
     expect(request.request.headers.has('Authorization')).toBe(false);
     const bearer = token(); request.flush({ access_token: bearer, token_type: 'Bearer' });
-    expect(auth.bearer()).toBe(bearer); expect(auth.role()).toBe('tenant'); expect(storage).not.toHaveBeenCalled();
-    storage.mockRestore();
+    expect(auth.bearer()).toBe(bearer); expect(auth.role()).toBe('tenant');
+    expect(JSON.parse(sessionStorage.getItem('sms-console-session')!)).toEqual({ token: bearer, role: 'tenant', identity: 'client' });
+    expect(localStorage.getItem('sms-console-session')).toBeNull();
   });
 
   it('opens a separate administrator session and clears it on logout', () => {
@@ -32,7 +33,66 @@ describe('Portal sessions', () => {
     const request = http.expectOne('/api/v1/admin/auth/token');
     expect(request.request.body).toEqual({ key: 'admin-key' });
     request.flush({ access_token: token() });
-    expect(auth.role()).toBe('admin'); auth.logout(); expect(auth.bearer()).toBeNull(); expect(auth.role()).toBeNull();
+    expect(auth.role()).toBe('admin');
+    expect(sessionStorage.getItem('sms-console-session')).not.toContain('admin-key');
+    auth.logout(); expect(auth.bearer()).toBeNull(); expect(auth.role()).toBeNull();
+    expect(sessionStorage.getItem('sms-console-session')).toBeNull();
+  });
+
+  it.each(['tenant', 'admin'] as const)('restores a %s session before route guards after reload', role => {
+    const bearer = token();
+    if (role === 'tenant') auth.loginTenant('client', 'secret').subscribe();
+    else auth.loginAdmin('admin-key').subscribe();
+    http.expectOne(role === 'tenant' ? '/api/v1/auth/token' : '/api/v1/admin/auth/token').flush({ access_token: bearer });
+    http.verify();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting(), provideRouter([])] });
+    auth = TestBed.inject(AuthService); http = TestBed.inject(HttpTestingController);
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    expect(auth.bearer()).toBe(bearer);
+    expect(auth.role()).toBe(role);
+    expect(auth.identity()).toBe(role === 'tenant' ? 'client' : 'Administrator');
+    const route = new ActivatedRouteSnapshot(); route.data = { role };
+    expect(TestBed.runInInjectionContext(() => roleGuard(route, {} as RouterStateSnapshot))).toBe(true);
+    http.expectNone('/api/v1/auth/token');
+    http.expectNone('/api/v1/admin/auth/token');
+  });
+
+  it.each([
+    'not-json', 'null',
+    JSON.stringify({ token: 'invalid', role: 'tenant', identity: 'client' }),
+    JSON.stringify({ token: 'h.e30.s', role: 'tenant', identity: 'client' }),
+    JSON.stringify({ token: `h.${btoa(JSON.stringify({ exp: 1 }))}.s`, role: 'tenant', identity: 'client' }),
+    JSON.stringify({ token: 'h.e30.s', role: 'unknown', identity: 'client' })
+  ])('discards invalid or expired stored sessions: %s', saved => {
+    sessionStorage.setItem('sms-console-session', saved);
+    const restored = TestBed.runInInjectionContext(() => new AuthService());
+    expect(restored.bearer()).toBeNull(); expect(restored.role()).toBeNull();
+    expect(sessionStorage.getItem('sms-console-session')).toBeNull();
+    restored.ngOnDestroy();
+  });
+
+  it('expires a restored session at its original expiry time', () => {
+    vi.useFakeTimers();
+    const bearer = `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 60 }))}.s`;
+    sessionStorage.setItem('sms-console-session', JSON.stringify({ token: bearer, role: 'tenant', identity: 'client' }));
+    const restored = TestBed.runInInjectionContext(() => new AuthService());
+    vi.advanceTimersByTime(60000);
+    expect(restored.bearer()).toBeNull(); expect(restored.expired()).toBe(true);
+    expect(sessionStorage.getItem('sms-console-session')).toBeNull();
+    restored.ngOnDestroy();
+  });
+
+  it('allows in-memory login when browser storage is unavailable', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Blocked'); });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Blocked'); });
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('Blocked'); });
+    const restored = TestBed.runInInjectionContext(() => new AuthService());
+    restored.loginTenant('client', 'secret').subscribe();
+    const bearer = token(); http.expectOne('/api/v1/auth/token').flush({ access_token: bearer });
+    expect(restored.bearer()).toBe(bearer);
+    expect(() => restored.logout()).not.toThrow();
+    restored.ngOnDestroy();
   });
 
   it('keeps failed logins unauthenticated', () => {

@@ -1,0 +1,55 @@
+<main class="signin">
+  <section class="signin-story" aria-label="SMS console">
+    <a class="brand" href="/login" aria-label="SMS console home"><span class="brand-mark"><sms-icon name="message"/></span>SMS<span class="brand-light">console</span></a>
+    <div class="signin-story-body">
+      <span class="signin-kicker">YOUR MESSAGING WORKSPACE</span>
+      <h1>Every message.<br><span>A clear picture.</span></h1>
+      <p>Send with confidence. Follow every delivery.<br>Keep your team connected to what matters.</p>
+      <div class="signin-preview" aria-hidden="true">
+        <div class="preview-heading"><span><sms-icon name="message"/> Message activity</span><span class="preview-label">WORKSPACE</span></div>
+        <div class="preview-event"><span class="preview-symbol"><sms-icon name="send"/></span><div><strong>Message sent</strong><small>Your conversation starts here</small></div><sms-icon name="check"/></div>
+        <div class="preview-event"><span class="preview-symbol"><sms-icon name="check"/></span><div><strong>Delivery confirmed</strong><small>A status you can follow</small></div><span class="preview-pill">Delivered</span></div>
+        <div class="preview-bottom"><sms-icon name="logs"/> One place for messages, history, and activity.</div>
+      </div>
+    </div>
+    <footer class="signin-story-footer"><sms-icon name="shield"/><span>Your workspace. Your company's data.</span><span class="signin-footer-line"></span></footer>
+  </section>
+
+  <section class="signin-panel" aria-labelledby="signin-title">
+    <div class="signin-form-wrap">
+      <span class="signin-welcome"><sms-icon name="key"/></span>
+      <span class="eyebrow">WELCOME BACK</span>
+      <h2 id="signin-title">Sign in to your workspace</h2>
+      <p class="signin-subtitle">Your messages and activity, all in one place.</p>
+
+      <div class="signin-modes" role="group" aria-label="Account type">
+        <button type="button" [class.active]="!admin()" [attr.aria-pressed]="!admin()" [disabled]="busy()" (click)="changeMode(false); form.resetForm({ clientId: clientId, credential: '' })"><sms-icon name="users"/>Client</button>
+        <button type="button" [class.active]="admin()" [attr.aria-pressed]="admin()" [disabled]="busy()" (click)="changeMode(true); form.resetForm({ clientId: clientId, credential: '' })"><sms-icon name="shield"/>Administrator</button>
+      </div>
+      <p class="signin-mode-help">{{ admin() ? 'Manage tenants, access, and provider settings.' : 'Use the credentials provided by your administrator.' }}</p>
+      @if (auth.expired()) { <div class="signin-notice" role="status"><sms-icon name="clock"/>Your session has ended. Please sign in again.</div> }
+      @if (error()) { <div class="signin-notice signin-error" role="alert"><sms-icon name="alert"/><span>{{ error() }}</span></div> }
+
+      <form #form="ngForm" (ngSubmit)="submit()" [attr.aria-busy]="busy()" novalidate>
+        @if (!admin()) {
+          <label for="client-id">Client ID</label>
+          <input id="client-id" name="clientId" [(ngModel)]="clientId" #client="ngModel" autocomplete="username" autocapitalize="none" spellcheck="false" required pattern=".*\S.*" maxlength="100" placeholder="Enter your client ID" [readOnly]="busy()" [attr.aria-invalid]="client.touched && client.invalid" [attr.aria-describedby]="client.touched && client.invalid ? 'client-error' : null"/>
+          @if (client.touched && client.invalid) { <p class="signin-field-error" id="client-error">Enter your client ID.</p> }
+        }
+        <label for="credential">{{ admin() ? 'Administration key' : 'Client secret' }}</label>
+        <div class="signin-password">
+          <input id="credential" name="credential" [type]="showCredential() ? 'text' : 'password'" [(ngModel)]="credential" #secret="ngModel" autocomplete="current-password" spellcheck="false" autocapitalize="none" required maxlength="1024" [placeholder]="admin() ? 'Enter your administration key' : 'Enter your client secret'" [readOnly]="busy()" (keydown)="checkCapsLock($event)" (keyup)="checkCapsLock($event)" (blur)="capsLock.set(false)" [attr.aria-invalid]="secret.touched && secret.invalid" aria-describedby="credential-help"/>
+          <button type="button" class="signin-reveal" [disabled]="busy()" (click)="showCredential.set(!showCredential())" [attr.aria-label]="showCredential() ? 'Hide credential' : 'Show credential'" [attr.aria-pressed]="showCredential()">{{ showCredential() ? 'Hide' : 'Show' }}</button>
+        </div>
+        <div id="credential-help" aria-live="polite">
+          @if (secret.touched && secret.invalid) { <p class="signin-field-error">{{ admin() ? 'Enter your administration key.' : 'Enter your client secret.' }}</p> }
+          @if (capsLock()) { <p class="signin-caps">Caps Lock is on.</p> }
+        </div>
+        <button class="signin-submit" type="submit" [disabled]="form.invalid || busy()"><span>{{ busy() ? 'Signing in…' : 'Sign in' }}</span>@if (busy()) { <span class="signin-spinner" aria-hidden="true"></span> } @else { <sms-icon name="arrow"/> }</button>
+      </form>
+      <div class="signin-support"><sms-icon name="shield"/><p>{{ admin() ? 'Restricted to authorized platform administrators.' : 'Need access or new credentials? Contact your administrator.' }}</p></div>
+      <p class="signin-session-note">Your session stays signed in when you refresh this tab.<br>Sign out when using a shared device.</p>
+    </div>
+    <footer class="signin-panel-footer">SMS console <span>Messaging, with clarity.</span></footer>
+  </section>
+</main>

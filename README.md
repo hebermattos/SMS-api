@@ -29,7 +29,11 @@ For frontend development, use Node.js 20.19+ or 22.12+ (Angular 21 compatible), 
 
 Administrator login exchanges the configured `Admin:ProvisioningKey` for a 15-minute JWT carrying only the `platform_admin` privilege, with no tenant claim. Tenant tokens cannot access administrative endpoints; administrator tokens cannot access tenant messages or logs. The existing `X-Admin-Key` tenant-bootstrap endpoint remains supported. Protect and rotate the shared administrative key through deployment configuration; individual administrator accounts and MFA are not implemented.
 
-Browser tokens remain in memory, so reloading the page requires login again. Password inputs are cleared after submissions. The API never returns stored provider secrets; blank password fields preserve saved values, and newly generated API-client secrets are displayed once. Disabling a tenant or client blocks existing tokens on subsequent API requests. Rotating a client secret prevents new logins with the old secret; already issued tokens remain valid until expiry unless that client is disabled. Suspending a tenant does not delete messages or stop validated provider callbacks.
+The responsive Angular sign-in screen provides separate client and administrator access, labeled fields, credential visibility controls, Caps Lock feedback, and accessible validation, loading, and error states. A valid existing session redirects to the appropriate workspace without another login request.
+
+Browser sessions use `sessionStorage` to preserve the token, portal role, and display identity across page reloads in the same tab. The console restores valid sessions before checking protected routes; expired or malformed saved sessions are discarded. Logout, token expiry, and API rejection (HTTP 401) clear the saved session. Passwords and the administrator key are never stored, and password inputs are cleared after submissions. If browser storage is blocked, login still works in memory but cannot survive refresh. Session storage is accessible to same-origin JavaScript; it is not an HttpOnly cookie. The API remains responsible for all authorization.
+
+The API never returns stored provider secrets; blank password fields preserve saved values, and newly generated API-client secrets are displayed once. Disabling a tenant or client blocks existing tokens on subsequent API requests. Rotating a client secret prevents new logins with the old secret; already issued tokens remain valid until expiry unless that client is disabled. Suspending a tenant does not delete messages or stop validated provider callbacks.
 
 No database migration is needed: all portal operations use the canonical schema. Default-provider changes are serialized per tenant and committed atomically. SQL integration tests in `AdministrationSqlTests` exercise tenant/client operations, encrypted settings, default switching, and isolation. To run them when tests are permitted, set `SMS_TEST_SQLSERVER` to a disposable database initialized from `database/schema.sql` and use `dotnet test Sms.Api.sln --filter FullyQualifiedName~AdministrationSqlTests`. Frontend test sources can be run with `npm test` inside `ui/`.
 
@@ -288,7 +292,7 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 
 ## Current limitations
 
-- Individual administrator identities, MFA and browser session persistence are not implemented; administration uses the configured shared key.
+- Individual administrator identities and MFA are not implemented; administration uses the configured shared key.
 
 ## Contributing
 
