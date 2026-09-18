@@ -1,0 +1,28 @@
+namespace Sms.Application.Auth;
+
+public sealed record PortalUserSummary(
+    Guid Id,
+    Guid? TenantId,
+    string Username,
+    string Context,
+    string Role,
+    bool IsActive,
+    DateTimeOffset CreatedAt);
+
+public sealed record NewPortalUser(
+    Guid Id,
+    Guid? TenantId,
+    string Username,
+    byte[] PasswordHash,
+    byte[] PasswordSalt,
+    int PasswordIterations,
+    string Context,
+    string Role);
+
+public interface IPortalUserManagementRepository
+{
+    Task<IReadOnlyList<PortalUserSummary>> ListPlatformUsersAsync(CancellationToken cancellationToken = default);
+    Task<Guid> CreatePlatformUserAsync(NewPortalUser user, CancellationToken cancellationToken = default);
+    Task<bool> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default);
+    Task<bool> ResetPasswordAsync(Guid id, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken = default);
+}
