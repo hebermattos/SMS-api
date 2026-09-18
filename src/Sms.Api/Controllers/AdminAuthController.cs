@@ -8,8 +8,8 @@ using Sms.Application.Auth;
 namespace Sms.Api.Controllers;
 
 public sealed record AdminTokenRequest(
-    [property: Required, StringLength(100)] string Username,
-    [property: Required, StringLength(128)] string Password);
+    [Required, StringLength(100)] string Username,
+    [Required, StringLength(128)] string Password);
 
 [ApiController]
 [Route("api/v1/admin/auth")]
