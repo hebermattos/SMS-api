@@ -19,8 +19,36 @@ public sealed class TokenService(IOptions<JwtOptions> options)
                 new Claim(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext),
                 new Claim(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole)
             ],
-            expires: DateTime.UtcNow.AddMinutes(15), signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key)), SecurityAlgorithms.HmacSha256));
+            expires: DateTime.UtcNow.AddMinutes(15), signingCredentials: SigningCredentials(settings));
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public string CreatePortalUser(
+        Guid userId,
+        string username,
+        Guid? tenantId,
+        string context,
+        string role)
+    {
+        var settings = options.Value;
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new("portal_username", username),
+            new(PortalSecurity.ContextClaim, context),
+            new(PortalSecurity.RoleClaim, role)
+        };
+
+        if (tenantId is not null)
+            claims.Add(new Claim("tenant_id", tenantId.Value.ToString()));
+
+        var token = new JwtSecurityToken(
+            settings.Issuer,
+            settings.Audience,
+            claims,
+            expires: DateTime.UtcNow.AddMinutes(settings.ExpirationMinutes),
+            signingCredentials: SigningCredentials(settings));
+
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
@@ -34,8 +62,12 @@ public sealed class TokenService(IOptions<JwtOptions> options)
             new Claim(PortalSecurity.ContextClaim, PortalSecurity.TenantContext),
             new Claim(PortalSecurity.RoleClaim, PortalSecurity.UserRole)
         };
-        var credentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key)), SecurityAlgorithms.HmacSha256);
-        var token = new JwtSecurityToken(settings.Issuer, settings.Audience, claims, expires: DateTime.UtcNow.AddMinutes(settings.ExpirationMinutes), signingCredentials: credentials);
+        var token = new JwtSecurityToken(settings.Issuer, settings.Audience, claims,
+            expires: DateTime.UtcNow.AddMinutes(settings.ExpirationMinutes),
+            signingCredentials: SigningCredentials(settings));
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    private static SigningCredentials SigningCredentials(JwtOptions settings) =>
+        new(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key)), SecurityAlgorithms.HmacSha256);
 }
