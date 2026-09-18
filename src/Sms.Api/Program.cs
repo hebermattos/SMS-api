@@ -50,6 +50,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
+    options.MapInboundClaims = false;
     options.Events = new JwtBearerEvents { OnTokenValidated = PortalSecurity.ValidateTenantAsync };
     options.TokenValidationParameters = new TokenValidationParameters
     {
