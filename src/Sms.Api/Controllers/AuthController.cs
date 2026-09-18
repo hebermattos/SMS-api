@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Sms.Api.Auth;
 using Sms.Application.Auth;
+using Sms.Api.Middleware;
 
 namespace Sms.Api.Controllers;
 
@@ -27,9 +28,13 @@ public sealed class AuthController(TokenService tokenService, IApiClientReposito
         if (client is null || !ClientSecretHasher.Verify(request.ClientSecret, client.SecretHash, client.SecretSalt, client.SecretIterations))
             return Unauthorized();
 
+        var token = tokenService.Create(client.TenantId, client.ClientId);
+        if (ControllerContext.HttpContext is not null)
+            HttpContext.Items[ClientLoginAuditMiddleware.IdentityKey] = new ClientLoginIdentity(client.TenantId, client.ClientId);
+
         return Ok(new
         {
-            access_token = tokenService.Create(client.TenantId, client.ClientId),
+            access_token = token,
             token_type = "Bearer"
         });
     }

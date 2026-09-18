@@ -15,11 +15,12 @@ public sealed class RequestAuditMiddleware(RequestDelegate next, ILogger<Request
         finally
         {
             var tenantId = context.User.FindFirstValue("tenant_id");
-            if (Guid.TryParse(tenantId, out var parsedTenantId))
+            if (context.User.Identity?.IsAuthenticated == true && Guid.TryParse(tenantId, out var parsedTenantId))
             {
                 logger.LogInformation(
-                    "HTTP request completed for tenant {TenantId}: {RequestMethod} {RequestPath} returned {StatusCode} in {ElapsedMilliseconds} ms",
+                    "HTTP request completed for tenant {TenantId}, client {ClientId}: {RequestMethod} {RequestPath} returned {StatusCode} in {ElapsedMilliseconds} ms",
                     parsedTenantId,
+                    context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
                     context.Request.Method,
                     context.Request.Path.Value,
                     context.Response.StatusCode,

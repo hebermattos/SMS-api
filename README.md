@@ -182,6 +182,8 @@ This project does not use migrations. Treat every target database as new and app
 
 ## Authentication
 
+Client login attempts are audited in `SmsApiLogs.dbo.LogEntries`, including validation failures, rejected credentials, rate limits and server errors. Successful logins record the verified `ClientId` and `TenantId`; failed attempts remain support-only, without a tenant or caller-supplied identifier. Authenticated HTTP activity includes the client identifier from the validated JWT subject, which is visible in the activity log message. Neither secrets nor tokens are logged. Login events use the existing batched exporter and its delivery limitations.
+
 Request a token:
 
 ```http
