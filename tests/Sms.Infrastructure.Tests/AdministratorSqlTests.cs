@@ -17,7 +17,7 @@ public sealed class AdministratorSqlTests
         var repository = new AdministratorRepository(factory);
         var authentication = new AdministratorAuthenticationService(repository);
         var username = "admin-" + Guid.NewGuid().ToString("N");
-        var id = await authentication.CreateAsync(username, "local-admin-test-password");
+        var id = await authentication.CreateAsync(username, "admin@example.com", "local-admin-test-password");
         using var connection = factory.CreateConnection();
         try
         {
@@ -27,7 +27,7 @@ public sealed class AdministratorSqlTests
             Assert.True(await repository.IsActiveAsync(id));
             Assert.NotNull(await authentication.AuthenticateAsync(username.ToUpperInvariant(), "local-admin-test-password"));
             Assert.Null(await authentication.AuthenticateAsync(username, "wrong-password"));
-            await Assert.ThrowsAsync<AdministratorConflictException>(() => authentication.CreateAsync(username.ToUpperInvariant(), "another-local-password"));
+            await Assert.ThrowsAsync<AdministratorConflictException>(() => authentication.CreateAsync(username.ToUpperInvariant(), "admin2@example.com", "another-local-password"));
             await connection.ExecuteAsync("UPDATE dbo.PlatformAdministrators SET IsActive=0 WHERE Id=@Id;", new { Id = id });
             Assert.False(await repository.IsActiveAsync(id));
             Assert.False(await repository.IsActiveAsync(Guid.NewGuid()));
