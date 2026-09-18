@@ -61,9 +61,12 @@ public sealed class PortalAuthControllerTests
         };
     }
 
-    private static PortalUserAccount Account(string context, string role) =>
-        new(Guid.NewGuid(), Guid.NewGuid(), "portal", "portal@example.com",
-            ClientSecretHasher.Hash(Password).Hash, ClientSecretHasher.Hash(Password).Salt, ClientSecretHasher.DefaultIterations, context, role, true);
+    private static PortalUserAccount Account(string context, string role)
+    {
+        var credentials = ClientSecretHasher.Hash(Password);
+        return new(Guid.NewGuid(), Guid.NewGuid(), "portal", "portal@example.com",
+            credentials.Hash, credentials.Salt, credentials.Iterations, context, role, true);
+    }
 
     private sealed class Users(PortalUserAccount? account) : IPortalUserRepository
     {
