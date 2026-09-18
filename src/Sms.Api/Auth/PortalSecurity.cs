@@ -44,7 +44,7 @@ public static class PortalSecurity
             .RequireAssertion(context => !context.User.HasClaim(x => x.Type == "tenant_id")));
 
         options.AddPolicy(AdminPolicy, policy => policy.RequireAuthenticatedUser()
-            .RequireClaim(ContextClaim, PlatformContext).RequireClaim(AdminClaim, "true")
+            .RequireClaim(AdminClaim, "true")
             .RequireClaim(RoleClaim, AdministratorRole)
             .RequireAssertion(context => !context.User.HasClaim(x => x.Type == "tenant_id")));
     }
