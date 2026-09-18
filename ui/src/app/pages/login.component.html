@@ -23,8 +23,8 @@
       <p class="signin-subtitle">Your messages and activity, all in one place.</p>
 
       <div class="signin-modes" role="group" aria-label="Account type">
-        <button type="button" [class.active]="!admin()" [attr.aria-pressed]="!admin()" [disabled]="busy()" (click)="changeMode(false); form.resetForm({ clientId: clientId, credential: '' })"><sms-icon name="users"/>Client</button>
-        <button type="button" [class.active]="admin()" [attr.aria-pressed]="admin()" [disabled]="busy()" (click)="changeMode(true); form.resetForm({ clientId: clientId, credential: '' })"><sms-icon name="shield"/>Administrator</button>
+        <button type="button" [class.active]="!admin()" [attr.aria-pressed]="!admin()" [disabled]="busy()" (click)="changeMode(false); form.resetForm({ clientId: clientId, username: username, credential: '' })"><sms-icon name="users"/>Client</button>
+        <button type="button" [class.active]="admin()" [attr.aria-pressed]="admin()" [disabled]="busy()" (click)="changeMode(true); form.resetForm({ clientId: clientId, username: username, credential: '' })"><sms-icon name="shield"/>Administrator</button>
       </div>
       <p class="signin-mode-help">{{ admin() ? 'Manage tenants, access, and provider settings.' : 'Use the credentials provided by your administrator.' }}</p>
       @if (auth.expired()) { <div class="signin-notice" role="status"><sms-icon name="clock"/>Your session has ended. Please sign in again.</div> }
@@ -36,13 +36,18 @@
           <input id="client-id" name="clientId" [(ngModel)]="clientId" #client="ngModel" autocomplete="username" autocapitalize="none" spellcheck="false" required pattern=".*\S.*" maxlength="100" placeholder="Enter your client ID" [readOnly]="busy()" [attr.aria-invalid]="client.touched && client.invalid" [attr.aria-describedby]="client.touched && client.invalid ? 'client-error' : null"/>
           @if (client.touched && client.invalid) { <p class="signin-field-error" id="client-error">Enter your client ID.</p> }
         }
-        <label for="credential">{{ admin() ? 'Administration key' : 'Client secret' }}</label>
+        @if (admin()) {
+          <label for="admin-username">Username</label>
+          <input id="admin-username" name="username" [(ngModel)]="username" #adminUsername="ngModel" autocomplete="username" autocapitalize="none" spellcheck="false" required pattern=".*\S.*" maxlength="100" placeholder="Enter your username" [readOnly]="busy()" [attr.aria-invalid]="adminUsername.touched && adminUsername.invalid" [attr.aria-describedby]="adminUsername.touched && adminUsername.invalid ? 'username-error' : null"/>
+          @if (adminUsername.touched && adminUsername.invalid) { <p class="signin-field-error" id="username-error">Enter your username.</p> }
+        }
+        <label for="credential">{{ admin() ? 'Password' : 'Client secret' }}</label>
         <div class="signin-password">
-          <input id="credential" name="credential" [type]="showCredential() ? 'text' : 'password'" [(ngModel)]="credential" #secret="ngModel" autocomplete="current-password" spellcheck="false" autocapitalize="none" required maxlength="1024" [placeholder]="admin() ? 'Enter your administration key' : 'Enter your client secret'" [readOnly]="busy()" (keydown)="checkCapsLock($event)" (keyup)="checkCapsLock($event)" (blur)="capsLock.set(false)" [attr.aria-invalid]="secret.touched && secret.invalid" aria-describedby="credential-help"/>
+          <input id="credential" name="credential" [type]="showCredential() ? 'text' : 'password'" [(ngModel)]="credential" #secret="ngModel" autocomplete="current-password" spellcheck="false" autocapitalize="none" required [maxlength]="admin() ? 128 : 1024" [placeholder]="admin() ? 'Enter your password' : 'Enter your client secret'" [readOnly]="busy()" (keydown)="checkCapsLock($event)" (keyup)="checkCapsLock($event)" (blur)="capsLock.set(false)" [attr.aria-invalid]="secret.touched && secret.invalid" aria-describedby="credential-help"/>
           <button type="button" class="signin-reveal" [disabled]="busy()" (click)="showCredential.set(!showCredential())" [attr.aria-label]="showCredential() ? 'Hide credential' : 'Show credential'" [attr.aria-pressed]="showCredential()">{{ showCredential() ? 'Hide' : 'Show' }}</button>
         </div>
         <div id="credential-help" aria-live="polite">
-          @if (secret.touched && secret.invalid) { <p class="signin-field-error">{{ admin() ? 'Enter your administration key.' : 'Enter your client secret.' }}</p> }
+          @if (secret.touched && secret.invalid) { <p class="signin-field-error">{{ admin() ? 'Enter your password.' : 'Enter your client secret.' }}</p> }
           @if (capsLock()) { <p class="signin-caps">Caps Lock is on.</p> }
         </div>
         <button class="signin-submit" type="submit" [disabled]="form.invalid || busy()"><span>{{ busy() ? 'Signing in…' : 'Sign in' }}</span>@if (busy()) { <span class="signin-spinner" aria-hidden="true"></span> } @else { <sms-icon name="arrow"/> }</button>

@@ -2,10 +2,29 @@ using System.Security.Cryptography;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Sms.Application.Auth;
+using Microsoft.Extensions.Configuration;
+using Sms.Infrastructure.Persistence;
+
+if (args is ["--admin"])
+{
+    var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+    var username = configuration["Admin:Username"] ?? throw new InvalidOperationException("Admin:Username is required.");
+    var password = configuration["Admin:Password"] ?? throw new InvalidOperationException("Admin:Password is required.");
+    var administrators = new AdministratorRepository(new SqlConnectionFactory(configuration));
+    if (await administrators.GetByUsernameAsync(username.Trim()) is not null)
+    {
+        Console.Error.WriteLine("This administrator username already exists. No credentials were changed.");
+        return 1;
+    }
+    var id = await new AdministratorAuthenticationService(administrators).CreateAsync(username, password);
+    Console.WriteLine($"Administrator created: {id}");
+    return 0;
+}
 
 if (args.Length < 2)
 {
     Console.Error.WriteLine("Usage: dotnet run --project tools/Sms.Provision -- <connection-string> <tenant-name> [client-id]");
+    Console.Error.WriteLine("Administrator: dotnet run --project tools/Sms.Provision -- --admin (uses ConnectionStrings__SqlServer, Admin__Username and Admin__Password environment variables)");
     return 1;
 }
 

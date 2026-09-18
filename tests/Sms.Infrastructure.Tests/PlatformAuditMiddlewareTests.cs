@@ -20,12 +20,13 @@ public sealed class PlatformAuditMiddlewareTests
         context.Request.RouteValues["tenantId"] = tenant.ToString();
         context.Request.RouteValues["provider"] = "secret-phone-number";
         context.Request.Headers.Authorization = "Bearer secret-token";
-        context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(PortalSecurity.AdminClaim, "true")], "test"));
+        var administratorId = Guid.NewGuid().ToString();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(PortalSecurity.AdminClaim, "true"), new Claim(ClaimTypes.NameIdentifier, administratorId)], "test"));
         var logger = new RecordingLogger();
         await new PlatformAuditMiddleware(c => { c.Response.StatusCode = status; return Task.CompletedTask; }, logger).InvokeAsync(context);
         Assert.Equal(level, logger.Level);
         Assert.Equal("Administration.SaveProvider", logger.Values["Action"]);
-        Assert.Equal("platform-administrator", logger.Values["Actor"]);
+        Assert.Equal(administratorId, logger.Values["Actor"]);
         Assert.Equal(outcome, logger.Values["Outcome"]);
         Assert.Equal(tenant, logger.Values["TargetTenantId"]);
         Assert.False(logger.Values.ContainsKey("TenantId"));
@@ -43,14 +44,18 @@ public sealed class PlatformAuditMiddlewareTests
     }
 
     [Theory]
-    [InlineData("AdminAuth", 200, "platform-administrator")]
+    [InlineData("AdminAuth", 200, "verified-admin-id")]
     [InlineData("AdminAuth", 401, "unauthenticated")]
     [InlineData("AdminAuth", 429, "unauthenticated")]
     [InlineData("AdminTenants", 201, "bootstrap-key")]
     public async Task IdentifiesLoginAndBootstrapOutcomes(string controller, int status, string actor)
     {
         var logger = new RecordingLogger();
-        await new PlatformAuditMiddleware(c => { c.Response.StatusCode = status; return Task.CompletedTask; }, logger)
+        await new PlatformAuditMiddleware(c => {
+            c.Response.StatusCode = status;
+            if (status == 200) c.Items[PortalSecurity.AdministratorLoginIdentityKey] = "verified-admin-id";
+            return Task.CompletedTask;
+        }, logger)
             .InvokeAsync(Context(controller, "Token"));
         Assert.Equal(actor, logger.Values["Actor"]);
     }

@@ -1,6 +1,18 @@
 SET QUOTED_IDENTIFIER ON;
 GO
 
+CREATE TABLE dbo.PlatformAdministrators
+(
+    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_PlatformAdministrators PRIMARY KEY,
+    Username NVARCHAR(100) COLLATE Latin1_General_100_CI_AS NOT NULL CONSTRAINT UQ_PlatformAdministrators_Username UNIQUE,
+    PasswordHash VARBINARY(32) NOT NULL,
+    PasswordSalt VARBINARY(32) NOT NULL,
+    PasswordIterations INT NOT NULL CONSTRAINT CK_PlatformAdministrators_Iterations CHECK (PasswordIterations >= 100000),
+    IsActive BIT NOT NULL CONSTRAINT DF_PlatformAdministrators_IsActive DEFAULT (1),
+    CreatedAt DATETIMEOFFSET NOT NULL
+);
+GO
+
 CREATE TABLE dbo.Tenants
 (
     Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_Tenants PRIMARY KEY,

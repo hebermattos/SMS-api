@@ -55,20 +55,19 @@ public sealed class PortalSecurityTests
     [Theory]
     [InlineData(null, "secret", false)] [InlineData("secret", null, false)]
     [InlineData("secret", "wrong", false)] [InlineData("secret", "secret", true)]
-    public void AdministratorLogin_RequiresConfiguredKey(string? expected, string? supplied, bool allowed)
+    public void Bootstrap_RequiresConfiguredKey(string? expected, string? supplied, bool allowed)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Admin:ProvisioningKey"] = expected }).Build();
-        var controller = new AdminAuthController(Tokens(), configuration) { ControllerContext = new() { HttpContext = new DefaultHttpContext() } };
-        var result = controller.Token(new(supplied!));
-        if (allowed) Assert.IsType<OkObjectResult>(result); else Assert.IsType<UnauthorizedResult>(result);
-        Assert.Equal("no-store", controller.Response.Headers.CacheControl);
+        Assert.Equal(allowed, PortalSecurity.ValidateAdminKey(expected, supplied));
         Assert.False(PortalSecurity.ValidateAdminKey("secret", new string('x', 1025)));
     }
 
     [Fact]
     public void AdministratorToken_HasShortLifetimeAndNoTenantIdentity()
     {
-        var token = new JwtSecurityTokenHandler().ReadJwtToken(Tokens().CreateAdministrator());
+        var id = Guid.NewGuid();
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(Tokens().CreateAdministrator(id, "admin"));
+        Assert.Equal(id.ToString(), token.Subject);
+        Assert.Contains(token.Claims, x => x.Type == "admin_username" && x.Value == "admin");
         Assert.Contains(token.Claims, x => x.Type == PortalSecurity.AdminClaim && x.Value == "true");
         Assert.DoesNotContain(token.Claims, x => x.Type == "tenant_id");
         Assert.InRange(token.ValidTo, DateTime.UtcNow.AddMinutes(14), DateTime.UtcNow.AddMinutes(16));
@@ -97,7 +96,7 @@ public sealed class PortalSecurityTests
         var malformed = Context(repo, new("tenant_id", "invalid"), new("sub", "client"));
         await PortalSecurity.ValidateTenantAsync(malformed); Assert.NotNull(malformed.Result?.Failure);
         var admin = Context(repo, new Claim(PortalSecurity.AdminClaim, "true"));
-        await PortalSecurity.ValidateTenantAsync(admin); Assert.Null(admin.Result);
+        await PortalSecurity.ValidateTenantAsync(admin); Assert.NotNull(admin.Result?.Failure);
     }
 
     [Theory]

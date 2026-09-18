@@ -12,6 +12,7 @@ public static class PortalSecurity
 {
     public const string AdminPolicy = "PlatformAdmin";
     public const string AdminClaim = "platform_admin";
+    public static readonly object AdministratorLoginIdentityKey = new();
 
     public static void ConfigureAuthorization(AuthorizationOptions options)
     {
@@ -31,9 +32,21 @@ public static class PortalSecurity
     public static async Task ValidateTenantAsync(TokenValidatedContext context)
     {
         var tenantClaim = context.Principal?.FindFirstValue("tenant_id");
-        if (tenantClaim is null) return; // Admin tokens are authorized separately and carry no tenant claim.
         var subject = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (context.Principal?.HasClaim(AdminClaim, "true") == true)
+        {
+            if (tenantClaim is not null || !Guid.TryParse(subject, out var administratorId))
+            {
+                context.Fail("Invalid administrator identity.");
+                return;
+            }
+            var administrators = context.HttpContext.RequestServices.GetRequiredService<IAdministratorRepository>();
+            if (!await administrators.IsActiveAsync(administratorId, context.HttpContext.RequestAborted))
+                context.Fail("Inactive administrator.");
+            return;
+        }
+        if (tenantClaim is null) { context.Fail("Missing identity."); return; }
         if (!Guid.TryParse(tenantClaim, out var tenantId) || string.IsNullOrWhiteSpace(subject))
         {
             context.Fail("Invalid tenant identity.");

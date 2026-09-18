@@ -30,6 +30,20 @@ describe('Login screen', () => {
     expect(component.admin()).toBe(true); expect(component.credential).toBe('');
     expect(fixture.nativeElement.querySelector('#credential').type).toBe('password');
     expect(fixture.nativeElement.querySelector('#client-id')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#admin-username')).not.toBeNull();
+  });
+
+  it('requires an administrator username and submits a password instead of a shared key', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    component.changeMode(true); component.credential = 'administrator-password';
+    component.submit(); http.expectNone('/api/v1/admin/auth/token');
+    component.username = ' admin '; component.submit();
+    const request = http.expectOne('/api/v1/admin/auth/token');
+    expect(request.request.body).toEqual({ username: 'admin', password: 'administrator-password' });
+    request.flush({ access_token: `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 900 }))}.s` });
+    expect(component.credential).toBe('');
+    expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/admin/tenants');
   });
 
   it('prevents duplicate requests and clears credentials after a login error', () => {
