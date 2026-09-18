@@ -150,7 +150,7 @@ ENCRYPTION_MASTER_KEY
 ADMIN_PROVISIONING_KEY
 ```
 
-The API is exposed on port `8080`.
+The API is exposed on port `8080`, and SQL Server is exposed on host port `1434`.
 
 Run the Bandwidth SQL Server integration tests in an isolated local Compose project:
 
@@ -159,7 +159,7 @@ docker compose -p sms-bandwidth-test --profile tests run --build --rm webhook-te
 docker compose -p sms-bandwidth-test --profile tests down
 ```
 
-This starts only SQL Server, database initialization and the test runner. It recreates the test databases using the canonical schemas and verifies concurrent callback retries, status history, tenant isolation and encrypted provider settings. Port 1433 must be available. No live Bandwidth account is needed. Configure public HTTPS callbacks separately when testing with a real provider account.
+This starts only SQL Server, database initialization and the test runner. It recreates the test databases using the canonical schemas and verifies concurrent callback retries, status history, tenant isolation and encrypted provider settings. Host port 1434 must be available. No live Bandwidth account is needed. Configure public HTTPS callbacks separately when testing with a real provider account.
 
 ## Database initialization
 
