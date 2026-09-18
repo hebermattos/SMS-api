@@ -10,7 +10,7 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
     {
         using var connection = connections.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<AdministratorAccount>(new CommandDefinition(
-            "SELECT Id,Username,PasswordHash,PasswordSalt,PasswordIterations,IsActive FROM dbo.PlatformAdministrators WHERE Username=@Username;",
+            "SELECT Id,Username,Email,PasswordHash,PasswordSalt,PasswordIterations,IsActive FROM dbo.PlatformAdministrators WHERE Username=@Username;",
             new { Username = username }, cancellationToken: cancellationToken));
     }
 
@@ -26,7 +26,7 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
     {
         using var connection = connections.CreateConnection();
         return (await connection.QueryAsync<AdministratorSummary>(new CommandDefinition("""
-            SELECT Id,Username,IsActive,CreatedAt FROM dbo.PlatformAdministrators ORDER BY Username;
+            SELECT Id,Username,Email,IsActive,CreatedAt FROM dbo.PlatformAdministrators ORDER BY Username;
             """, cancellationToken: cancellationToken))).AsList();
     }
 
@@ -36,8 +36,8 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
         try
         {
             await connection.ExecuteAsync(new CommandDefinition("""
-                INSERT dbo.PlatformAdministrators(Id,Username,PasswordHash,PasswordSalt,PasswordIterations,IsActive,CreatedAt)
-                VALUES(@Id,@Username,@PasswordHash,@PasswordSalt,@PasswordIterations,@IsActive,SYSDATETIMEOFFSET());
+                INSERT dbo.PlatformAdministrators(Id,Username,Email,PasswordHash,PasswordSalt,PasswordIterations,IsActive,CreatedAt)
+                VALUES(@Id,@Username,@Email,@PasswordHash,@PasswordSalt,@PasswordIterations,@IsActive,SYSDATETIMEOFFSET());
                 """, account, cancellationToken: cancellationToken));
         }
         catch (SqlException exception) when (exception.Number is 2601 or 2627)
