@@ -33,8 +33,18 @@ public sealed class PortalSecurityTests
         services.AddAuthorization(PortalSecurity.ConfigureAuthorization);
         using var provider = services.BuildServiceProvider();
         var claims = new List<Claim>();
-        if (tenant) claims.Add(new("tenant_id", Guid.NewGuid().ToString()));
-        if (admin) claims.Add(new(PortalSecurity.AdminClaim, "true"));
+        if (tenant)
+        {
+            claims.Add(new("tenant_id", Guid.NewGuid().ToString()));
+            claims.Add(new(PortalSecurity.ContextClaim, PortalSecurity.TenantContext));
+            claims.Add(new(PortalSecurity.RoleClaim, PortalSecurity.UserRole));
+        }
+        if (admin)
+        {
+            claims.Add(new(PortalSecurity.AdminClaim, "true"));
+            claims.Add(new(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext));
+            claims.Add(new(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole));
+        }
         var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer"));
         var authorization = provider.GetRequiredService<IAuthorizationService>();
         var options = provider.GetRequiredService<IOptions<AuthorizationOptions>>().Value;
