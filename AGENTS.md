@@ -73,7 +73,7 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 ## Docker and configuration
 
 - Docker Compose is for local and automated tests only, not the production deployment model.
-- Compose must recreate both databases from the complete schema files and provision the example tenant on first startup.
+- Compose must create each database and apply its complete schema only when the database does not exist, provision the example tenant and provider fixtures on first initialization, and preserve data across ordinary restarts. Use `docker compose down --remove-orphans --volumes` only for an intentional clean reset.
 - Keep development fallback secrets clearly non-production and documented.
 - Use ASP.NET Core configuration and environment variables for deployment-specific values.
 - `Sms:PublicBaseUrl` must remain an externally reachable absolute HTTPS URL and must not be derived from untrusted proxy headers.
