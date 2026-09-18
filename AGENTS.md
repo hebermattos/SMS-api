@@ -114,7 +114,6 @@ When Codex is being used through an IDE integration:
 
 ## Current known gaps
 
-- Bandwidth inbound and status webhooks are not implemented yet.
 - The Angular administration UI is not implemented yet.
 
 Treat these as separate future PRs. Do not silently implement them as part of an unrelated task.

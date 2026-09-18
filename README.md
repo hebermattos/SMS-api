@@ -7,12 +7,12 @@ Multi-tenant REST API for sending, receiving, tracking, and querying SMS message
 - ASP.NET Core / .NET 8
 - SQL Server + Dapper
 - JWT bearer authentication
-- Twilio
+- Twilio and Bandwidth
 - OpenTelemetry logs, traces and metrics
 - Docker Compose
 - xUnit + Coverlet
 
-Bandwidth outbound SMS is implemented with OAuth 2.0 Client Credentials. Bandwidth webhook endpoints are not implemented yet.
+Bandwidth outbound SMS uses OAuth 2.0 Client Credentials. Inbound and delivery-status webhooks use tenant-specific HTTP Basic authentication.
 
 ## Architecture
 
@@ -48,6 +48,8 @@ GET  /api/v1/logs
 
 POST /api/v1/webhooks/twilio/inbound
 POST /api/v1/webhooks/twilio/status
+POST /api/v1/webhooks/bandwidth/inbound
+POST /api/v1/webhooks/bandwidth/status
 
 POST /api/v1/admin/tenants
 ```
@@ -62,6 +64,33 @@ Twilio webhook endpoints are anonymous by design and validate `X-Twilio-Signatur
 Twilio accounts may be shared by multiple tenants. Callback ownership is resolved by the unique active combination of provider, account ID, and configured sender number. A tenant cannot override its configured sender number when sending.
 
 The tenant provisioning endpoint uses `X-Admin-Key`. It is intended as bootstrap administration and should not be exposed publicly without additional administrative access controls.
+
+## Bandwidth webhooks
+
+Configure the Bandwidth Messaging Application with these URLs under your externally reachable HTTPS base URL:
+
+- Inbound Callback URL: `/api/v1/webhooks/bandwidth/inbound`
+- Status Callback URL: `/api/v1/webhooks/bandwidth/status`
+
+Use a separate Messaging Application per tenant so each application has its own callback credentials, even when tenants share an OAuth account. Enable Basic authentication on both callbacks. Use the tenant provider configuration's `AccountId` (the OAuth **client ID**, not the Bandwidth messaging account ID) as the callback username. Generate a strong, separate callback password for each tenant and set the same password in both Bandwidth callback configurations and `Settings.webhookPassword`. Do not reuse the OAuth client secret.
+
+The existing `TenantSmsProviderConfiguration` uses `Provider = "Bandwidth"`, `AccountId` for the OAuth client ID, `ApiSecret` for the OAuth client secret, and `FromNumber` for the tenant's Bandwidth number. Its `Settings` JSON must include:
+
+```json
+{
+  "accountId": "<Bandwidth messaging account ID>",
+  "applicationId": "<Bandwidth Messaging Application ID>",
+  "webhookPassword": "<separate generated callback password>"
+}
+```
+
+Provision this configuration through `ITenantSmsProviderRepository.UpsertAsync` in trusted administrative code; it encrypts `ApiSecret` and the complete `Settings` value with AES-256-GCM. The tenant-creation HTTP endpoint and CLI do not currently provision provider settings. Never insert plaintext secrets directly into SQL Server. Existing outbound-only configurations continue to send messages, but callbacks fail authentication until `webhookPassword` is configured.
+
+Callbacks accept JSON arrays of 1–100 events, with a maximum request body of 1 MiB. The receiver validates every event's credentials, application ID, owner number, recipient and direction before writing any event. The tenant comes from the authenticated provider configuration; payload tenant identifiers are ignored. Missing or invalid credentials receive `401` with a Basic challenge, malformed or unsupported events receive `400`, and non-JSON requests with credentials receive `415`. Successful callbacks, including duplicates and valid status callbacks for unknown message IDs, receive `204`.
+
+Supported events are `message-received` (Received), `message-sending` and `message-sent` (Sent), `message-delivered` (Delivered), and `message-failed` (Failed). Configure only these status events. Duplicate inbound messages and repeated status transitions do not create duplicate history. Late intermediate events cannot overwrite a terminal status. A database failure leaves the request unsuccessful so Bandwidth can retry; any already-persisted events are safe to replay. The API stores the inbound owner's copy of group-message text, not media attachments.
+
+See Bandwidth's [callback payload reference](https://dev.bandwidth.com/docs/messaging/webhooks/) and [callback authentication documentation](https://dev.bandwidth.com/docs/numbers/webhooks/#authentication).
 
 ## Test environment with Docker
 
@@ -93,6 +122,15 @@ ADMIN_PROVISIONING_KEY
 ```
 
 The API is exposed on port `8080`.
+
+Run the Bandwidth SQL Server integration tests in an isolated local Compose project:
+
+```bash
+docker compose -p sms-bandwidth-test --profile tests run --build --rm webhook-tests
+docker compose -p sms-bandwidth-test --profile tests down
+```
+
+This starts only SQL Server, database initialization and the test runner. It recreates the test databases using the canonical schemas and verifies concurrent callback retries, status history, tenant isolation and encrypted provider settings. Port 1433 must be available. No live Bandwidth account is needed. Configure public HTTPS callbacks separately when testing with a real provider account.
 
 ## Database initialization
 
@@ -158,7 +196,7 @@ dotnet build Sms.Api.sln --configuration Release
 dotnet test Sms.Api.sln --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 ```
 
-The CI workflow builds the solution, runs tests, generates Cobertura coverage and enforces a minimum 80% line-coverage threshold. SQL Server/Dapper persistence adapters are reserved for integration testing and excluded from the unit-test coverage calculation. Coverage reports are uploaded as workflow artifacts.
+The CI workflow builds the solution, runs tests, generates Cobertura coverage and enforces a minimum 80% line-coverage threshold. SQL Server/Dapper persistence adapters are reserved for integration testing and excluded from the unit-test coverage calculation. Coverage reports are uploaded as workflow artifacts. A separate required-to-pass `bandwidth-sql` job initializes SQL Server with the canonical schema and exercises Bandwidth persistence. Locally, SQL tests are skipped unless `SMS_TEST_SQLSERVER` points to a disposable database initialized with `database/schema.sql`; the Compose test profile supplies it automatically.
 
 ## Security notes
 
@@ -175,7 +213,6 @@ The CI workflow builds the solution, runs tests, generates Cobertura coverage an
 
 ## Current limitations
 
-- Bandwidth inbound/status webhooks are not implemented.
 - Angular administration UI is not implemented.
 
 ## Contributing

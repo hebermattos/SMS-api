@@ -20,6 +20,7 @@ public sealed class RegistrationAndModelTests
         services.AddApplication();
 
         Assert.Contains(services, x => x.ServiceType == typeof(SendSmsService) && x.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(services, x => x.ServiceType == typeof(ReceiveSmsWebhookService) && x.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(services, x => x.ServiceType == typeof(TenantProvisioningService) && x.Lifetime == ServiceLifetime.Scoped);
     }
 
@@ -37,6 +38,7 @@ public sealed class RegistrationAndModelTests
 
         Assert.Equal(2, services.Count(x => x.ServiceType == typeof(ISmsProvider)));
         Assert.Contains(services, x => x.ServiceType == typeof(BandwidthSmsProvider));
+        Assert.Contains(services, x => x.ServiceType == typeof(BandwidthWebhookParser) && x.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(services, x => x.ServiceType == typeof(IHttpClientFactory));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsProviderResolver));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsMessageRepository));
