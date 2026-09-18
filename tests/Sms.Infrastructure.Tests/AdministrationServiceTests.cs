@@ -79,6 +79,18 @@ public sealed class AdministrationServiceTests
     }
 
     [Fact]
+    public async Task TenantTimeZone_IsValidatedAndStored()
+    {
+        var repo = new AdministrationFakeRepository();
+        var service = Service(repo);
+
+        await service.UpdateTenantAsync(repo.Tenant.Id, "Company", "America/Sao_Paulo", true, default);
+
+        Assert.Equal("America/Sao_Paulo", repo.Tenant.TimeZoneId);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateTenantAsync(repo.Tenant.Id, "Company", "Not/AZone", true, default));
+    }
+
+    [Fact]
     public async Task ProviderEdit_PreservesSecretsAndResponsesOmitThem()
     {
         var repo = new AdministrationFakeRepository(); var service = Service(repo);
