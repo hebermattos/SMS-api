@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
