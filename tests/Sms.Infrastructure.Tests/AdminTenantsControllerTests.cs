@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Sms.Api.Controllers;
+using Sms.Application.Auth;
 using Sms.Application.Tenants;
 
 namespace Sms.Infrastructure.Tests;
