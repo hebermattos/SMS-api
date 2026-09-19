@@ -25,6 +25,7 @@ const routes: Routes = [
       { path: 'messages', loadComponent: () => import('./app/pages/messages.component').then(m => m.MessagesComponent) },
       { path: 'messages/:id', loadComponent: () => import('./app/pages/message-detail.component').then(m => m.MessageDetailComponent) },
       { path: 'reports', loadComponent: () => import('./app/pages/sms-reports.component').then(m => m.SmsReportsComponent) },
+      { path: 'alerts', loadComponent: () => import('./app/pages/alerts.component').then(m => m.AlertsComponent) },
       { path: 'logs', loadComponent: () => import('./app/pages/logs.component').then(m => m.LogsComponent) }
     ]
   },
