@@ -11,6 +11,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Sms.Api.Auth;
 using Sms.Api.Middleware;
+using Sms.Api.Workers;
 using Sms.Application;
 using Sms.Application.Common;
 using Sms.Infrastructure;
@@ -70,6 +71,7 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHostedService<AlertEvaluationWorker>();
 
 var app = builder.Build();
 app.UseHttpsRedirection();
