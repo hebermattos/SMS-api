@@ -45,7 +45,7 @@ public sealed class AdministrationControllerTests
         var tenant = new TenantContext(); var repository = new OverviewRepository(); var controller = new OverviewController(tenant, repository);
         Assert.IsType<NotFoundResult>(await controller.Get(default));
         Assert.Equal(tenant.TenantId, repository.RequestedTenant);
-        repository.Value = new("Company", 1, 2, 1, 0, 0, []);
+        repository.Value = new("Company", "UTC", 1, 2, 1, 0, 0, []);
         Assert.IsType<OkObjectResult>(await controller.Get(default));
     }
 
