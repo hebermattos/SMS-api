@@ -7,5 +7,5 @@ RUN npm run build
 
 FROM nginx:stable-alpine
 COPY ui/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /ui/dist/console/browser /usr/share/nginx/html
+COPY --from=build /ui/dist/ui/browser /usr/share/nginx/html
 EXPOSE 80

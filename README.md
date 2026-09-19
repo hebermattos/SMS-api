@@ -6,7 +6,7 @@ Multi-tenant REST API for sending, receiving, tracking, and querying SMS message
 
 - ASP.NET Core / .NET 8
 - SQL Server and Dapper
-- Angular 21 administration console
+- Angular 21 administration UI
 - JWT authentication
 - Twilio and Bandwidth providers
 - OpenTelemetry
@@ -23,7 +23,7 @@ docker compose up --build
 
 Open:
 
-- Console: http://localhost:4200
+- UI: http://localhost:4200
 - API: http://localhost:8080
 - SQL Server: localhost,1434
 
@@ -46,12 +46,12 @@ docker compose up --build
 
 Docker is for local testing only. The Compose fallback credentials must never be used outside local development.
 
-## Console
+## UI
 
-The Angular console provides:
+The Angular UI provides:
 
 - Platform administration: administrators, tenants, API clients, and providers.
-- Tenant operations: send SMS, history, status history, reports, configurable alert rules, in-console alerts, and tenant logs.
+- Tenant operations: send SMS, history, status history, reports, configurable alert rules, in-UI alerts, and tenant logs.
 
 For frontend development:
 
@@ -206,7 +206,7 @@ dotnet run --project tools/Sms.Provision -- --admin
 
 Provide `ConnectionStrings__SqlServer`, `Admin__Username`, `Admin__Password`, and `Admin__Email` through the environment.
 
-Create a tenant through the authenticated platform-administrator API or console. The generated client secret is returned once.
+Create a tenant through the authenticated platform-administrator API or UI. The generated client secret is returned once.
 
 ## Tests and CI
 
@@ -218,7 +218,7 @@ dotnet build Sms.Api.sln --configuration Release
 dotnet test Sms.Api.sln --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 ```
 
-Pushes to `main` automatically build and test the .NET solution and Angular console and enforce at least 80% backend line coverage. SQL Server integration tests and the Docker Compose end-to-end bootstrap run only when the CI workflow is started manually with **Run workflow**. Manual runs execute backend and frontend checks first, SQL integration second, and Compose validation last.
+Pushes to `main` automatically build and test the .NET solution and Angular UI and enforce at least 80% backend line coverage. SQL Server integration tests and the Docker Compose end-to-end bootstrap run only when the CI workflow is started manually with **Run workflow**. Manual runs execute backend and frontend checks first, SQL integration second, and Compose validation last.
 
 ## Architecture
 
@@ -228,7 +228,7 @@ src/Sms.Application     Use cases and contracts
 src/Sms.Domain          Domain models
 src/Sms.Infrastructure  SQL Server, encryption, providers, observability
 src/Sms.Infrastructure/Sql  Embedded runtime SQL queries grouped by responsibility
-ui                      Angular console
+ui                      Angular UI
 database                Canonical schemas and test seeds
 tools/Sms.Provision     Bootstrap provisioning
 tests                   Unit and SQL integration tests

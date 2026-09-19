@@ -6,7 +6,7 @@ import { PortalContext, PortalPermissionRole, PortalRole, TokenResponse } from '
 
 @Injectable({ providedIn: 'root' })
 export class AuthService implements OnDestroy {
-  private readonly storageKey = 'sms-console-session';
+  private readonly storageKey = 'sms-ui-session';
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private token: string | null = null;

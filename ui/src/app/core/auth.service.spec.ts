@@ -24,8 +24,8 @@ describe('Portal sessions', () => {
     expect(request.request.headers.has('Authorization')).toBe(false);
     const bearer = token(); request.flush({ access_token: bearer, token_type: 'Bearer' });
     expect(auth.bearer()).toBe(bearer); expect(auth.role()).toBe('tenant');
-    expect(JSON.parse(sessionStorage.getItem('sms-console-session')!)).toEqual({ token: bearer, role: 'tenant', identity: 'client', context: 'tenant', permissionRole: 'user' });
-    expect(localStorage.getItem('sms-console-session')).toBeNull();
+    expect(JSON.parse(sessionStorage.getItem('sms-ui-session')!)).toEqual({ token: bearer, role: 'tenant', identity: 'client', context: 'tenant', permissionRole: 'user' });
+    expect(localStorage.getItem('sms-ui-session')).toBeNull();
   });
 
   it('opens a separate administrator session and clears it on logout', () => {
@@ -34,9 +34,9 @@ describe('Portal sessions', () => {
     expect(request.request.body).toEqual({ username: 'admin', password: 'admin-password' });
     request.flush({ access_token: token() });
     expect(auth.role()).toBe('admin');
-    expect(sessionStorage.getItem('sms-console-session')).not.toContain('admin-password');
+    expect(sessionStorage.getItem('sms-ui-session')).not.toContain('admin-password');
     auth.logout(); expect(auth.bearer()).toBeNull(); expect(auth.role()).toBeNull();
-    expect(sessionStorage.getItem('sms-console-session')).toBeNull();
+    expect(sessionStorage.getItem('sms-ui-session')).toBeNull();
   });
 
   it.each(['tenant', 'admin'] as const)('restores a %s session before route guards after reload', role => {
@@ -65,21 +65,21 @@ describe('Portal sessions', () => {
     JSON.stringify({ token: `h.${btoa(JSON.stringify({ exp: 1 }))}.s`, role: 'tenant', identity: 'client' }),
     JSON.stringify({ token: 'h.e30.s', role: 'unknown', identity: 'client' })
   ])('discards invalid or expired stored sessions: %s', saved => {
-    sessionStorage.setItem('sms-console-session', saved);
+    sessionStorage.setItem('sms-ui-session', saved);
     const restored = TestBed.runInInjectionContext(() => new AuthService());
     expect(restored.bearer()).toBeNull(); expect(restored.role()).toBeNull();
-    expect(sessionStorage.getItem('sms-console-session')).toBeNull();
+    expect(sessionStorage.getItem('sms-ui-session')).toBeNull();
     restored.ngOnDestroy();
   });
 
   it('expires a restored session at its original expiry time', () => {
     vi.useFakeTimers();
     const bearer = `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 60 }))}.s`;
-    sessionStorage.setItem('sms-console-session', JSON.stringify({ token: bearer, role: 'tenant', identity: 'client' }));
+    sessionStorage.setItem('sms-ui-session', JSON.stringify({ token: bearer, role: 'tenant', identity: 'client' }));
     const restored = TestBed.runInInjectionContext(() => new AuthService());
     vi.advanceTimersByTime(60000);
     expect(restored.bearer()).toBeNull(); expect(restored.expired()).toBe(true);
-    expect(sessionStorage.getItem('sms-console-session')).toBeNull();
+    expect(sessionStorage.getItem('sms-ui-session')).toBeNull();
     restored.ngOnDestroy();
   });
 
