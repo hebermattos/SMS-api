@@ -11,6 +11,7 @@ public sealed class RabbitMqAlertOptions
     public string VirtualHost { get; init; } = "/";
     public string Queue { get; init; } = "sms.alert.evaluation";
     public string SendQueue { get; init; } = "sms.send";
+    public string ReportingQueue { get; init; } = "sms.reporting.overview";
 
     public static RabbitMqAlertOptions From(IConfiguration configuration)
     {
@@ -23,7 +24,8 @@ public sealed class RabbitMqAlertOptions
             Password = section["Password"] ?? "guest",
             VirtualHost = section["VirtualHost"] ?? "/",
             Queue = section["Queue"] ?? "sms.alert.evaluation",
-            SendQueue = section["SendQueue"] ?? "sms.send"
+            SendQueue = section["SendQueue"] ?? "sms.send",
+            ReportingQueue = section["ReportingQueue"] ?? "sms.reporting.overview"
         };
     }
 }
