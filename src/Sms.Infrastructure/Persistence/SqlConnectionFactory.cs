@@ -1,12 +1,18 @@
+using System.Data;
+using Dapper;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
-using System.Data;
 
 namespace Sms.Infrastructure.Persistence;
 
 public sealed class SqlConnectionFactory
 {
     private readonly string _connectionString;
+
+    static SqlConnectionFactory()
+    {
+        SqlMapper.AddTypeHandler(new PostgresDateTimeOffsetHandler());
+    }
 
     public SqlConnectionFactory(IConfiguration configuration)
     {
