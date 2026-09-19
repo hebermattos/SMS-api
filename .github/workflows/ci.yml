@@ -17,8 +17,8 @@ jobs:
     name: Backend build and unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
       - name: Restore
@@ -42,11 +42,11 @@ jobs:
           if ($percent -lt 80) { throw "Line coverage $percent% is below the required 80%." }
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: code-coverage
           path: TestResults/**/coverage.cobertura.xml
-          if-no-files-found: error
+          if-no-files-found: warn
 
   sql-integration:
     name: SQL Server integration tests
@@ -68,8 +68,8 @@ jobs:
       SMS_TEST_SQLSERVER: 'Server=localhost;Database=SmsApiWebhookTests;User Id=sa;Password=SmsApi_Local_2026!;TrustServerCertificate=True'
       SMS_TEST_REPORTING_SQLSERVER: 'Server=localhost;Database=SmsApiReportingTests;User Id=sa;Password=SmsApi_Local_2026!;TrustServerCertificate=True'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
       - name: Initialize canonical schema
@@ -90,8 +90,8 @@ jobs:
       run:
         working-directory: ui
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Initialize databases through Docker Compose
         run: docker compose run --build --rm provider-init
       - name: Verify both schemas, the example client, and encrypted providers
