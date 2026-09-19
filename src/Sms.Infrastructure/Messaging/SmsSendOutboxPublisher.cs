@@ -36,12 +36,21 @@ public sealed class SmsSendOutboxPublisher(
     private async Task PublishBatchAsync(CancellationToken cancellationToken)
     {
         using var connection = connectionFactory.CreateConnection();
+        var lockId = Guid.NewGuid();
         var rows = await connection.QueryAsync<SmsSendEvent>(new CommandDefinition("""
-            SELECT TOP (100) Id AS EventId, TenantId, MessageId
-            FROM dbo.SmsSendOutbox WITH (READPAST, UPDLOCK, ROWLOCK)
-            WHERE PublishedAtUtc IS NULL
-            ORDER BY CreatedAtUtc, Id;
-            """, cancellationToken: cancellationToken));
+            WITH pending AS
+            (
+                SELECT TOP (100) *
+                FROM dbo.SmsSendOutbox WITH (READPAST, UPDLOCK, ROWLOCK)
+                WHERE PublishedAtUtc IS NULL
+                  AND (LockedUntilUtc IS NULL OR LockedUntilUtc < SYSUTCDATETIME())
+                ORDER BY CreatedAtUtc, Id
+            )
+            UPDATE pending
+            SET LockId=@LockId, LockedUntilUtc=DATEADD(MINUTE,1,SYSUTCDATETIME()),
+                AttemptCount=AttemptCount+1, LastAttemptAtUtc=SYSUTCDATETIME()
+            OUTPUT INSERTED.Id AS EventId, INSERTED.TenantId, INSERTED.MessageId;
+            """, new { LockId = lockId }, cancellationToken: cancellationToken));
 
         if (!rows.Any()) return;
 
@@ -66,9 +75,9 @@ public sealed class SmsSendOutboxPublisher(
             channel.WaitForConfirmsOrDie(TimeSpan.FromSeconds(5));
             await connection.ExecuteAsync(new CommandDefinition("""
                 UPDATE dbo.SmsSendOutbox
-                SET PublishedAtUtc=SYSUTCDATETIME(), AttemptCount=AttemptCount+1, LastAttemptAtUtc=SYSUTCDATETIME()
-                WHERE Id=@EventId AND PublishedAtUtc IS NULL;
-                """, row, cancellationToken: cancellationToken));
+                SET PublishedAtUtc=SYSUTCDATETIME(), LockId=NULL, LockedUntilUtc=NULL
+                WHERE Id=@EventId AND LockId=@LockId AND PublishedAtUtc IS NULL;
+                """, new { row.EventId, LockId = lockId }, cancellationToken: cancellationToken));
         }
     }
 }
