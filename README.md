@@ -87,6 +87,11 @@ GET  /api/v1/messages/{id}
 GET  /api/v1/messages/{id}/status-history
 GET  /api/v1/logs
 GET  /api/v1/overview
+GET  /api/v1/reports/sms
+GET  /api/v1/tenant/users
+POST /api/v1/tenant/users
+PUT  /api/v1/tenant/users/{id}/state
+POST /api/v1/tenant/users/{id}/reset-password
 GET  /api/v1/alerts
 GET  /api/v1/alerts/rules
 POST /api/v1/alerts/rules
@@ -103,6 +108,12 @@ GET  /api/v1/admin/administrators
 POST /api/v1/admin/administrators
 PUT  /api/v1/admin/administrators/{id}/state
 POST /api/v1/admin/administrators/{id}/reset-password
+GET  /api/v1/admin/platform-users
+POST /api/v1/admin/platform-users
+PUT  /api/v1/admin/platform-users/{id}/state
+POST /api/v1/admin/platform-users/{id}/reset-password
+GET  /api/v1/admin/reports/sms
+GET  /api/v1/admin/time-zones
 GET  /api/v1/admin/tenants
 POST /api/v1/admin/tenants
 GET  /api/v1/admin/tenants/{id}
@@ -159,6 +170,8 @@ RabbitMq__Password
 
 ## Database
 
+Runtime Dapper queries are stored as embedded `.sql` resources under `src/Sms.Infrastructure/Sql` and loaded through a cached query loader.
+
 The project does not use migrations. Initialize new databases with:
 
 - `database/schema.sql`
@@ -168,7 +181,7 @@ The application database stores tenants, users, clients, providers, messages, st
 
 All dates are stored in UTC. Each tenant has an IANA time zone for display and date filters.
 
-Alert rules count distinct messages entering the selected status within the configured window. Rules can trigger once per incident or repeat at a configured interval while the condition remains true. Alert evaluation is event-driven through RabbitMQ. The outbox makes database changes durable across broker outages, and the inbox prevents duplicate alert notifications.
+Alert rules count SMS status transitions within the configured window. A once-only rule fires once and remains triggered until the rule is updated. A repeating rule can fire again after its configured interval while the threshold remains satisfied. Alert evaluation is event-driven through RabbitMQ. The outbox makes database changes durable across broker outages, and the inbox prevents duplicate alert notifications.
 
 ## Security
 
@@ -205,7 +218,7 @@ dotnet build Sms.Api.sln --configuration Release
 dotnet test Sms.Api.sln --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 ```
 
-The CI workflow runs only on `main`, builds the solution, tests the API and Angular console, validates Docker initialization, runs SQL integration tests, and enforces at least 80% line coverage.
+Pushes to `main` automatically build and test the .NET solution and Angular console and enforce at least 80% backend line coverage. SQL Server integration tests and the Docker Compose end-to-end bootstrap run only when the CI workflow is started manually with **Run workflow**. Manual runs execute backend and frontend checks first, SQL integration second, and Compose validation last.
 
 ## Architecture
 
@@ -214,6 +227,7 @@ src/Sms.Api             HTTP, authentication, authorization
 src/Sms.Application     Use cases and contracts
 src/Sms.Domain          Domain models
 src/Sms.Infrastructure  SQL Server, encryption, providers, observability
+src/Sms.Infrastructure/Sql  Embedded runtime SQL queries grouped by responsibility
 ui                      Angular console
 database                Canonical schemas and test seeds
 tools/Sms.Provision     Bootstrap provisioning
