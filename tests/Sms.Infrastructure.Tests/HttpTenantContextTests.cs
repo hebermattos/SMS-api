@@ -16,6 +16,15 @@ public sealed class HttpTenantContextTests
     }
 
     [Fact]
+    public void TenantId_UsesWorkerTenantOutsideHttpRequest()
+    {
+        var tenantId = Guid.NewGuid();
+        var context = new HttpTenantContext(new HttpContextAccessor());
+        context.SetTenant(tenantId);
+        Assert.Equal(tenantId, context.TenantId);
+    }
+
+    [Fact]
     public void TenantId_RejectsMissingClaim()
     {
         var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
