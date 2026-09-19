@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Sms.Infrastructure.Messaging;
+using Sms.Infrastructure.Caching;
 
 namespace Sms.Api.Health;
 
@@ -101,12 +102,15 @@ public static class DependencyHealthChecks
     public sealed class ReportingDatabaseHealthCheck(IConfiguration configuration)
         : SqlServerHealthCheck(RequiredConnectionString(configuration, "ReportingSqlServer"));
 
-    public sealed class RedisHealthCheck(IDistributedCache cache) : IHealthCheck
+    public sealed class RedisHealthCheck(IDistributedCache cache, CacheOptions cacheOptions) : IHealthCheck
     {
         public async Task<HealthCheckResult> CheckHealthAsync(
             HealthCheckContext context,
             CancellationToken cancellationToken = default)
         {
+            if (!cacheOptions.Enabled)
+                return HealthCheckResult.Healthy("Cache is disabled.");
+
             try
             {
                 await cache.GetAsync("health:redis-probe", cancellationToken);
