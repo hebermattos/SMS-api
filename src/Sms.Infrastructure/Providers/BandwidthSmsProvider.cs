@@ -61,7 +61,7 @@ public sealed class BandwidthSmsProvider(
 
         if (token.ExpiresIn > 0)
         {
-            var lifetimeSeconds = Math.Max(1, token.ExpiresIn - 60);
+            var lifetimeSeconds = Math.Max(1, token.ExpiresIn - 10);
             await cache.SetStringAsync(cacheKey, token.AccessToken,
                 new DistributedCacheEntryOptions
                 {
