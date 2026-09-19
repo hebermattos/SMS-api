@@ -44,6 +44,7 @@ public sealed class PortalAuthControllerTests
 
     [Theory]
     [InlineData("", "tenant")]
+    [InlineData("user", "tenant")]
     [InlineData("user", "")]
     [InlineData("user", "invalid")]
     public async Task InvalidOrUnknownCredentialsAreRejected(string username, string context)
