@@ -6,6 +6,7 @@ using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Tests;
 
+[Collection(SqlServerTestCollection.Name)]
 public sealed class AdministratorSqlTests
 {
     [SqlServerFact]
