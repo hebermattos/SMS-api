@@ -8,7 +8,7 @@ CREATE TABLE dbo.PlatformAdministrators
     Email NVARCHAR(320) COLLATE Latin1_General_100_CI_AS NOT NULL,
     PasswordHash VARBINARY(32) NOT NULL,
     PasswordSalt VARBINARY(32) NOT NULL,
-    PasswordIterations INT NOT NULL CONSTRAINT CK_PlatformAdministrators_Iterations CHECK (PasswordIterations >= 100000),
+    PasswordIterations INT NOT NULL CONSTRAINT CK_PlatformAdministrators_Iterations CHECK (PasswordIterations >= 600000),
     IsActive BIT NOT NULL CONSTRAINT DF_PlatformAdministrators_IsActive DEFAULT (1),
     CreatedAt DATETIMEOFFSET NOT NULL
 );
@@ -22,7 +22,7 @@ CREATE TABLE dbo.PortalUsers
     Email NVARCHAR(320) COLLATE Latin1_General_100_CI_AS NOT NULL,
     PasswordHash VARBINARY(32) NOT NULL,
     PasswordSalt VARBINARY(32) NOT NULL,
-    PasswordIterations INT NOT NULL CONSTRAINT CK_PortalUsers_Iterations CHECK (PasswordIterations >= 100000),
+    PasswordIterations INT NOT NULL CONSTRAINT CK_PortalUsers_Iterations CHECK (PasswordIterations >= 600000),
     Context NVARCHAR(20) NOT NULL,
     Role NVARCHAR(20) NOT NULL,
     IsActive BIT NOT NULL CONSTRAINT DF_PortalUsers_IsActive DEFAULT (1),
@@ -63,10 +63,13 @@ CREATE TABLE dbo.Tenants
 (
     Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_Tenants PRIMARY KEY,
     Name NVARCHAR(200) NOT NULL,
+    Code NVARCHAR(100) COLLATE Latin1_General_100_CI_AS NOT NULL,
     TimeZoneId NVARCHAR(100) NOT NULL CONSTRAINT DF_Tenants_TimeZoneId DEFAULT ('UTC'),
     IsActive BIT NOT NULL CONSTRAINT DF_Tenants_IsActive DEFAULT (1),
     CreatedAt DATETIMEOFFSET NOT NULL
 );
+GO
+CREATE UNIQUE INDEX UX_Tenants_Code ON dbo.Tenants(Code);
 GO
 
 ALTER TABLE dbo.PortalUsers
@@ -88,7 +91,9 @@ CREATE TABLE dbo.SmsMessages
     CreatedAt DATETIMEOFFSET NOT NULL,
     UpdatedAt DATETIMEOFFSET NULL,
     CONSTRAINT FK_SmsMessages_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT UQ_SmsMessages_Tenant_Id UNIQUE (TenantId, Id)
+    CONSTRAINT UQ_SmsMessages_Tenant_Id UNIQUE (TenantId, Id),
+    CONSTRAINT CK_SmsMessages_Direction CHECK (Direction IN (1, 2)),
+    CONSTRAINT CK_SmsMessages_Status CHECK (Status BETWEEN 1 AND 5)
 );
 GO
 CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON dbo.SmsMessages(TenantId, CreatedAt DESC);
@@ -109,7 +114,8 @@ CREATE TABLE dbo.TenantSmsProviders
     IsActive BIT NOT NULL CONSTRAINT DF_TenantSmsProviders_IsActive DEFAULT (1),
     CreatedAt DATETIMEOFFSET NOT NULL,
     UpdatedAt DATETIMEOFFSET NULL,
-    CONSTRAINT FK_TenantSmsProviders_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id)
+    CONSTRAINT FK_TenantSmsProviders_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT CK_TenantSmsProviders_SettingsJson CHECK (Settings IS NULL OR ISJSON(Settings) = 1)
 );
 GO
 CREATE UNIQUE INDEX UX_TenantSmsProviders_Tenant_Provider ON dbo.TenantSmsProviders(TenantId, Provider);
@@ -131,7 +137,7 @@ CREATE TABLE dbo.ApiClients
     CreatedAt DATETIMEOFFSET NOT NULL,
     UpdatedAt DATETIMEOFFSET NULL,
     CONSTRAINT FK_ApiClients_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT CK_ApiClients_SecretIterations CHECK (SecretIterations >= 100000)
+    CONSTRAINT CK_ApiClients_SecretIterations CHECK (SecretIterations >= 600000)
 );
 GO
 CREATE UNIQUE INDEX UX_ApiClients_ClientId ON dbo.ApiClients(ClientId);
@@ -176,6 +182,7 @@ CREATE TABLE dbo.AlertRules
     CreatedAt DATETIMEOFFSET NOT NULL,
     UpdatedAt DATETIMEOFFSET NULL,
     CONSTRAINT FK_AlertRules_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT UQ_AlertRules_Tenant_Id UNIQUE (TenantId, Id),
     CONSTRAINT CK_AlertRules_Status CHECK (Status BETWEEN 1 AND 5),
     CONSTRAINT CK_AlertRules_Threshold CHECK (Threshold BETWEEN 1 AND 1000000),
     CONSTRAINT CK_AlertRules_Window CHECK (WindowMinutes BETWEEN 1 AND 43200),
@@ -206,9 +213,14 @@ CREATE TABLE dbo.Alerts
     IsRead BIT NOT NULL CONSTRAINT DF_Alerts_IsRead DEFAULT (0),
     ReadAt DATETIMEOFFSET NULL,
     CONSTRAINT FK_Alerts_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT FK_Alerts_TenantRule FOREIGN KEY (TenantId, RuleId) REFERENCES dbo.AlertRules(TenantId, Id),
     CONSTRAINT CK_Alerts_Status CHECK (Status BETWEEN 1 AND 5),
     CONSTRAINT CK_Alerts_MatchCount CHECK (MatchCount >= 0),
-    CONSTRAINT CK_Alerts_ReadState CHECK ((IsRead=0 AND ReadAt IS NULL) OR IsRead=1)
+    CONSTRAINT CK_Alerts_ReadState CHECK
+    (
+        (IsRead = 0 AND ReadAt IS NULL)
+        OR (IsRead = 1 AND ReadAt IS NOT NULL)
+    )
 );
 GO
 CREATE INDEX IX_Alerts_Tenant_CreatedAt ON dbo.Alerts(TenantId, CreatedAt DESC, Id DESC)
@@ -258,11 +270,19 @@ CREATE INDEX IX_AlertEvaluationOutbox_Pending ON dbo.AlertEvaluationOutbox(Creat
     WHERE PublishedAtUtc IS NULL;
 GO
 
+CREATE INDEX IX_AlertEvaluationOutbox_PublishedAtUtc
+    ON dbo.AlertEvaluationOutbox(PublishedAtUtc, Id)
+    WHERE PublishedAtUtc IS NOT NULL;
+GO
+
 CREATE TABLE dbo.AlertEvaluationInbox
 (
     EventId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_AlertEvaluationInbox PRIMARY KEY,
     ProcessedAtUtc DATETIMEOFFSET NOT NULL
 );
+GO
+CREATE INDEX IX_AlertEvaluationInbox_ProcessedAtUtc
+    ON dbo.AlertEvaluationInbox(ProcessedAtUtc, EventId);
 GO
 
 CREATE TRIGGER dbo.TR_SmsMessageStatusHistory_AlertEvaluationOutbox
@@ -299,11 +319,19 @@ CREATE INDEX IX_SmsSendOutbox_Pending ON dbo.SmsSendOutbox(CreatedAtUtc, Id)
     WHERE PublishedAtUtc IS NULL;
 GO
 
+CREATE INDEX IX_SmsSendOutbox_PublishedAtUtc
+    ON dbo.SmsSendOutbox(PublishedAtUtc, Id)
+    WHERE PublishedAtUtc IS NOT NULL;
+GO
+
 CREATE TABLE dbo.SmsSendInbox
 (
     EventId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_SmsSendInbox PRIMARY KEY,
     ProcessedAtUtc DATETIMEOFFSET NOT NULL
 );
+GO
+CREATE INDEX IX_SmsSendInbox_ProcessedAtUtc
+    ON dbo.SmsSendInbox(ProcessedAtUtc, EventId);
 GO
 
 CREATE TRIGGER dbo.TR_SmsMessages_SmsSendOutbox
