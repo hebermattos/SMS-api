@@ -14,7 +14,14 @@ internal static class UserActivityMessageFormatter
         [("TenantUsers", "List")] = ("Viewed tenant users.", "Could not view tenant users."),
         [("TenantUsers", "Create")] = ("Created a tenant user.", "Could not create the tenant user."),
         [("TenantUsers", "SetState")] = ("Updated a tenant user's status.", "Could not update the tenant user's status."),
-        [("TenantUsers", "ResetPassword")] = ("Reset a tenant user's password.", "Could not reset the tenant user's password.")
+        [("TenantUsers", "ResetPassword")] = ("Reset a tenant user's password.", "Could not reset the tenant user's password."),
+        [("Alerts", "Rules")] = ("Viewed alert rules.", "Could not view alert rules."),
+        [("Alerts", "CreateRule")] = ("Created an alert rule.", "Could not create the alert rule."),
+        [("Alerts", "UpdateRule")] = ("Updated an alert rule.", "Could not update the alert rule."),
+        [("Alerts", "DeleteRule")] = ("Deleted an alert rule.", "Could not delete the alert rule."),
+        [("Alerts", "List")] = ("Viewed alerts.", "Could not view alerts."),
+        [("Alerts", "MarkRead")] = ("Marked an alert as read.", "Could not mark the alert as read."),
+        [("Alerts", "MarkAllRead")] = ("Marked all alerts as read.", "Could not mark all alerts as read.")
     };
 
     internal static string Format(string? controller, string? action, int statusCode)

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sms.Application;
+using Sms.Application.Alerts;
 using Sms.Application.Messages;
 using Sms.Application.Providers;
 using Sms.Application.Tenants;
@@ -22,6 +23,7 @@ public sealed class RegistrationAndModelTests
         Assert.Contains(services, x => x.ServiceType == typeof(SendSmsService) && x.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(services, x => x.ServiceType == typeof(ReceiveSmsWebhookService) && x.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(services, x => x.ServiceType == typeof(TenantProvisioningService) && x.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(services, x => x.ServiceType == typeof(AlertService) && x.Lifetime == ServiceLifetime.Scoped);
     }
 
     [Fact]
@@ -43,6 +45,7 @@ public sealed class RegistrationAndModelTests
         Assert.Contains(services, x => x.ServiceType == typeof(IHttpClientFactory));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsProviderResolver));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsMessageRepository));
+        Assert.Contains(services, x => x.ServiceType == typeof(IAlertRepository));
         Assert.Contains(services, x => x.ServiceType == typeof(ITenantSmsProviderRepository));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsWebhookUrlProvider));
     }

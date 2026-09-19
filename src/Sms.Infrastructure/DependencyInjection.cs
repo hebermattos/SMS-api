@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sms.Application.Auth;
+using Sms.Application.Alerts;
 using Sms.Application.Common;
 using Sms.Application.Administration;
 using Sms.Application.Messages;
@@ -41,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvisioner, TenantProvisioner>();
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();
         services.AddScoped<ISmsReportRepository, SmsReportRepository>();
+        services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<ILogEntryRepository, LogEntryRepository>();
         services.AddScoped<ITenantSmsProviderRepository, TenantSmsProviderRepository>();
         services.AddScoped<ISmsProviderResolver, SmsProviderResolver>();

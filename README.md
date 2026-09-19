@@ -49,7 +49,7 @@ Docker is for local testing only. The Compose fallback credentials must never be
 The Angular console provides:
 
 - Platform administration: administrators, tenants, API clients, and providers.
-- Tenant operations: send SMS, history, status history, reports, and tenant logs.
+- Tenant operations: send SMS, history, status history, reports, configurable alert rules, in-console alerts, and tenant logs.
 
 For frontend development:
 
@@ -85,6 +85,13 @@ GET  /api/v1/messages/{id}
 GET  /api/v1/messages/{id}/status-history
 GET  /api/v1/logs
 GET  /api/v1/overview
+GET  /api/v1/alerts
+GET  /api/v1/alerts/rules
+POST /api/v1/alerts/rules
+PUT  /api/v1/alerts/rules/{id}
+DELETE /api/v1/alerts/rules/{id}
+POST /api/v1/alerts/{id}/read
+POST /api/v1/alerts/read-all
 ```
 
 Platform-administrator-protected:
@@ -140,6 +147,7 @@ Jwt__ExpirationMinutes
 Encryption__MasterKey
 Sms__DefaultProvider
 Sms__PublicBaseUrl
+Alerts__EvaluationSeconds
 ```
 
 `Encryption__MasterKey` must be Base64 for exactly 32 bytes. `Sms__PublicBaseUrl` must be an HTTPS URL without credentials, query strings, or fragments.
@@ -151,9 +159,11 @@ The project does not use migrations. Initialize new databases with:
 - `database/schema.sql`
 - `database/logs-schema.sql`
 
-The application database stores tenants, users, clients, providers, messages, and status history. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
+The application database stores tenants, users, clients, providers, messages, status history, alert rules, and triggered alerts. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
 
 All dates are stored in UTC. Each tenant has an IANA time zone for display and date filters.
+
+Alert rules count distinct messages entering the selected status within the configured window. Rules can trigger once per incident or repeat at a configured interval while the condition remains true. The evaluator runs every 60 seconds by default; configure `Alerts__EvaluationSeconds` between 10 and 3600 seconds.
 
 ## Security
 

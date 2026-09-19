@@ -21,6 +21,7 @@ import { IconComponent } from './shared/icon.component';
           <a routerLink="/app/messages" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}"><sms-icon name="message"/>Messages</a>
           <a routerLink="/app/send" routerLinkActive="active"><sms-icon name="send"/>Send SMS</a>
           <a routerLink="/app/reports" routerLinkActive="active"><sms-icon name="grid"/>Reports</a>
+          <a routerLink="/app/alerts" routerLinkActive="active"><sms-icon name="alert"/>Alerts</a>
           <a routerLink="/app/logs" routerLinkActive="active"><sms-icon name="logs"/>Activity logs</a>
         }
       </nav>

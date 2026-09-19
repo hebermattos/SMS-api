@@ -153,3 +153,64 @@ CREATE TABLE dbo.SmsMessageStatusHistory
 GO
 CREATE INDEX IX_SmsMessageStatusHistory_Tenant_Message_CreatedAt ON dbo.SmsMessageStatusHistory(TenantId, MessageId, CreatedAt);
 GO
+CREATE INDEX IX_SmsMessageStatusHistory_Tenant_Status_CreatedAt
+    ON dbo.SmsMessageStatusHistory(TenantId, Status, CreatedAt)
+    INCLUDE (MessageId);
+GO
+
+
+CREATE TABLE dbo.AlertRules
+(
+    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_AlertRules PRIMARY KEY,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    Name NVARCHAR(120) NOT NULL,
+    Provider NVARCHAR(50) NULL,
+    Status INT NOT NULL,
+    Threshold INT NOT NULL,
+    WindowMinutes INT NOT NULL,
+    RepeatMode INT NOT NULL,
+    RepeatIntervalMinutes INT NULL,
+    IsActive BIT NOT NULL,
+    IsTriggered BIT NOT NULL CONSTRAINT DF_AlertRules_IsTriggered DEFAULT (0),
+    LastTriggeredAt DATETIMEOFFSET NULL,
+    CreatedAt DATETIMEOFFSET NOT NULL,
+    UpdatedAt DATETIMEOFFSET NULL,
+    CONSTRAINT FK_AlertRules_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT CK_AlertRules_Status CHECK (Status BETWEEN 1 AND 5),
+    CONSTRAINT CK_AlertRules_Threshold CHECK (Threshold BETWEEN 1 AND 1000000),
+    CONSTRAINT CK_AlertRules_Window CHECK (WindowMinutes BETWEEN 1 AND 43200),
+    CONSTRAINT CK_AlertRules_RepeatMode CHECK (RepeatMode IN (1,2)),
+    CONSTRAINT CK_AlertRules_RepeatInterval CHECK
+    (
+        (RepeatMode=1 AND RepeatIntervalMinutes IS NULL)
+        OR (RepeatMode=2 AND RepeatIntervalMinutes BETWEEN 1 AND 43200)
+    )
+);
+GO
+CREATE UNIQUE INDEX UX_AlertRules_Tenant_Name ON dbo.AlertRules(TenantId, Name);
+GO
+CREATE INDEX IX_AlertRules_Active ON dbo.AlertRules(IsActive, TenantId) INCLUDE (Status, Provider, Threshold, WindowMinutes);
+GO
+
+CREATE TABLE dbo.Alerts
+(
+    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_Alerts PRIMARY KEY,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    RuleId UNIQUEIDENTIFIER NOT NULL,
+    RuleName NVARCHAR(120) NOT NULL,
+    Provider NVARCHAR(50) NULL,
+    Status INT NOT NULL,
+    MatchCount INT NOT NULL,
+    WindowMinutes INT NOT NULL,
+    CreatedAt DATETIMEOFFSET NOT NULL,
+    IsRead BIT NOT NULL CONSTRAINT DF_Alerts_IsRead DEFAULT (0),
+    ReadAt DATETIMEOFFSET NULL,
+    CONSTRAINT FK_Alerts_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT CK_Alerts_Status CHECK (Status BETWEEN 1 AND 5),
+    CONSTRAINT CK_Alerts_MatchCount CHECK (MatchCount >= 0),
+    CONSTRAINT CK_Alerts_ReadState CHECK ((IsRead=0 AND ReadAt IS NULL) OR IsRead=1)
+);
+GO
+CREATE INDEX IX_Alerts_Tenant_CreatedAt ON dbo.Alerts(TenantId, CreatedAt DESC, Id DESC)
+    INCLUDE (IsRead, RuleId, Status, Provider, MatchCount);
+GO
