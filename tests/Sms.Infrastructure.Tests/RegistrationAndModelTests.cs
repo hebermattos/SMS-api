@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sms.Application;
@@ -33,6 +34,7 @@ public sealed class RegistrationAndModelTests
         {
             ["ConnectionStrings:SqlServer"] = "Server=localhost;Database=SmsApi;User Id=sa;Password=Password1!;TrustServerCertificate=True",
             ["ConnectionStrings:ReportingSqlServer"] = "Server=localhost;Database=SmsApiReporting;User Id=sa;Password=Password1!;TrustServerCertificate=True",
+            ["ConnectionStrings:Redis"] = "localhost:6379",
             ["Encryption:MasterKey"] = Convert.ToBase64String(new byte[32])
         }).Build();
         var services = new ServiceCollection();
@@ -44,6 +46,7 @@ public sealed class RegistrationAndModelTests
         Assert.Contains(services, x => x.ServiceType == typeof(BandwidthSmsProvider));
         Assert.Contains(services, x => x.ServiceType == typeof(BandwidthWebhookParser) && x.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(services, x => x.ServiceType == typeof(IHttpClientFactory));
+        Assert.Contains(services, x => x.ServiceType == typeof(IDistributedCache));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsProviderResolver));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsMessageRepository));
         Assert.Contains(services, x => x.ServiceType == typeof(IAlertRepository));
