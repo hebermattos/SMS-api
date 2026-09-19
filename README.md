@@ -23,8 +23,7 @@ The Angular 21 console in `ui/` provides two separate workspaces, in English:
 - **Platform administrators:** manage administrator accounts, list/create companies, edit names, suspend/reactivate access, create/disable/reactivate API clients, rotate client secrets, and configure tenant-specific Twilio/Bandwidth credentials and default senders.
 - **Tenant users:** view message totals, send SMS, page through sent/received messages, inspect status history, and query operational logs by date range. The API derives their tenant solely from their JWT.
 
-Start the local stack with `docker compose up --build` and open `http://localhost:4200`. The console proxies `/api/` to the API, so no permissive CORS policy is needed. Use the seeded `example-client` / `example-secret-change-me` for **Client**, or username `admin` and password `Admin_Local_2026!` for **Administrator**. Override the initial administrator through `ADMIN_USERNAME` and `ADMIN_PASSWORD`
-`ADMIN_EMAIL` before initializing the local stack. These credentials are local-only. TLS termination is required in shared or production environments; Compose is not a production deployment model.
+Start the local stack with `docker compose up --build` and open `http://localhost:4200`. The console proxies `/api/` to the API, so no permissive CORS policy is needed. Use the seeded `example-client` / `example-secret-change-me` for **Client**, or username `admin` and password `Admin_Local_2026!` for **Administrator**. Override the initial administrator through `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `ADMIN_EMAIL` before initializing the local stack. These credentials are local-only. TLS termination is required in shared or production environments; Compose is not a production deployment model.
 
 For frontend development, use Node.js 20.19+ or 22.12+ (Angular 21 compatible), run `npm ci` and `npm start` from `ui/`, and keep the API running on port 8080. The development proxy defaults to `http://localhost:8080`; set `SMS_API_URL` to change its upstream. `npm run build` compiles the production bundle into `ui/dist/console/browser`. Serve it with an SPA fallback and a same-origin `/api/` reverse proxy. The Angular project is built separately from `Sms.Api.sln`.
 
@@ -126,7 +125,7 @@ Configure the Bandwidth Messaging Application with these URLs under your externa
 
 Use a separate Messaging Application per tenant so each application has its own callback credentials, even when tenants share an OAuth account. Enable Basic authentication on both callbacks. Use the tenant provider configuration's `AccountId` (the OAuth **client ID**, not the Bandwidth messaging account ID) as the callback username. Generate a strong, separate callback password for each tenant and set the same password in both Bandwidth callback configurations and `Settings.webhookPassword`. Do not reuse the OAuth client secret.
 
-The existing `TenantSmsProviderConfiguration` uses `Provider = "Bandwidth"`, `AccountId` for the OAuth client ID, `ApiSecret` for the OAuth client secret, and `FromNumber` for the tenant's Bandwidth number. Its `Settings` JSON must include:
+The tenant provider configuration uses `Provider = "Bandwidth"`, `AccountId` for the OAuth client ID, `ApiSecret` for the OAuth client secret, and `FromNumber` for the tenant's Bandwidth number. Its `Settings` JSON must include:
 
 ```json
 {
@@ -178,9 +177,10 @@ ENCRYPTION_MASTER_KEY
 ADMIN_PROVISIONING_KEY
 ADMIN_USERNAME
 ADMIN_PASSWORD
+ADMIN_EMAIL
 ```
 
-After `db-init`, the one-shot `provider-init` service runs the application seed in `database/seeds/Sms.Seed`. It creates the initial platform administrator if that username does not exist, without overwriting an existing password. It saves both providers through the existing repository, encrypting their API secrets and settings with the same `ENCRYPTION_MASTER_KEY` used by the API. The API waits for this step to succeed. The seed uses fictional credentials only and makes no calls to provider APIs.
+After `db-init`, the one-shot `provider-init` service runs the application seed in `database/seeds/Sms.Seed`. It creates the initial platform administrator if that username does not exist, without overwriting an existing password. It saves both providers through the existing repository, encrypting their API secrets and settings with the same `ENCRYPTION_MASTER_KEY` used by the API. The API waits for this step to succeed. The seed uses fictional credentials only and makes no calls to provider APIs. The seed is intended for local/test environments and should not be used as a production provisioning mechanism.
 
 | Provider | Account/client ID | Sender | Default |
 | --- | --- | --- | --- |
@@ -189,7 +189,7 @@ After `db-init`, the one-shot `provider-init` service runs the application seed 
 
 Both configurations are active and visible in the console, but **fictional credentials cannot send real SMS**. They are not a mock delivery service. Select `Twilio` or `Bandwidth` in the send request's `provider` parameter as usual. Replace credentials and sender settings through the administration console before testing delivery with a real account. Bandwidth also needs its messaging account ID, application ID, and a separate webhook password.
 
-Test-account availability checked on September 18, 2026:
+Test-account availability (checked September 18, 2026):
 
 - [Twilio test credentials](https://www.twilio.com/docs/iam/test-credentials) are account-specific. Existing legacy-console test credentials continue to work; the documentation says new ones cannot be created in the new console and directs new users to a trial account. Test credentials simulate SMS without delivery or status callbacks. The seeded SID/token are fictional, even though the sender is Twilio's documented test number.
 - [Bandwidth offers a trial](https://www.bandwidth.com/request-trial/) for its messaging and other APIs, requested through registration. No public shared credentials were found for automatic bootstrap; the seed uses a fictional OAuth client, messaging account, application, and webhook password.
