@@ -65,7 +65,7 @@ public static class DependencyHealthChecks
         return services;
     }
 
-    private abstract class SqlServerHealthCheck(string connectionString) : IHealthCheck
+    public abstract class SqlServerHealthCheck(string connectionString) : IHealthCheck
     {
         public async Task<HealthCheckResult> CheckHealthAsync(
             HealthCheckContext context,
@@ -92,16 +92,16 @@ public static class DependencyHealthChecks
         }
     }
 
-    private sealed class ApplicationDatabaseHealthCheck(IConfiguration configuration)
+    public sealed class ApplicationDatabaseHealthCheck(IConfiguration configuration)
         : SqlServerHealthCheck(RequiredConnectionString(configuration, "SqlServer"));
 
-    private sealed class ObservabilityDatabaseHealthCheck(IConfiguration configuration)
+    public sealed class ObservabilityDatabaseHealthCheck(IConfiguration configuration)
         : SqlServerHealthCheck(RequiredConnectionString(configuration, "LogsSqlServer"));
 
-    private sealed class ReportingDatabaseHealthCheck(IConfiguration configuration)
+    public sealed class ReportingDatabaseHealthCheck(IConfiguration configuration)
         : SqlServerHealthCheck(RequiredConnectionString(configuration, "ReportingSqlServer"));
 
-    private sealed class RedisHealthCheck(IDistributedCache cache) : IHealthCheck
+    public sealed class RedisHealthCheck(IDistributedCache cache) : IHealthCheck
     {
         public async Task<HealthCheckResult> CheckHealthAsync(
             HealthCheckContext context,
@@ -119,7 +119,7 @@ public static class DependencyHealthChecks
         }
     }
 
-    private sealed class RabbitMqHealthCheck : IHealthCheck
+    public sealed class RabbitMqHealthCheck : IHealthCheck
     {
         private readonly string _host;
         private readonly int _port;
@@ -150,7 +150,7 @@ public static class DependencyHealthChecks
         }
     }
 
-    private abstract class ExternalHttpHealthCheck(
+    public abstract class ExternalHttpHealthCheck(
         IHttpClientFactory httpClientFactory,
         string clientName,
         string providerName) : IHealthCheck
@@ -181,10 +181,10 @@ public static class DependencyHealthChecks
         }
     }
 
-    private sealed class TwilioHealthCheck(IHttpClientFactory httpClientFactory)
+    public sealed class TwilioHealthCheck(IHttpClientFactory httpClientFactory)
         : ExternalHttpHealthCheck(httpClientFactory, TwilioClientName, "Twilio");
 
-    private sealed class BandwidthHealthCheck(IHttpClientFactory httpClientFactory)
+    public sealed class BandwidthHealthCheck(IHttpClientFactory httpClientFactory)
         : ExternalHttpHealthCheck(httpClientFactory, BandwidthClientName, "Bandwidth");
 
     private static string RequiredConnectionString(IConfiguration configuration, string name) =>
