@@ -14,6 +14,11 @@ public sealed record ProviderSummary(string Provider, string AccountId, string? 
     bool IsDefault, bool HasApiSecret, IReadOnlyDictionary<string, string?> Settings, IReadOnlyList<string> ConfiguredSecrets);
 public sealed class AdministrationConflictException() : Exception("Já existe um cadastro com estes identificadores.");
 
+public interface IProviderCatalogCache
+{
+    Task<IReadOnlyList<ProviderDefinition>> GetAsync(CancellationToken cancellationToken = default);
+}
+
 public interface IProviderSettingsPolicy
 {
     ProviderDefinition Definition { get; }
