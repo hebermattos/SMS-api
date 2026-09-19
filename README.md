@@ -1,5 +1,7 @@
 # SMS API
 
+[![Codex](https://img.shields.io/badge/Codex-OpenAI-000000?logo=openai&logoColor=white)](https://openai.com/codex/)
+
 Multi-tenant REST API for sending, receiving, scheduling, tracking, and querying SMS messages.
 
 ## Stack
