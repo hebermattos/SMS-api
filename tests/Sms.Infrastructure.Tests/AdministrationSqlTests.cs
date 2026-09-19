@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.Configuration;
 using Sms.Application.Administration;
 using Sms.Application.Auth;
@@ -11,7 +11,7 @@ using Sms.Infrastructure.Security;
 
 namespace Sms.Infrastructure.Tests;
 
-[Collection(SqlServerTestCollection.Name)]
+[Collection(PostgresTestCollection.Name)]
 public sealed class AdministrationSqlTests
 {
     [ReportingSqlFact]
@@ -19,12 +19,12 @@ public sealed class AdministrationSqlTests
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:SqlServer"] = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER"),
-            ["ConnectionStrings:ReportingSqlServer"] = Environment.GetEnvironmentVariable("SMS_TEST_REPORTING_SQLSERVER"),
+            ["ConnectionStrings:Postgres"] = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES"),
+            ["ConnectionStrings:ReportingPostgres"] = Environment.GetEnvironmentVariable("SMS_TEST_REPORTING_POSTGRES"),
             ["Encryption:MasterKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
         }).Build();
-        var factory = new SqlConnectionFactory(configuration);
-        var reportingFactory = new ReportingSqlConnectionFactory(configuration);
+        var factory = new NpgsqlConnectionFactory(configuration);
+        var reportingFactory = new ReportingNpgsqlConnectionFactory(configuration);
         var protector = new AesGcmSecretProtector(configuration);
         var configurationCache = TenantConfigurationCacheTestFactory.Create(factory);
         var repository = new AdministrationRepository(factory, protector, configurationCache);
@@ -32,15 +32,15 @@ public sealed class AdministrationSqlTests
         var service = new AdministrationService(repository, providers, [new TwilioSettingsPolicy(), new BandwidthSettingsPolicy()], new AdministrationServiceTests.TestProviderCatalogCache());
         var credentials = new ApiClientRepository(factory, configurationCache);
         var tenant = Guid.NewGuid(); var other = Guid.NewGuid(); var account = Guid.NewGuid().ToString("N");
-        using var connection = new SqlConnection(configuration.GetConnectionString("SqlServer"));
-        using var reportingConnection = new SqlConnection(configuration.GetConnectionString("ReportingSqlServer"));
+        using var connection = new NpgsqlConnection(configuration.GetConnectionString("Postgres"));
+        using var reportingConnection = new NpgsqlConnection(configuration.GetConnectionString("ReportingPostgres"));
         await connection.OpenAsync();
         await reportingConnection.OpenAsync();
         try
         {
             await connection.ExecuteAsync("""
-                INSERT dbo.Tenants(Id, Name, IsActive, CreatedAt)
-                VALUES (@Tenant, N'Portal test', 1, SYSDATETIMEOFFSET()), (@Other, N'Other portal test', 1, SYSDATETIMEOFFSET());
+                INSERT Tenants(Id, Name, IsActive, CreatedAt)
+                VALUES (@Tenant, 'Portal test', 1, CURRENT_TIMESTAMP), (@Other, 'Other portal test', 1, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant, Other = other });
             var issued = await service.CreateClientAsync(tenant, null, default);
             var stored = await credentials.GetActiveByClientIdAsync(issued.ClientId);
@@ -71,7 +71,7 @@ public sealed class AdministrationSqlTests
             Assert.False((await providers.GetAsync(tenant, "Twilio"))!.IsDefault);
             Assert.Empty(await repository.ListProvidersAsync(other, default));
             var persisted = await connection.QuerySingleAsync<(string ApiSecret, string Settings)>(
-                "SELECT ApiSecret, Settings FROM dbo.TenantSmsProviders WHERE TenantId=@Tenant AND Provider='Bandwidth';", new { Tenant = tenant });
+                "SELECT ApiSecret, Settings FROM TenantSmsProviders WHERE TenantId=@Tenant AND Provider='Bandwidth';", new { Tenant = tenant });
             Assert.DoesNotContain("local-bandwidth-secret", persisted.ApiSecret);
             Assert.DoesNotContain("local-callback-password", persisted.Settings);
             await service.SaveProviderAsync(tenant, "Bandwidth", bandwidth with { ApiSecret = null, Settings = new() { ["webhookPassword"] = "" } }, default);
@@ -82,8 +82,8 @@ public sealed class AdministrationSqlTests
             Assert.Equal("Twilio", (await providers.GetDefaultAsync(other))!.Provider);
 
             await reportingConnection.ExecuteAsync("""
-                INSERT dbo.TenantSmsOverview(TenantId, Outbound, Inbound, Delivered, Failed, Pending, UpdatedAtUtc)
-                VALUES (@Tenant, 12, 3, 8, 1, 3, SYSUTCDATETIME());
+                INSERT TenantSmsOverview(TenantId, Outbound, Inbound, Delivered, Failed, Pending, UpdatedAtUtc)
+                VALUES (@Tenant, 12, 3, 8, 1, 3, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant });
 
             var overview = await new TenantPortalRepository(reportingFactory, configurationCache).GetOverviewAsync(tenant, default);
@@ -94,19 +94,19 @@ public sealed class AdministrationSqlTests
         }
         finally
         {
-            await reportingConnection.ExecuteAsync("DELETE dbo.TenantSmsOverview WHERE TenantId IN (@Tenant, @Other);", new { Tenant = tenant, Other = other });
+            await reportingConnection.ExecuteAsync("DELETE TenantSmsOverview WHERE TenantId IN (@Tenant, @Other);", new { Tenant = tenant, Other = other });
             await connection.ExecuteAsync("""
-                DELETE dbo.TenantSmsProviders WHERE TenantId IN (@Tenant, @Other);
-                DELETE dbo.ApiClients WHERE TenantId IN (@Tenant, @Other);
-                DELETE dbo.Tenants WHERE Id IN (@Tenant, @Other);
+                DELETE TenantSmsProviders WHERE TenantId IN (@Tenant, @Other);
+                DELETE ApiClients WHERE TenantId IN (@Tenant, @Other);
+                DELETE Tenants WHERE Id IN (@Tenant, @Other);
                 """, new { Tenant = tenant, Other = other });
         }
     }
-    [SqlServerFact]
+    [PostgresFact]
     public async Task Schema_RejectsInvalidTenantRelationships()
     {
-        var connectionString = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER");
-        using var connection = new SqlConnection(connectionString);
+        var connectionString = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES");
+        using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
 
         var tenant = Guid.NewGuid();
@@ -117,39 +117,39 @@ public sealed class AdministrationSqlTests
         try
         {
             await connection.ExecuteAsync("""
-                INSERT dbo.Tenants(Id, Name, IsActive, CreatedAt)
-                VALUES (@Tenant, N'Integrity tenant', 1, SYSDATETIMEOFFSET()),
-                       (@OtherTenant, N'Other integrity tenant', 1, SYSDATETIMEOFFSET());
+                INSERT Tenants(Id, Name, IsActive, CreatedAt)
+                VALUES (@Tenant, 'Integrity tenant', 1, CURRENT_TIMESTAMP),
+                       (@OtherTenant, 'Other integrity tenant', 1, CURRENT_TIMESTAMP);
 
-                INSERT dbo.SmsMessages
-                    (Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt)
+                INSERT SmsMessages
+                    (Id, TenantId, "From", "To", Body, Provider, ProviderMessageId, Direction, Status, CreatedAt)
                 VALUES
-                    (@MessageId, @Tenant, N'encrypted-from', N'encrypted-to', N'encrypted-body',
-                     N'Mock', NULL, 1, 1, SYSDATETIMEOFFSET());
+                    (@MessageId, @Tenant, 'encrypted-from', 'encrypted-to', 'encrypted-body',
+                     'Mock', NULL, 1, 1, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant, OtherTenant = otherTenant, MessageId = messageId });
 
-            var invalidUser = await Assert.ThrowsAsync<SqlException>(() => connection.ExecuteAsync("""
-                INSERT dbo.PortalUsers
+            var invalidUser = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync("""
+                INSERT PortalUsers
                     (Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive, CreatedAt)
                 VALUES
-                    (NEWID(), @MissingTenant, N'invalid-user', N'invalid@example.com',
-                     0x00, 0x00, 600000, N'tenant', N'user', 1, SYSDATETIMEOFFSET());
+                    (gen_random_uuid(), @MissingTenant, 'invalid-user', 'invalid@example.com',
+                     0x00, 0x00, 600000, 'tenant', 'user', 1, CURRENT_TIMESTAMP);
                 """, new { MissingTenant = missingTenant }));
             Assert.Equal(547, invalidUser.Number);
 
-            var crossTenantHistory = await Assert.ThrowsAsync<SqlException>(() => connection.ExecuteAsync("""
-                INSERT dbo.SmsMessageStatusHistory(Id, TenantId, MessageId, Status, CreatedAt)
-                VALUES (NEWID(), @OtherTenant, @MessageId, 1, SYSDATETIMEOFFSET());
+            var crossTenantHistory = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync("""
+                INSERT SmsMessageStatusHistory(Id, TenantId, MessageId, Status, CreatedAt)
+                VALUES (gen_random_uuid(), @OtherTenant, @MessageId, 1, CURRENT_TIMESTAMP);
                 """, new { OtherTenant = otherTenant, MessageId = messageId }));
             Assert.Equal(547, crossTenantHistory.Number);
         }
         finally
         {
             await connection.ExecuteAsync("""
-                DELETE dbo.SmsMessageStatusHistory WHERE MessageId=@MessageId;
-                DELETE dbo.SmsMessages WHERE Id=@MessageId;
-                DELETE dbo.PortalUsers WHERE TenantId IN (@Tenant, @OtherTenant);
-                DELETE dbo.Tenants WHERE Id IN (@Tenant, @OtherTenant);
+                DELETE SmsMessageStatusHistory WHERE MessageId=@MessageId;
+                DELETE SmsMessages WHERE Id=@MessageId;
+                DELETE PortalUsers WHERE TenantId IN (@Tenant, @OtherTenant);
+                DELETE Tenants WHERE Id IN (@Tenant, @OtherTenant);
                 """, new { Tenant = tenant, OtherTenant = otherTenant, MessageId = messageId });
         }
     }

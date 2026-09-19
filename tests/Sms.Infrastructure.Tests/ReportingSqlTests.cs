@@ -1,5 +1,5 @@
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.Configuration;
 using Sms.Infrastructure.Messaging;
 using Sms.Infrastructure.Persistence;
@@ -11,54 +11,54 @@ public sealed class ReportingSqlFactAttribute : FactAttribute
 {
     public ReportingSqlFactAttribute()
     {
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER")) ||
-            string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SMS_TEST_REPORTING_SQLSERVER")))
-            Skip = "Set SMS_TEST_SQLSERVER and SMS_TEST_REPORTING_SQLSERVER to databases initialized with the application and reporting schemas.";
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES")) ||
+            string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SMS_TEST_REPORTING_POSTGRES")))
+            Skip = "Set SMS_TEST_POSTGRES and SMS_TEST_REPORTING_POSTGRES to PostgreSQL databases initialized with the application and reporting schemas.";
     }
 }
 
-[Collection(SqlServerTestCollection.Name)]
+[Collection(PostgresTestCollection.Name)]
 public sealed class ReportingSqlTests
 {
     [ReportingSqlFact]
     public async Task OverviewProjection_ConvergesWhenDeltasArriveOutOfOrder()
     {
-        var applicationConnectionString = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER");
-        var reportingConnectionString = Environment.GetEnvironmentVariable("SMS_TEST_REPORTING_SQLSERVER");
+        var applicationConnectionString = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES");
+        var reportingConnectionString = Environment.GetEnvironmentVariable("SMS_TEST_REPORTING_POSTGRES");
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:ReportingSqlServer"] = reportingConnectionString
+            ["ConnectionStrings:ReportingPostgres"] = reportingConnectionString
         }).Build();
-        var consumer = new TenantSmsOverviewConsumer(new TenantSmsOverviewProjection(new ReportingSqlConnectionFactory(configuration)));
+        var consumer = new TenantSmsOverviewConsumer(new TenantSmsOverviewProjection(new ReportingNpgsqlConnectionFactory(configuration)));
         var tenantId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
         var eventIds = new List<Guid>();
 
-        using var application = new SqlConnection(applicationConnectionString);
-        using var reporting = new SqlConnection(reportingConnectionString);
+        using var application = new NpgsqlConnection(applicationConnectionString);
+        using var reporting = new NpgsqlConnection(reportingConnectionString);
         await application.OpenAsync();
         await reporting.OpenAsync();
 
         try
         {
             await application.ExecuteAsync("""
-                INSERT dbo.Tenants(Id, Name, IsActive, CreatedAt)
-                VALUES (@TenantId, N'Reporting tenant', 1, SYSUTCDATETIME());
+                INSERT Tenants(Id, Name, IsActive, CreatedAt)
+                VALUES (@TenantId, 'Reporting tenant', 1, CURRENT_TIMESTAMP);
 
-                INSERT dbo.SmsMessages
-                    (Id, TenantId, [From], [To], Body, Provider, Direction, Status, CreatedAt)
+                INSERT SmsMessages
+                    (Id, TenantId, "From", "To", Body, Provider, Direction, Status, CreatedAt)
                 VALUES
-                    (@MessageId, @TenantId, N'encrypted-from', N'encrypted-to', N'encrypted-body', N'Mock', 1, 1, SYSUTCDATETIME());
+                    (@MessageId, @TenantId, 'encrypted-from', 'encrypted-to', 'encrypted-body', 'Mock', 1, 1, CURRENT_TIMESTAMP);
 
-                UPDATE dbo.SmsMessages
-                SET Status = 3, UpdatedAt = SYSUTCDATETIME()
+                UPDATE SmsMessages
+                SET Status = 3, UpdatedAt = CURRENT_TIMESTAMP
                 WHERE TenantId = @TenantId AND Id = @MessageId;
                 """, new { TenantId = tenantId, MessageId = messageId });
 
             var events = (await application.QueryAsync<TenantSmsOverviewEvent>("""
                 SELECT EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta,
                        FailedDelta, PendingDelta, OccurredAtUtc
-                FROM dbo.TenantSmsOverviewOutbox
+                FROM TenantSmsOverviewOutbox
                 WHERE TenantId = @TenantId
                 ORDER BY SequenceNumber;
                 """, new { TenantId = tenantId })).AsList();
@@ -73,20 +73,20 @@ public sealed class ReportingSqlTests
             await consumer.ApplyAsync(events[0]);
 
             var counters = await reporting.QuerySingleAsync<(long Outbound, long Inbound, long Delivered, long Failed, long Pending)>(
-                "SELECT Outbound, Inbound, Delivered, Failed, Pending FROM dbo.TenantSmsOverview WHERE TenantId=@TenantId;",
+                "SELECT Outbound, Inbound, Delivered, Failed, Pending FROM TenantSmsOverview WHERE TenantId=@TenantId;",
                 new { TenantId = tenantId });
             Assert.Equal((1L, 0L, 1L, 0L, 0L), counters);
         }
         finally
         {
             if (eventIds.Count > 0)
-                await reporting.ExecuteAsync("DELETE dbo.TenantSmsOverviewInbox WHERE EventId IN @EventIds;", new { EventIds = eventIds });
-            await reporting.ExecuteAsync("DELETE dbo.TenantSmsOverview WHERE TenantId=@TenantId;", new { TenantId = tenantId });
+                await reporting.ExecuteAsync("DELETE TenantSmsOverviewInbox WHERE EventId IN @EventIds;", new { EventIds = eventIds });
+            await reporting.ExecuteAsync("DELETE TenantSmsOverview WHERE TenantId=@TenantId;", new { TenantId = tenantId });
             await application.ExecuteAsync("""
-                DELETE dbo.TenantSmsOverviewOutbox WHERE TenantId=@TenantId;
-                DELETE dbo.SmsMessageStatusHistory WHERE TenantId=@TenantId;
-                DELETE dbo.SmsMessages WHERE TenantId=@TenantId;
-                DELETE dbo.Tenants WHERE Id=@TenantId;
+                DELETE TenantSmsOverviewOutbox WHERE TenantId=@TenantId;
+                DELETE SmsMessageStatusHistory WHERE TenantId=@TenantId;
+                DELETE SmsMessages WHERE TenantId=@TenantId;
+                DELETE Tenants WHERE Id=@TenantId;
                 """, new { TenantId = tenantId });
         }
     }

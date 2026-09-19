@@ -1,5 +1,5 @@
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.Configuration;
 using Sms.Application.Alerts;
 using Sms.Domain.Messages;
@@ -7,34 +7,34 @@ using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Tests;
 
-[Collection(SqlServerTestCollection.Name)]
+[Collection(PostgresTestCollection.Name)]
 public sealed class AlertSqlTests
 {
-    [SqlServerFact]
+    [PostgresFact]
     public async Task OnceRule_FiresOncePerIncidentAndPreservesTenantIsolation()
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:SqlServer"] = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER")
+            ["ConnectionStrings:Postgres"] = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES")
         }).Build();
-        var repository = new AlertRepository(new SqlConnectionFactory(configuration));
+        var repository = new AlertRepository(new NpgsqlConnectionFactory(configuration));
         var tenantId = Guid.NewGuid(); var otherTenantId = Guid.NewGuid();
         var ruleId = Guid.NewGuid(); var message1 = Guid.NewGuid(); var message2 = Guid.NewGuid();
-        using var connection = new SqlConnection(configuration.GetConnectionString("SqlServer"));
+        using var connection = new NpgsqlConnection(configuration.GetConnectionString("Postgres"));
         await connection.OpenAsync();
         try
         {
             await connection.ExecuteAsync("""
-                INSERT dbo.Tenants(Id,Name,IsActive,CreatedAt) VALUES
-                    (@Tenant,N'Alert tenant',1,SYSUTCDATETIME()),(@Other,N'Other tenant',1,SYSUTCDATETIME());
-                INSERT dbo.SmsMessages(Id,TenantId,[From],[To],Body,Provider,Direction,Status,CreatedAt) VALUES
-                    (@Message1,@Tenant,N'x',N'x',N'x',N'Twilio',1,4,SYSUTCDATETIME()),
-                    (@Message2,@Tenant,N'x',N'x',N'x',N'Twilio',1,4,SYSUTCDATETIME());
-                INSERT dbo.SmsMessageStatusHistory(Id,TenantId,MessageId,Status,CreatedAt) VALUES
-                    (NEWID(),@Tenant,@Message1,4,SYSUTCDATETIME()),
-                    (NEWID(),@Tenant,@Message2,4,SYSUTCDATETIME());
-                INSERT dbo.AlertStatusCounters(TenantId,Provider,Status,BucketStartUtc,MessageCount,UpdatedAtUtc)
-                VALUES (@Tenant,N'Twilio',4,DATEADD(MINUTE,DATEDIFF(MINUTE,0,CAST(SYSUTCDATETIME() AS datetime2)),0) AT TIME ZONE 'UTC',2,SYSUTCDATETIME());
+                INSERT Tenants(Id,Name,IsActive,CreatedAt) VALUES
+                    (@Tenant,'Alert tenant',1,CURRENT_TIMESTAMP),(@Other,'Other tenant',1,CURRENT_TIMESTAMP);
+                INSERT SmsMessages(Id,TenantId,"From","To",Body,Provider,Direction,Status,CreatedAt) VALUES
+                    (@Message1,@Tenant,'x','x','x','Twilio',1,4,CURRENT_TIMESTAMP),
+                    (@Message2,@Tenant,'x','x','x','Twilio',1,4,CURRENT_TIMESTAMP);
+                INSERT SmsMessageStatusHistory(Id,TenantId,MessageId,Status,CreatedAt) VALUES
+                    (gen_random_uuid(),@Tenant,@Message1,4,CURRENT_TIMESTAMP),
+                    (gen_random_uuid(),@Tenant,@Message2,4,CURRENT_TIMESTAMP);
+                INSERT AlertStatusCounters(TenantId,Provider,Status,BucketStartUtc,MessageCount,UpdatedAtUtc)
+                VALUES (@Tenant,'Twilio',4,DATEADD(MINUTE,DATEDIFF(MINUTE,0,CAST(CURRENT_TIMESTAMP AS datetime2)),0) AT TIME ZONE 'UTC',2,CURRENT_TIMESTAMP);
                 """, new { Tenant = tenantId, Other = otherTenantId, Message1 = message1, Message2 = message2 });
 
             await repository.CreateRuleAsync(new(ruleId, tenantId, "Failures", "Twilio", SmsStatus.Failed,
@@ -46,22 +46,22 @@ public sealed class AlertSqlTests
             Assert.Empty(await repository.ListAlertsAsync(otherTenantId, false, 0, 20));
 
             await connection.ExecuteAsync("""
-                UPDATE dbo.SmsMessageStatusHistory
-                SET CreatedAt=DATEADD(HOUR,-1,SYSUTCDATETIME())
+                UPDATE SmsMessageStatusHistory
+                SET CreatedAt=DATEADD(HOUR,-1,CURRENT_TIMESTAMP)
                 WHERE TenantId=@Tenant;
-                UPDATE dbo.AlertStatusCounters
-                SET BucketStartUtc=DATEADD(HOUR,-1,BucketStartUtc), UpdatedAtUtc=DATEADD(HOUR,-1,SYSUTCDATETIME())
+                UPDATE AlertStatusCounters
+                SET BucketStartUtc=DATEADD(HOUR,-1,BucketStartUtc), UpdatedAtUtc=DATEADD(HOUR,-1,CURRENT_TIMESTAMP)
                 WHERE TenantId=@Tenant;
                 """, new { Tenant = tenantId });
             await repository.EvaluateAsync(tenantId);
 
             await connection.ExecuteAsync("""
-                UPDATE dbo.SmsMessageStatusHistory
-                SET CreatedAt=SYSUTCDATETIME()
+                UPDATE SmsMessageStatusHistory
+                SET CreatedAt=CURRENT_TIMESTAMP
                 WHERE TenantId=@Tenant;
-                UPDATE dbo.AlertStatusCounters
-                SET BucketStartUtc=DATEADD(MINUTE,DATEDIFF(MINUTE,0,CAST(SYSUTCDATETIME() AS datetime2)),0) AT TIME ZONE 'UTC',
-                    UpdatedAtUtc=SYSUTCDATETIME()
+                UPDATE AlertStatusCounters
+                SET BucketStartUtc=DATEADD(MINUTE,DATEDIFF(MINUTE,0,CAST(CURRENT_TIMESTAMP AS datetime2)),0) AT TIME ZONE 'UTC',
+                    UpdatedAtUtc=CURRENT_TIMESTAMP
                 WHERE TenantId=@Tenant;
                 """, new { Tenant = tenantId });
             await repository.EvaluateAsync(tenantId);
@@ -71,11 +71,11 @@ public sealed class AlertSqlTests
         finally
         {
             await connection.ExecuteAsync("""
-                DELETE dbo.Alerts WHERE TenantId IN (@Tenant,@Other);
-                DELETE dbo.AlertRules WHERE TenantId IN (@Tenant,@Other);
-                DELETE dbo.SmsMessageStatusHistory WHERE TenantId IN (@Tenant,@Other);
-                DELETE dbo.SmsMessages WHERE TenantId IN (@Tenant,@Other);
-                DELETE dbo.Tenants WHERE Id IN (@Tenant,@Other);
+                DELETE Alerts WHERE TenantId IN (@Tenant,@Other);
+                DELETE AlertRules WHERE TenantId IN (@Tenant,@Other);
+                DELETE SmsMessageStatusHistory WHERE TenantId IN (@Tenant,@Other);
+                DELETE SmsMessages WHERE TenantId IN (@Tenant,@Other);
+                DELETE Tenants WHERE Id IN (@Tenant,@Other);
                 """, new { Tenant = tenantId, Other = otherTenantId });
         }
     }

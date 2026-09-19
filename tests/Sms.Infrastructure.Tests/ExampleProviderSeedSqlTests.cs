@@ -8,30 +8,30 @@ using Sms.Seed;
 
 namespace Sms.Infrastructure.Tests;
 
-[Collection(SqlServerTestCollection.Name)]
+[Collection(PostgresTestCollection.Name)]
 public sealed class ExampleProviderSeedSqlTests
 {
-    [SqlServerFact]
+    [PostgresFact]
     public async Task Seed_CanBeRepeated_EncryptsWithConfiguredKey_AndKeepsTenantIsolation()
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:SqlServer"] = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER"),
+            ["ConnectionStrings:Postgres"] = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES"),
             ["Encryption:MasterKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
         }).Build();
-        var factory = new SqlConnectionFactory(configuration);
+        var factory = new NpgsqlConnectionFactory(configuration);
         var protector = new AesGcmSecretProtector(configuration);
         var configurationCache = TenantConfigurationCacheTestFactory.Create(factory);
         var providers = new TenantSmsProviderRepository(factory, protector, configurationCache);
         var tenant = Guid.NewGuid();
         using var connection = factory.CreateConnection();
-        await connection.ExecuteAsync("INSERT dbo.Tenants(Id,Name,IsActive,CreatedAt) VALUES(@Id,N'Seed test',1,SYSDATETIMEOFFSET());", new { Id = tenant });
+        await connection.ExecuteAsync("INSERT Tenants(Id,Name,IsActive,CreatedAt) VALUES(@Id,'Seed test',1,CURRENT_TIMESTAMP);", new { Id = tenant });
         try
         {
             await ExampleProviders.SeedAsync(providers, tenant);
             await ExampleProviders.SeedAsync(providers, tenant);
             var rows = (await connection.QueryAsync<(string Provider, string ApiSecret, string? Settings)>(
-                "SELECT Provider,ApiSecret,Settings FROM dbo.TenantSmsProviders WHERE TenantId=@Tenant;", new { Tenant = tenant })).ToList();
+                "SELECT Provider,ApiSecret,Settings FROM TenantSmsProviders WHERE TenantId=@Tenant;", new { Tenant = tenant })).ToList();
             Assert.Equal(3, rows.Count);
             Assert.Equal("Twilio", (await providers.GetDefaultAsync(tenant))!.Provider);
             Assert.Null(await providers.GetAsync(Guid.NewGuid(), "Twilio"));
@@ -55,7 +55,7 @@ public sealed class ExampleProviderSeedSqlTests
         }
         finally
         {
-            await connection.ExecuteAsync("DELETE dbo.TenantSmsProviders WHERE TenantId=@Tenant; DELETE dbo.Tenants WHERE Id=@Tenant;", new { Tenant = tenant });
+            await connection.ExecuteAsync("DELETE TenantSmsProviders WHERE TenantId=@Tenant; DELETE Tenants WHERE Id=@Tenant;", new { Tenant = tenant });
         }
     }
 }

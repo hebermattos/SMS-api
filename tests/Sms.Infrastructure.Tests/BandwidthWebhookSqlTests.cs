@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.Configuration;
 using Sms.Application.Messages;
 using Sms.Application.Providers;
@@ -13,28 +13,28 @@ using Sms.Infrastructure.Security;
 
 namespace Sms.Infrastructure.Tests;
 
-[Collection(SqlServerTestCollection.Name)]
-public sealed class SqlServerFactAttribute : FactAttribute
+[Collection(PostgresTestCollection.Name)]
+public sealed class PostgresFactAttribute : FactAttribute
 {
-    public SqlServerFactAttribute()
+    public PostgresFactAttribute()
     {
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER")))
-            Skip = "Set SMS_TEST_SQLSERVER to a test database initialized with database/schema.sql.";
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES")))
+            Skip = "Set SMS_TEST_POSTGRES to a PostgreSQL test database initialized with database/schema.sql.";
     }
 }
 
 public sealed class BandwidthWebhookSqlTests
 {
-    [SqlServerFact]
+    [PostgresFact]
     public async Task Callbacks_PersistEncryptedSettingsAndIsolateIdempotentHistory()
     {
-        var connectionString = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER")!;
+        var connectionString = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES")!;
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:SqlServer"] = connectionString,
+            ["ConnectionStrings:Postgres"] = connectionString,
             ["Encryption:MasterKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
         }).Build();
-        var factory = new SqlConnectionFactory(configuration);
+        var factory = new NpgsqlConnectionFactory(configuration);
         var configurationCache = TenantConfigurationCacheTestFactory.Create(factory);
         var providers = new TenantSmsProviderRepository(factory, new AesGcmSecretProtector(configuration), configurationCache);
         var contentProtector = new AesGcmSmsContentProtector(configuration);
@@ -44,21 +44,21 @@ public sealed class BandwidthWebhookSqlTests
         var tenant = Guid.NewGuid();
         var otherTenant = Guid.NewGuid();
         var account = Guid.NewGuid().ToString("N");
-        using var connection = new SqlConnection(connectionString);
+        using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
         try
         {
             await connection.ExecuteAsync("""
-                INSERT dbo.Tenants (Id, Name, IsActive, CreatedAt)
-                VALUES (@Tenant, N'Webhook test', 1, SYSDATETIMEOFFSET()),
-                       (@OtherTenant, N'Other webhook test', 1, SYSDATETIMEOFFSET());
+                INSERT Tenants (Id, Name, IsActive, CreatedAt)
+                VALUES (@Tenant, 'Webhook test', 1, CURRENT_TIMESTAMP),
+                       (@OtherTenant, 'Other webhook test', 1, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant, OtherTenant = otherTenant });
             var settings = "{\"accountId\":\"bandwidth-account\",\"applicationId\":\"app-1\",\"webhookPassword\":\"callback-password\"}";
             await providers.UpsertAsync(new(tenant, "Bandwidth", account, "oauth-secret", "+15550000001", true, true, settings));
             await providers.UpsertAsync(new(otherTenant, "Bandwidth", account, "other-oauth-secret", "+15550000003", true, true,
                 settings.Replace("callback-password", "other-callback-password")));
             var stored = await connection.QuerySingleAsync<(string ApiSecret, string Settings)>(
-                "SELECT ApiSecret, Settings FROM dbo.TenantSmsProviders WHERE TenantId=@Tenant AND Provider='Bandwidth';", new { Tenant = tenant });
+                "SELECT ApiSecret, Settings FROM TenantSmsProviders WHERE TenantId=@Tenant AND Provider='Bandwidth';", new { Tenant = tenant });
             Assert.DoesNotContain("oauth-secret", stored.ApiSecret);
             Assert.DoesNotContain("callback-password", stored.Settings);
             Assert.DoesNotContain("applicationId", stored.Settings);
@@ -70,7 +70,7 @@ public sealed class BandwidthWebhookSqlTests
             Assert.Equal(SmsStatus.Received, inbound.Status);
             Assert.Equal("test body", inbound.Body);
             var encrypted = await connection.QuerySingleAsync<(string From, string To, string Body)>(
-                "SELECT [From], [To], Body FROM dbo.SmsMessages WHERE Id=@Id;", new { inbound.Id });
+                "SELECT "From", "To", Body FROM SmsMessages WHERE Id=@Id;", new { inbound.Id });
             Assert.DoesNotContain(inbound.From, encrypted.From);
             Assert.DoesNotContain(inbound.To, encrypted.To);
             Assert.DoesNotContain(inbound.Body, encrypted.Body);
@@ -139,10 +139,10 @@ public sealed class BandwidthWebhookSqlTests
         finally
         {
             await connection.ExecuteAsync("""
-                DELETE dbo.SmsMessageStatusHistory WHERE TenantId IN (@Tenant, @OtherTenant);
-                DELETE dbo.SmsMessages WHERE TenantId IN (@Tenant, @OtherTenant);
-                DELETE dbo.TenantSmsProviders WHERE TenantId IN (@Tenant, @OtherTenant);
-                DELETE dbo.Tenants WHERE Id IN (@Tenant, @OtherTenant);
+                DELETE SmsMessageStatusHistory WHERE TenantId IN (@Tenant, @OtherTenant);
+                DELETE SmsMessages WHERE TenantId IN (@Tenant, @OtherTenant);
+                DELETE TenantSmsProviders WHERE TenantId IN (@Tenant, @OtherTenant);
+                DELETE Tenants WHERE Id IN (@Tenant, @OtherTenant);
                 """, new { Tenant = tenant, OtherTenant = otherTenant });
         }
     }
