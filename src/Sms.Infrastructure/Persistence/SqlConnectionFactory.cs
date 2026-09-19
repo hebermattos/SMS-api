@@ -11,7 +11,7 @@ public sealed class SqlConnectionFactory
 
     static SqlConnectionFactory()
     {
-        SqlMapper.AddTypeHandler(new PostgresDateTimeOffsetHandler());
+        SqlMapper.AddTypeHandler(PostgresDateTimeOffsetHandler.Instance);
     }
 
     public SqlConnectionFactory(IConfiguration configuration)
