@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddSingleton<SqlConnectionFactory>();
         services.AddSingleton<LogsSqlConnectionFactory>();
         services.AddSingleton<ReportingSqlConnectionFactory>();
+        services.AddSingleton<TenantConfigurationCache>();
         services.AddSingleton<ITenantSmsOverviewOutbox, TenantSmsOverviewOutbox>();
         services.AddSingleton<ITenantSmsOverviewEventPublisher, TenantSmsOverviewEventPublisher>();
         services.AddScoped<ITenantSmsOverviewProjection, TenantSmsOverviewProjection>();

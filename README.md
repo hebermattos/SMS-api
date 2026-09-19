@@ -75,7 +75,7 @@ Swagger documents the complete API surface.
 The provider is selected per request. All providers implement `ISmsProvider`, while provider-specific code remains isolated from the application core.
 
 - **Twilio:** signed callbacks using `X-Twilio-Signature`.
-- **Bandwidth:** OAuth 2.0 Client Credentials and authenticated callbacks. OAuth access tokens are cached in Redis until shortly before their reported expiration.
+- **Bandwidth:** OAuth 2.0 Client Credentials and authenticated callbacks. OAuth access tokens are cached in Redis until shortly before their reported expiration.\n\nTenant configuration is also cached in Redis. Tenant metadata, time zone, API-client authentication data, and SMS-provider configuration have no time-based cache expiration and are invalidated only after a persisted configuration change. Provider secrets remain encrypted while cached.
 
 Immediate messages are queued through RabbitMQ/MassTransit. Scheduled messages are stored in UTC and queued when due.
 
@@ -123,7 +123,7 @@ RabbitMq__Password
 - `sql.application` — application database; failure makes the API unhealthy.
 - `sql.observability` — logs, traces, and metrics database.
 - `sql.reporting` — reporting database.
-- `redis` — Redis connectivity used by the Bandwidth OAuth token cache.
+- `redis` — Redis connectivity used by the Bandwidth OAuth token cache and tenant-configuration cache.
 - `rabbitmq` — RabbitMQ TCP connectivity.
 - `twilio` — Twilio API reachability.
 - `bandwidth` — Bandwidth API reachability.
