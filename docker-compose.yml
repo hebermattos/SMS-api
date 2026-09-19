@@ -92,8 +92,8 @@ services:
       Sms__PublicBaseUrl: "${SMS_PUBLIC_BASE_URL:-https://localhost:8080}"
       RabbitMq__Host: "rabbitmq"
       RabbitMq__Port: "5672"
-      RabbitMq__User: "${RABBITMQ_USER:-guest}"
-      RabbitMq__Password: "${RABBITMQ_PASSWORD:-guest}"
+      RabbitMq__User: "${RABBITMQ_USER:-sms}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
     ports: ["8080:8080"]
 
   webhook-tests:
