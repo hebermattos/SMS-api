@@ -34,8 +34,8 @@ public sealed class RegistrationAndModelTests
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:SqlServer"] = "Server=localhost;Database=SmsApi;User Id=sa;Password=Password1!;TrustServerCertificate=True",
-            ["ConnectionStrings:ReportingSqlServer"] = "Server=localhost;Database=SmsApiReporting;User Id=sa;Password=Password1!;TrustServerCertificate=True",
+            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=sms_api;Username=sms;Password=Password1!",
+            ["ConnectionStrings:ReportingPostgres"] = "Host=localhost;Database=sms_api_reporting;Username=sms;Password=Password1!",
             ["ConnectionStrings:Redis"] = "localhost:6379",
             ["Encryption:MasterKey"] = Convert.ToBase64String(new byte[32])
         }).Build();

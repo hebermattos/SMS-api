@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Sms.Application.Auth;
 using Microsoft.Extensions.Configuration;
 using Sms.Infrastructure.Persistence;
@@ -26,7 +26,7 @@ if (args is ["--admin"])
 if (args.Length < 2)
 {
     Console.Error.WriteLine("Usage: dotnet run --project tools/Sms.Provision -- <connection-string> <tenant-name> [client-id]");
-    Console.Error.WriteLine("Administrator: dotnet run --project tools/Sms.Provision -- --admin (uses ConnectionStrings__SqlServer, Admin__Username and Admin__Password environment variables)");
+    Console.Error.WriteLine("Administrator: dotnet run --project tools/Sms.Provision -- --admin (uses ConnectionStrings__Postgres, Admin__Username and Admin__Password environment variables)");
     return 1;
 }
 
@@ -37,7 +37,7 @@ var clientId = args.Length > 2 ? args[2].Trim() : $"tenant_{tenantId:N}";
 var secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
 var hashed = ClientSecretHasher.Hash(secret);
 
-await using var connection = new SqlConnection(connectionString);
+await using var connection = new NpgsqlConnection(connectionString);
 await connection.OpenAsync();
 await using var transaction = await connection.BeginTransactionAsync();
 try
