@@ -5,7 +5,7 @@ Use this checklist when auditing the `sms-api` project. The user's current expli
 ## Architecture and maintainability
 
 - REST API uses C# and ASP.NET Core.
-- SQL Server is the application database and Dapper is the data-access library.
+- PostgreSQL is the application database and Dapper is the data-access library.
 - Administration UI uses Angular.
 - Code favors simplicity, readability, maintainability, and necessary abstractions only.
 - Database migrations are not used; a new database is initialized from scripts.
@@ -42,12 +42,12 @@ Use this checklist when auditing the `sms-api` project. The user's current expli
 - First startup creates the application database and a separate observability database.
 - Initialization creates the required schemas and a configured sample tenant.
 - Provider test configuration or safe fake data is initialized where required by current project instructions.
-- Initialization is idempotent whenever practical and waits for SQL Server readiness reliably.
+- Initialization is idempotent whenever practical and waits for PostgreSQL readiness reliably.
 
 ## Logging and observability
 
 - OpenTelemetry covers logs, traces, and metrics.
-- Observability data is initially stored in the dedicated SQL Server observability database.
+- Observability data is initially stored in the dedicated PostgreSQL observability database.
 - Customers can view only their own logs; platform users can access system logs according to authorization.
 - System logs contain only error level or higher and are intended only for platform users.
 - User logs record customer user activities, including login activity, with tenant identity and appropriate actor/context.

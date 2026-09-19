@@ -1,6 +1,6 @@
 ---
 name: sql-query-performance
-description: Statically review the text of SQL Server queries in this SMS API and suggest performance improvements. Use when reviewing Dapper SQL, investigating potential query inefficiencies, or checking query text for performance risks; do not execute queries or require database access.
+description: Statically review the text of PostgreSQL queries in this SMS API and suggest performance improvements. Use when reviewing Dapper SQL, investigating potential query inefficiencies, or checking query text for performance risks; do not execute queries or require database access.
 ---
 
 # SQL Query Performance
