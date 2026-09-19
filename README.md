@@ -24,7 +24,7 @@ docker compose up --build
 Open:
 
 - UI: http://localhost:4200
-- API: http://localhost:8080
+- API: http://localhost:8080 (redirects to Swagger in Development)
 - Swagger: http://localhost:8080/swagger (Development only)
 - SQL Server: localhost,1434
 

@@ -87,6 +87,7 @@ app.UseAuthentication();
 app.UseMiddleware<RequestAuditMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
+app.MapSwaggerRoot();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.Run();
 

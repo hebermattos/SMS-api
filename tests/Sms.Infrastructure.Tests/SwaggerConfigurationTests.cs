@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
@@ -31,5 +33,47 @@ public sealed class SwaggerConfigurationTests
         Assert.Equal(SecuritySchemeType.Http, securityScheme.Type);
         Assert.Equal("bearer", securityScheme.Scheme);
         Assert.Single(document.SecurityRequirements);
+    }
+
+    [Fact]
+    public async Task MapSwaggerRoot_InDevelopment_RedirectsToSwagger()
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = Environments.Development
+        });
+        using var app = builder.Build();
+
+        app.MapSwaggerRoot();
+
+        var endpoint = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(routeEndpoint => routeEndpoint.RoutePattern.RawText == "/");
+
+        var context = new DefaultHttpContext
+        {
+            RequestServices = app.Services
+        };
+        await endpoint.RequestDelegate!(context);
+
+        Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
+        Assert.Equal("/swagger", context.Response.Headers.Location);
+    }
+
+    [Fact]
+    public void MapSwaggerRoot_OutsideDevelopment_DoesNotMapRootEndpoint()
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = Environments.Production
+        });
+        using var app = builder.Build();
+
+        app.MapSwaggerRoot();
+
+        Assert.DoesNotContain(
+            ((IEndpointRouteBuilder)app).DataSources.SelectMany(dataSource => dataSource.Endpoints),
+            endpoint => endpoint is RouteEndpoint routeEndpoint && routeEndpoint.RoutePattern.RawText == "/");
     }
 }
