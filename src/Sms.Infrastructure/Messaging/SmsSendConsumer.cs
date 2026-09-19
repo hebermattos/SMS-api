@@ -1,11 +1,6 @@
-using System.Text.Json;
 using Dapper;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using MassTransit;
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using Sms.Application.Common;
 using Sms.Application.Messages;
 using Sms.Domain.Messages;
@@ -14,96 +9,38 @@ using Sms.Infrastructure.Persistence;
 namespace Sms.Infrastructure.Messaging;
 
 public sealed class SmsSendConsumer(
-    IServiceScopeFactory scopes,
+    IWorkerTenantContext tenantContext,
+    ISmsMessageRepository repository,
+    ISmsProviderResolver providerResolver,
     SqlConnectionFactory connectionFactory,
-    IConfiguration configuration,
-    ILogger<SmsSendConsumer> logger) : BackgroundService
+    ILogger<SmsSendConsumer> logger) : IConsumer<SmsSendEvent>
 {
-    private readonly RabbitMqAlertOptions options = RabbitMqAlertOptions.From(configuration);
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task Consume(ConsumeContext<SmsSendEvent> context)
     {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await ConsumeAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "SMS send consumer stopped; retrying.");
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-            }
-        }
-    }
-
-    private Task ConsumeAsync(CancellationToken stoppingToken)
-    {
-        var factory = new ConnectionFactory
-        {
-            HostName = options.Host, Port = options.Port, UserName = options.User,
-            Password = options.Password, VirtualHost = options.VirtualHost,
-            DispatchConsumersAsync = true
-        };
-        var rabbit = factory.CreateConnection();
-        var channel = rabbit.CreateModel();
-        channel.ExchangeDeclare(options.SendExchange, ExchangeType.Direct, durable: true, autoDelete: false);
-        channel.QueueDeclare(options.SendQueue, durable: true, exclusive: false, autoDelete: false);
-        channel.QueueBind(options.SendQueue, options.SendExchange, options.SendRoutingKey);
-        channel.BasicQos(0, 1, false);
-
-        var consumer = new AsyncEventingBasicConsumer(channel);
-        consumer.Received += async (_, args) =>
-        {
-            try
-            {
-                var message = JsonSerializer.Deserialize<SmsSendEvent>(args.Body.Span)
-                    ?? throw new InvalidOperationException("Empty SMS send event.");
-                await SendAsync(message, stoppingToken);
-                channel.BasicAck(args.DeliveryTag, false);
-            }
-            catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
-            {
-                logger.LogError(exception, "Queued SMS processing failed; message will be retried.");
-                channel.BasicNack(args.DeliveryTag, false, requeue: true);
-            }
-        };
-        channel.BasicConsume(options.SendQueue, autoAck: false, consumer);
-        return Task.Delay(Timeout.InfiniteTimeSpan, stoppingToken).ContinueWith(_ =>
-        {
-            channel.Dispose();
-            rabbit.Dispose();
-        }, CancellationToken.None);
-    }
-
-    private async Task SendAsync(SmsSendEvent item, CancellationToken cancellationToken)
-    {
+        var item = context.Message;
         using var connection = connectionFactory.CreateConnection();
         var processed = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
             "SELECT COUNT(1) FROM dbo.SmsSendInbox WHERE EventId=@EventId;",
-            new { item.EventId }, cancellationToken: cancellationToken));
+            new { item.EventId }, cancellationToken: context.CancellationToken));
         if (processed != 0) return;
 
-        using var scope = scopes.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IWorkerTenantContext>().SetTenant(item.TenantId);
-        var repository = scope.ServiceProvider.GetRequiredService<ISmsMessageRepository>();
-        var message = await repository.GetByIdAsync(item.TenantId, item.MessageId, cancellationToken)
+        tenantContext.SetTenant(item.TenantId);
+        var message = await repository.GetByIdAsync(item.TenantId, item.MessageId, context.CancellationToken)
             ?? throw new InvalidOperationException("Queued SMS message was not found.");
         if (message.Status != SmsStatus.Queued)
         {
-            await MarkProcessedAsync(item.EventId, cancellationToken);
+            await MarkProcessedAsync(item.EventId, context.CancellationToken);
             return;
         }
 
         try
         {
-            var provider = scope.ServiceProvider.GetRequiredService<ISmsProviderResolver>().Resolve(message.Provider);
-            var result = await provider.SendAsync(message.From, message.To, message.Body, cancellationToken);
+            var provider = providerResolver.Resolve(message.Provider);
+            var result = await provider.SendAsync(message.From, message.To, message.Body, context.CancellationToken);
             await repository.UpdateStatusAsync(item.TenantId, item.MessageId, ParseStatus(result.Status),
-                result.ProviderMessageId, DateTimeOffset.UtcNow, cancellationToken);
+                result.ProviderMessageId, DateTimeOffset.UtcNow, context.CancellationToken);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
         {
             throw;
         }
@@ -111,10 +48,10 @@ public sealed class SmsSendConsumer(
         {
             logger.LogError(exception, "SMS provider rejected queued message {MessageId}.", item.MessageId);
             await repository.UpdateStatusAsync(item.TenantId, item.MessageId, SmsStatus.Failed, null,
-                DateTimeOffset.UtcNow, cancellationToken);
+                DateTimeOffset.UtcNow, context.CancellationToken);
         }
 
-        await MarkProcessedAsync(item.EventId, cancellationToken);
+        await MarkProcessedAsync(item.EventId, context.CancellationToken);
     }
 
     private async Task MarkProcessedAsync(Guid eventId, CancellationToken cancellationToken)

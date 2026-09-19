@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sms.Application.Auth;
@@ -22,9 +23,35 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<SqlConnectionFactory>();
-        services.AddSingleton<AlertEvaluationOutboxPublisher>();
-        services.AddSingleton<AlertEvaluationConsumer>();
         services.AddSingleton<LogsSqlConnectionFactory>();
+        var rabbitMq = RabbitMqAlertOptions.From(configuration);
+        services.AddMassTransit(bus =>
+        {
+            bus.AddConsumer<AlertEvaluationConsumer>();
+            bus.AddConsumer<SmsSendConsumer>();
+            bus.UsingRabbitMq((context, rabbit) =>
+            {
+                rabbit.Host(rabbitMq.Host, (ushort)rabbitMq.Port, rabbitMq.VirtualHost, host =>
+                {
+                    host.Username(rabbitMq.User);
+                    host.Password(rabbitMq.Password);
+                });
+                rabbit.ReceiveEndpoint(rabbitMq.Queue, endpoint =>
+                {
+                    endpoint.PrefetchCount = 1;
+                    endpoint.ConcurrentMessageLimit = 1;
+                    endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
+                    endpoint.ConfigureConsumer<AlertEvaluationConsumer>(context);
+                });
+                rabbit.ReceiveEndpoint(rabbitMq.SendQueue, endpoint =>
+                {
+                    endpoint.PrefetchCount = 1;
+                    endpoint.ConcurrentMessageLimit = 1;
+                    endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
+                    endpoint.ConfigureConsumer<SmsSendConsumer>(context);
+                });
+            });
+        });
         services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();
         services.AddSingleton<ISmsContentProtector, AesGcmSmsContentProtector>();
         services.AddSingleton<TwilioWebhookValidator>();

@@ -1,79 +1,14 @@
 using Dapper;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using Microsoft.Extensions.Hosting;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
+using MassTransit;
 using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Messaging;
 
-public sealed class AlertEvaluationConsumer(
-    SqlConnectionFactory connectionFactory,
-    IConfiguration configuration,
-    ILogger<AlertEvaluationConsumer> logger) : BackgroundService
+public sealed class AlertEvaluationConsumer(SqlConnectionFactory connectionFactory) : IConsumer<AlertEvaluationEvent>
 {
-    private readonly RabbitMqAlertOptions options = RabbitMqAlertOptions.From(configuration);
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task Consume(ConsumeContext<AlertEvaluationEvent> context)
     {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await ConsumeAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Alert evaluation consumer stopped; retrying.");
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-            }
-        }
-    }
-
-    private Task ConsumeAsync(CancellationToken stoppingToken)
-    {
-        var factory = new ConnectionFactory
-        {
-            HostName = options.Host, Port = options.Port, UserName = options.User,
-            Password = options.Password, VirtualHost = options.VirtualHost,
-            DispatchConsumersAsync = true
-        };
-        var rabbit = factory.CreateConnection();
-        var channel = rabbit.CreateModel();
-        channel.ExchangeDeclare(options.Exchange, ExchangeType.Direct, durable: true, autoDelete: false);
-        channel.QueueDeclare(options.Queue, durable: true, exclusive: false, autoDelete: false);
-        channel.QueueBind(options.Queue, options.Exchange, options.RoutingKey);
-        channel.BasicQos(0, 1, false);
-
-        var consumer = new AsyncEventingBasicConsumer(channel);
-        consumer.Received += async (_, args) =>
-        {
-            try
-            {
-                var message = JsonSerializer.Deserialize<AlertEvaluationEvent>(args.Body.Span)
-                    ?? throw new InvalidOperationException("Empty alert evaluation event.");
-                await EvaluateAsync(message, stoppingToken);
-                channel.BasicAck(args.DeliveryTag, false);
-            }
-            catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
-            {
-                logger.LogError(exception, "Alert evaluation failed; message will be retried.");
-                channel.BasicNack(args.DeliveryTag, false, requeue: true);
-            }
-        };
-        channel.BasicConsume(options.Queue, autoAck: false, consumer);
-        return Task.Delay(Timeout.InfiniteTimeSpan, stoppingToken).ContinueWith(_ =>
-        {
-            channel.Dispose();
-            rabbit.Dispose();
-        }, CancellationToken.None);
-    }
-
-    private async Task EvaluateAsync(AlertEvaluationEvent message, CancellationToken cancellationToken)
-    {
+        var message = context.Message;
         using var connection = connectionFactory.CreateConnection();
         connection.Open();
         using var transaction = connection.BeginTransaction(System.Data.IsolationLevel.Serializable);
@@ -82,7 +17,7 @@ public sealed class AlertEvaluationConsumer(
             INSERT dbo.AlertEvaluationInbox(EventId, ProcessedAtUtc)
             SELECT @EventId, SYSUTCDATETIME()
             WHERE NOT EXISTS (SELECT 1 FROM dbo.AlertEvaluationInbox WITH (UPDLOCK, HOLDLOCK) WHERE EventId=@EventId);
-            """, new { message.EventId }, transaction, cancellationToken: cancellationToken));
+            """, new { message.EventId }, transaction, cancellationToken: context.CancellationToken));
         if (inserted == 0) { transaction.Commit(); return; }
 
         const string sql = """
@@ -114,7 +49,7 @@ public sealed class AlertEvaluationConsumer(
         {
             TenantId = message.TenantId, Provider = message.Provider, Status = message.Status,
             OccurredAtUtc = message.OccurredAtUtc
-        }, transaction, cancellationToken: cancellationToken));
+        }, transaction, cancellationToken: context.CancellationToken));
         transaction.Commit();
     }
 }

@@ -9,12 +9,8 @@ public sealed class RabbitMqAlertOptions
     public string User { get; init; } = "guest";
     public string Password { get; init; } = "guest";
     public string VirtualHost { get; init; } = "/";
-    public string Exchange { get; init; } = "sms.alerts";
     public string Queue { get; init; } = "sms.alert.evaluation";
-    public string RoutingKey { get; init; } = "alert.evaluate";
-    public string SendExchange { get; init; } = "sms.messages";
     public string SendQueue { get; init; } = "sms.send";
-    public string SendRoutingKey { get; init; } = "message.send";
 
     public static RabbitMqAlertOptions From(IConfiguration configuration)
     {
@@ -26,12 +22,8 @@ public sealed class RabbitMqAlertOptions
             User = section["User"] ?? "guest",
             Password = section["Password"] ?? "guest",
             VirtualHost = section["VirtualHost"] ?? "/",
-            Exchange = section["Exchange"] ?? "sms.alerts",
             Queue = section["Queue"] ?? "sms.alert.evaluation",
-            RoutingKey = section["RoutingKey"] ?? "alert.evaluate",
-            SendExchange = section["SendExchange"] ?? "sms.messages",
-            SendQueue = section["SendQueue"] ?? "sms.send",
-            SendRoutingKey = section["SendRoutingKey"] ?? "message.send"
+            SendQueue = section["SendQueue"] ?? "sms.send"
         };
     }
 }

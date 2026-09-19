@@ -1,20 +1,16 @@
-using System.Text.Json;
 using Dapper;
-using Microsoft.Extensions.Configuration;
+using MassTransit;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Messaging;
 
 public sealed class SmsSendOutboxPublisher(
     SqlConnectionFactory connectionFactory,
-    IConfiguration configuration,
+    IPublishEndpoint publishEndpoint,
     ILogger<SmsSendOutboxPublisher> logger) : BackgroundService
 {
-    private readonly RabbitMqAlertOptions options = RabbitMqAlertOptions.From(configuration);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -52,27 +48,9 @@ public sealed class SmsSendOutboxPublisher(
             OUTPUT INSERTED.Id AS EventId, INSERTED.TenantId, INSERTED.MessageId;
             """, new { LockId = lockId }, cancellationToken: cancellationToken));
 
-        if (!rows.Any()) return;
-
-        var factory = new ConnectionFactory
-        {
-            HostName = options.Host, Port = options.Port, UserName = options.User,
-            Password = options.Password, VirtualHost = options.VirtualHost
-        };
-        using var rabbit = factory.CreateConnection();
-        using var channel = rabbit.CreateModel();
-        channel.ExchangeDeclare(options.SendExchange, ExchangeType.Direct, durable: true, autoDelete: false);
-        channel.QueueDeclare(options.SendQueue, durable: true, exclusive: false, autoDelete: false);
-        channel.QueueBind(options.SendQueue, options.SendExchange, options.SendRoutingKey);
-        channel.ConfirmSelect();
-
         foreach (var row in rows)
         {
-            var properties = channel.CreateBasicProperties();
-            properties.Persistent = true;
-            properties.MessageId = row.EventId.ToString();
-            channel.BasicPublish(options.SendExchange, options.SendRoutingKey, properties, JsonSerializer.SerializeToUtf8Bytes(row));
-            channel.WaitForConfirmsOrDie(TimeSpan.FromSeconds(5));
+            await publishEndpoint.Publish(row, cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition("""
                 UPDATE dbo.SmsSendOutbox
                 SET PublishedAtUtc=SYSUTCDATETIME(), LockId=NULL, LockedUntilUtc=NULL

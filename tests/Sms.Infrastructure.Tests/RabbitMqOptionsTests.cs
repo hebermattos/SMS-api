@@ -26,12 +26,8 @@ public sealed class RabbitMqOptionsTests
             ["RabbitMq:User"] = "sms",
             ["RabbitMq:Password"] = "secret",
             ["RabbitMq:VirtualHost"] = "/sms",
-            ["RabbitMq:Exchange"] = "alerts.exchange",
             ["RabbitMq:Queue"] = "alerts.queue",
-            ["RabbitMq:RoutingKey"] = "alerts.route",
-            ["RabbitMq:SendExchange"] = "send.exchange",
-            ["RabbitMq:SendQueue"] = "send.queue",
-            ["RabbitMq:SendRoutingKey"] = "send.route"
+            ["RabbitMq:SendQueue"] = "send.queue"
         }).Build();
 
         var options = RabbitMqAlertOptions.From(configuration);
@@ -41,11 +37,7 @@ public sealed class RabbitMqOptionsTests
         Assert.Equal("sms", options.User);
         Assert.Equal("secret", options.Password);
         Assert.Equal("/sms", options.VirtualHost);
-        Assert.Equal("alerts.exchange", options.Exchange);
         Assert.Equal("alerts.queue", options.Queue);
-        Assert.Equal("alerts.route", options.RoutingKey);
-        Assert.Equal("send.exchange", options.SendExchange);
         Assert.Equal("send.queue", options.SendQueue);
-        Assert.Equal("send.route", options.SendRoutingKey);
     }
 }
