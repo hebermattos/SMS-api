@@ -37,6 +37,15 @@ public sealed class AlertServiceTests
     }
 
     [Fact]
+    public async Task CreateRule_RejectsScheduledStatus()
+    {
+        var service = new AlertService(new FakeAlertRepository());
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateRuleAsync(Guid.NewGuid(),
+            new("Scheduled", null, SmsStatus.Scheduled, 1, 5, AlertRepeatMode.Once, null, true)));
+    }
+
+    [Fact]
     public async Task MissingTenantOwnedRecords_AreNotModified()
     {
         var service = new AlertService(new FakeAlertRepository());

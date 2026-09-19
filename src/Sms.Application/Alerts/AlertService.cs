@@ -48,7 +48,7 @@ public sealed class AlertService(IAlertRepository repository)
         var name = request.Name?.Trim();
         if (string.IsNullOrWhiteSpace(name) || name.Length > 120)
             throw new ArgumentException("Rule name is required and must not exceed 120 characters.");
-        if (!Enum.IsDefined(request.Status))
+        if (!Enum.IsDefined(request.Status) || request.Status == SmsStatus.Scheduled)
             throw new ArgumentException("A valid SMS status is required.");
         if (request.Threshold is < 1 or > 1_000_000)
             throw new ArgumentException("Threshold must be between 1 and 1,000,000.");

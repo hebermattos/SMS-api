@@ -34,7 +34,7 @@ public interface IAdministrationRepository
 }
 
 public sealed record AvailableProvider(string Name, string? FromNumber, bool IsDefault);
-public sealed record TenantOverview(string Name, long Outbound, long Inbound, long Delivered, long Failed,
+public sealed record TenantOverview(string Name, string TimeZoneId, long Outbound, long Inbound, long Delivered, long Failed,
     long Pending, IReadOnlyList<AvailableProvider> Providers);
 
 public interface ITenantPortalRepository

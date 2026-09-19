@@ -13,7 +13,7 @@ public sealed class SendSmsServiceTests
         var repository = new FakeRepository();
         var provider = new FakeProvider("Twilio");
         var publisher = new FakePublisher();
-        var service = new SendSmsService(new FakeTenantContext(tenantId), repository, new FakeResolver(provider), publisher, new(new TestOptOutRepository()));
+        var service = CreateService(tenantId, repository, provider, publisher);
 
         var result = await service.SendAsync(new SendSmsRequest(" +15551234567 ", "hello"));
 
@@ -36,9 +36,41 @@ public sealed class SendSmsServiceTests
     public async Task SendAsync_RejectsInvalidRequest(string to, string body)
     {
         var service = new SendSmsService(
-            new FakeTenantContext(Guid.NewGuid()), new FakeRepository(), new FakeResolver(new FakeProvider("Twilio")), new FakePublisher(), new(new TestOptOutRepository()));
+            new FakeTenantContext(Guid.NewGuid()), new FakeRepository(), new FakeResolver(new FakeProvider("Twilio")), new FakePublisher(),
+            new(new TestOptOutRepository()), new FakeTimeZones(TimeZoneInfo.Utc), new FixedTimeProvider(DateTimeOffset.UtcNow));
         await Assert.ThrowsAsync<ArgumentException>(() => service.SendAsync(new SendSmsRequest(to, body)));
     }
+
+    [Fact]
+    public async Task SendAsync_ConvertsTenantLocalScheduleToUtcWithoutPublishingImmediately()
+    {
+        var tenantId = Guid.NewGuid();
+        var repository = new FakeRepository();
+        var publisher = new FakePublisher();
+        var clock = new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        var zone = TimeZoneInfo.CreateCustomTimeZone("Tenant/MinusThree", TimeSpan.FromHours(-3), "Tenant", "Tenant");
+        var service = new SendSmsService(new FakeTenantContext(tenantId), repository, new FakeResolver(new FakeProvider("Twilio")),
+            publisher, new(new TestOptOutRepository()), new FakeTimeZones(zone), clock);
+
+        var result = await service.SendAsync(new SendSmsRequest("+15551234567", "hello", ScheduledAt: new DateTime(2026, 1, 1, 10, 0, 0)));
+
+        Assert.Equal(nameof(SmsStatus.Scheduled), result.Status);
+        Assert.Equal(new DateTimeOffset(2026, 1, 1, 13, 0, 0, TimeSpan.Zero), repository.Inserted!.ScheduledAtUtc);
+        Assert.Null(publisher.Published);
+    }
+
+    [Fact]
+    public async Task SendAsync_RejectsPastTenantLocalSchedule()
+    {
+        var service = CreateService(Guid.NewGuid(), new FakeRepository(), new FakeProvider("Twilio"), new FakePublisher());
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SendAsync(
+            new SendSmsRequest("+15551234567", "hello", ScheduledAt: new DateTime(2025, 12, 31, 23, 59, 0))));
+    }
+
+    private static SendSmsService CreateService(Guid tenantId, FakeRepository repository, FakeProvider provider, FakePublisher publisher) =>
+        new(new FakeTenantContext(tenantId), repository, new FakeResolver(provider), publisher, new(new TestOptOutRepository()),
+            new FakeTimeZones(TimeZoneInfo.Utc), new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
 
     private sealed class FakePublisher : ISmsSendEventPublisher
     {
@@ -52,6 +84,14 @@ public sealed class SendSmsServiceTests
     }
 
     private sealed record FakeTenantContext(Guid TenantId) : ITenantContext;
+    private sealed record FakeTimeZones(TimeZoneInfo Zone) : ITenantTimeZoneProvider
+    {
+        public Task<TimeZoneInfo> GetAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(Zone);
+    }
+    private sealed class FixedTimeProvider(DateTimeOffset value) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => value;
+    }
 
     private sealed class FakeResolver(ISmsProvider provider) : ISmsProviderResolver
     {
@@ -84,6 +124,7 @@ public sealed class SendSmsServiceTests
         public Task<IReadOnlyList<SmsMessage>> GetHistoryAsync(Guid tenantId, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SmsMessage>>([]);
         public Task<IReadOnlyList<SmsStatusHistory>> GetStatusHistoryAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SmsStatusHistory>>([]);
         public Task InsertInboundIfNotExistsAsync(SmsMessage message, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<bool> TryQueueScheduledAsync(Guid tenantId, Guid id, DateTimeOffset updatedAt, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task UpdateStatusByProviderMessageIdAsync(Guid tenantId, string provider, string providerMessageId, SmsStatus status, DateTimeOffset updatedAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

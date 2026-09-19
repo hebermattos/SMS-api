@@ -17,12 +17,12 @@ SET XACT_ABORT ON;
             UPDATE c WITH (UPDLOCK, SERIALIZABLE)
             SET MessageCount = c.MessageCount + x.Amount, UpdatedAtUtc = @UpdatedAt
             FROM dbo.AlertStatusCounters c
-            INNER JOIN (SELECT Provider, COUNT(*) AS Amount FROM @ChangedMessages WHERE PreviousStatus <> @Status GROUP BY Provider) x
+            INNER JOIN (SELECT Provider, COUNT(*) AS Amount FROM @ChangedMessages WHERE PreviousStatus <> @Status AND @Status BETWEEN 1 AND 5 GROUP BY Provider) x
               ON x.Provider = c.Provider
             WHERE c.TenantId = @TenantId AND c.Status = @Status AND c.BucketStartUtc = @BucketStartUtc;
             INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
             SELECT @TenantId, x.Provider, @Status, @BucketStartUtc, x.Amount, @UpdatedAt
-            FROM (SELECT Provider, COUNT(*) AS Amount FROM @ChangedMessages WHERE PreviousStatus <> @Status GROUP BY Provider) x
+            FROM (SELECT Provider, COUNT(*) AS Amount FROM @ChangedMessages WHERE PreviousStatus <> @Status AND @Status BETWEEN 1 AND 5 GROUP BY Provider) x
             WHERE NOT EXISTS (SELECT 1 FROM dbo.AlertStatusCounters c WHERE c.TenantId=@TenantId AND c.Provider=x.Provider AND c.Status=@Status AND c.BucketStartUtc=@BucketStartUtc);
 
             COMMIT TRANSACTION;

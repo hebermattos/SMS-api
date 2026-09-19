@@ -45,6 +45,15 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
         await connection.ExecuteAsync(new CommandDefinition(sql, EncryptedParameters(message), cancellationToken: cancellationToken));
     }
 
+    public async Task<bool> TryQueueScheduledAsync(Guid tenantId, Guid id, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/SmsMessageRepository.TryQueueScheduledAsync.08.sql"),
+            new { TenantId = tenantId, Id = id, Scheduled = SmsStatus.Scheduled, Queued = SmsStatus.Queued, UpdatedAt = updatedAt },
+            cancellationToken: cancellationToken)) != 0;
+    }
+
     public async Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
     {
         var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/SmsMessageRepository.UpdateStatusAsync.06.sql");
@@ -75,6 +84,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
         message.Direction,
         message.Status,
         message.CreatedAt,
+        message.ScheduledAtUtc,
         message.UpdatedAt
     };
 
@@ -90,6 +100,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
         Direction = message.Direction,
         Status = message.Status,
         CreatedAt = message.CreatedAt,
+        ScheduledAtUtc = message.ScheduledAtUtc,
         UpdatedAt = message.UpdatedAt
     };
 }

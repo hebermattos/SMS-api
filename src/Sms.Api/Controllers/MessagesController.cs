@@ -14,6 +14,8 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
     public async Task<IActionResult> Send([FromBody] SendSmsRequest request, CancellationToken cancellationToken)
     {
         var result = await sendSmsService.SendAsync(request, cancellationToken);
+        if (result.ScheduledAt.HasValue)
+            result = result with { ScheduledAt = TimeZoneInfo.ConvertTime(result.ScheduledAt.Value, await Zone(cancellationToken)) };
         return AcceptedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
@@ -53,6 +55,7 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
         message.Id, message.TenantId, message.From, message.To, message.Body, message.Provider,
         message.ProviderMessageId, message.Direction, message.Status,
         CreatedAt = TimeZoneInfo.ConvertTime(message.CreatedAt, zone),
+        ScheduledAt = message.ScheduledAtUtc.HasValue ? (DateTimeOffset?)TimeZoneInfo.ConvertTime(message.ScheduledAtUtc.Value, zone) : null,
         UpdatedAt = message.UpdatedAt.HasValue ? (DateTimeOffset?)TimeZoneInfo.ConvertTime(message.UpdatedAt.Value, zone) : null
     };
 }

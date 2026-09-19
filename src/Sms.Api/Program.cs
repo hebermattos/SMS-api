@@ -49,6 +49,7 @@ builder.Services.AddScoped<PortalExceptionFilter>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<HttpTenantContext>();
 builder.Services.AddScoped<ITenantContext>(services => services.GetRequiredService<HttpTenantContext>());
 builder.Services.AddScoped<IWorkerTenantContext>(services => services.GetRequiredService<HttpTenantContext>());
@@ -75,6 +76,7 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHostedService<Sms.Infrastructure.Messaging.AlertEvaluationOutboxPublisher>();
+builder.Services.AddHostedService<Sms.Infrastructure.Messaging.ScheduledSmsPublisher>();
 
 var app = builder.Build();
 app.UseSwaggerDocumentation();

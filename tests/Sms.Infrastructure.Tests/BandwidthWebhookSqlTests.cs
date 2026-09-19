@@ -94,6 +94,21 @@ public sealed class BandwidthWebhookSqlTests
             Assert.Equal(SmsStatus.Queued, (await messages.GetByIdAsync(otherTenant, other.Id))!.Status);
             Assert.Single(await messages.GetStatusHistoryAsync(otherTenant, other.Id));
 
+            var scheduled = new SmsMessage
+            {
+                Id = Guid.NewGuid(), TenantId = tenant, Provider = "Bandwidth",
+                From = "+15550000001", To = "+15550000002", Body = "scheduled test",
+                Direction = SmsDirection.Outbound,
+                Status = SmsStatus.Scheduled,
+                CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-2),
+                ScheduledAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1)
+            };
+            await messages.InsertAsync(scheduled);
+            Assert.True(await messages.TryQueueScheduledAsync(tenant, scheduled.Id, DateTimeOffset.UtcNow));
+            Assert.False(await messages.TryQueueScheduledAsync(tenant, scheduled.Id, DateTimeOffset.UtcNow));
+            Assert.Equal(new[] { SmsStatus.Scheduled, SmsStatus.Queued },
+                (await messages.GetStatusHistoryAsync(tenant, scheduled.Id)).Select(x => x.Status));
+
             var failed = Outbound(tenant, "outbound-failed");
             await messages.InsertAsync(failed);
             var failure = BandwidthWebhooksControllerTests.Payload("message-failed");

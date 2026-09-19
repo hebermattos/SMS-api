@@ -137,6 +137,17 @@ GET  /api/v1/admin/system-logs
 
 Tenant access is always derived from the authenticated JWT. Callers cannot select a tenant through request parameters.
 
+To schedule an outbound message, send `scheduledAt` as a local date and time without a UTC offset. The API interprets it in the authenticated tenant's IANA time zone, validates daylight-saving transitions, and stores the resulting instant in UTC. Omit the field to send immediately. Scheduled messages can be created up to one year ahead.
+
+```json
+{
+  "to": "+15551234567",
+  "body": "Your appointment is tomorrow.",
+  "provider": "Twilio",
+  "scheduledAt": "2026-10-20T09:30:00"
+}
+```
+
 ## Providers
 
 All providers implement `ISmsProvider` and are selected through `ISmsProviderResolver`.
@@ -237,7 +248,7 @@ The roadmap is ordered by priority and may evolve as operational needs and custo
 
 ### Phase 3 — Messaging capabilities
 
-- [ ] Schedule messages for future delivery in the tenant time zone.
+- [x] Schedule messages for future delivery in the tenant time zone.
 - [ ] Support bulk sends with validation, progress tracking, cancellation, and per-recipient results.
 - [ ] Add message templates with tenant-level ownership and variable validation.
 - [ ] Add tenant-configurable inbound auto-replies and routing rules.
