@@ -211,6 +211,7 @@ CREATE TABLE dbo.AlertRules
     LastTriggeredAt DATETIMEOFFSET NULL,
     CreatedAt DATETIMEOFFSET NOT NULL,
     UpdatedAt DATETIMEOFFSET NULL,
+    DeletedAt DATETIMEOFFSET NULL,
     CONSTRAINT FK_AlertRules_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
     CONSTRAINT UQ_AlertRules_Tenant_Id UNIQUE (TenantId, Id),
     CONSTRAINT CK_AlertRules_Status CHECK (Status BETWEEN 1 AND 5),
@@ -224,9 +225,11 @@ CREATE TABLE dbo.AlertRules
     )
 );
 GO
-CREATE UNIQUE INDEX UX_AlertRules_Tenant_Name ON dbo.AlertRules(TenantId, Name);
+CREATE UNIQUE INDEX UX_AlertRules_Tenant_Name ON dbo.AlertRules(TenantId, Name) WHERE DeletedAt IS NULL;
 GO
-CREATE INDEX IX_AlertRules_Active ON dbo.AlertRules(IsActive, TenantId) INCLUDE (Status, Provider, Threshold, WindowMinutes);
+CREATE INDEX IX_AlertRules_Active ON dbo.AlertRules(IsActive, TenantId)
+    INCLUDE (Status, Provider, Threshold, WindowMinutes)
+    WHERE DeletedAt IS NULL;
 GO
 
 CREATE TABLE dbo.Alerts

@@ -17,6 +17,7 @@ public interface IPortalUserRepository
     Task<PortalUserAccount?> GetActiveByUsernameAsync(
         string username,
         string context,
+        string? tenantCode,
         CancellationToken cancellationToken = default);
 
     Task<PortalUserAccount?> GetActiveByIdAsync(

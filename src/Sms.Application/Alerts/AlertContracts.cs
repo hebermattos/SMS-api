@@ -29,5 +29,5 @@ public interface IAlertRepository
     Task<IReadOnlyList<AlertNotification>> ListAlertsAsync(Guid tenantId, bool unreadOnly, int skip, int take, CancellationToken cancellationToken = default);
     Task<bool> MarkReadAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default);
     Task MarkAllReadAsync(Guid tenantId, CancellationToken cancellationToken = default);
-    Task EvaluateAsync(CancellationToken cancellationToken = default);
+    Task EvaluateAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }

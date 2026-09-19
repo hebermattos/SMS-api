@@ -39,8 +39,8 @@ public sealed class AlertSqlTests
 
             await repository.CreateRuleAsync(new(ruleId, tenantId, "Failures", "Twilio", SmsStatus.Failed,
                 2, 15, AlertRepeatMode.Once, null, true, false, null, DateTimeOffset.UtcNow, null));
-            await repository.EvaluateAsync();
-            await repository.EvaluateAsync();
+            await repository.EvaluateAsync(tenantId);
+            await repository.EvaluateAsync(tenantId);
 
             Assert.Single(await repository.ListAlertsAsync(tenantId, false, 0, 20));
             Assert.Empty(await repository.ListAlertsAsync(otherTenantId, false, 0, 20));
@@ -53,7 +53,7 @@ public sealed class AlertSqlTests
                 SET BucketStartUtc=DATEADD(HOUR,-1,BucketStartUtc), UpdatedAtUtc=DATEADD(HOUR,-1,SYSUTCDATETIME())
                 WHERE TenantId=@Tenant;
                 """, new { Tenant = tenantId });
-            await repository.EvaluateAsync();
+            await repository.EvaluateAsync(tenantId);
 
             await connection.ExecuteAsync("""
                 UPDATE dbo.SmsMessageStatusHistory
@@ -64,7 +64,7 @@ public sealed class AlertSqlTests
                     UpdatedAtUtc=SYSUTCDATETIME()
                 WHERE TenantId=@Tenant;
                 """, new { Tenant = tenantId });
-            await repository.EvaluateAsync();
+            await repository.EvaluateAsync(tenantId);
 
             Assert.Equal(2, (await repository.ListAlertsAsync(tenantId, false, 0, 20)).Count);
         }

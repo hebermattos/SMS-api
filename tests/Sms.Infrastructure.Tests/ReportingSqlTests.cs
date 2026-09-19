@@ -21,7 +21,7 @@ public sealed class ReportingSqlFactAttribute : FactAttribute
 public sealed class ReportingSqlTests
 {
     [ReportingSqlFact]
-    public async Task OverviewProjection_AppliesOrderedDeltasIdempotently()
+    public async Task OverviewProjection_ConvergesWhenDeltasArriveOutOfOrder()
     {
         var applicationConnectionString = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER");
         var reportingConnectionString = Environment.GetEnvironmentVariable("SMS_TEST_REPORTING_SQLSERVER");
@@ -68,9 +68,9 @@ public sealed class ReportingSqlTests
             Assert.Equal((1L, 1L), (events[0].OutboundDelta, events[0].PendingDelta));
             Assert.Equal((1L, -1L), (events[1].DeliveredDelta, events[1].PendingDelta));
 
-            await consumer.ApplyAsync(events[0]);
-            await consumer.ApplyAsync(events[0]);
             await consumer.ApplyAsync(events[1]);
+            await consumer.ApplyAsync(events[1]);
+            await consumer.ApplyAsync(events[0]);
 
             var counters = await reporting.QuerySingleAsync<(long Outbound, long Inbound, long Delivered, long Failed, long Pending)>(
                 "SELECT Outbound, Inbound, Delivered, Failed, Pending FROM dbo.TenantSmsOverview WHERE TenantId=@TenantId;",

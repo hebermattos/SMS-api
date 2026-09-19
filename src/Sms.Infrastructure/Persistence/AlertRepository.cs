@@ -55,10 +55,11 @@ public sealed class AlertRepository(SqlConnectionFactory connectionFactory) : IA
         await connection.ExecuteAsync(new CommandDefinition(sql, new { TenantId = tenantId }, cancellationToken: cancellationToken));
     }
 
-    public async Task EvaluateAsync(CancellationToken cancellationToken = default)
+    public async Task EvaluateAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
         var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AlertRepository.EvaluateAsync.05.sql");
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(sql, cancellationToken: cancellationToken));
+        await connection.ExecuteAsync(new CommandDefinition(
+            sql, new { TenantId = tenantId }, cancellationToken: cancellationToken));
     }
 }

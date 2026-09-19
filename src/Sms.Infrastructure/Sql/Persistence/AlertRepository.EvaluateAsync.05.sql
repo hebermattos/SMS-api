@@ -19,7 +19,7 @@ SET XACT_ABORT ON;
                   AND c.BucketStartUtc>=DATEADD(MINUTE,-r.WindowMinutes,@Now)
                   AND (r.Provider IS NULL OR c.Provider=r.Provider)
             ) counts
-            WHERE r.IsActive=1;
+            WHERE r.TenantId=@TenantId AND r.IsActive=1 AND r.DeletedAt IS NULL;
 
             INSERT dbo.Alerts(Id,TenantId,RuleId,RuleName,Provider,Status,MatchCount,WindowMinutes,CreatedAt,IsRead)
             OUTPUT INSERTED.RuleId INTO @Fired(RuleId)

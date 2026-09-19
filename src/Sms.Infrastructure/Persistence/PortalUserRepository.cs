@@ -8,13 +8,14 @@ public sealed class PortalUserRepository(SqlConnectionFactory connections) : IPo
     public async Task<PortalUserAccount?> GetActiveByUsernameAsync(
         string username,
         string context,
+        string? tenantCode,
         CancellationToken cancellationToken = default)
     {
         var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/PortalUserRepository.GetActiveByUsernameAsync.01.sql");
 
         using var connection = connections.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<PortalUserAccount>(
-            new CommandDefinition(sql, new { Username = username, Context = context },
+            new CommandDefinition(sql, new { Username = username, Context = context, TenantCode = tenantCode },
                 cancellationToken: cancellationToken));
     }
 
