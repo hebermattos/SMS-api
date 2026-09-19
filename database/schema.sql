@@ -236,3 +236,44 @@ CREATE INDEX IX_AlertStatusCounters_Tenant_Provider_Status_Bucket
     ON dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc)
     INCLUDE (MessageCount);
 GO
+
+
+CREATE TABLE dbo.AlertEvaluationOutbox
+(
+    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_AlertEvaluationOutbox PRIMARY KEY,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    Provider NVARCHAR(50) NOT NULL,
+    Status INT NOT NULL,
+    OccurredAtUtc DATETIMEOFFSET NOT NULL,
+    CreatedAtUtc DATETIMEOFFSET NOT NULL,
+    PublishedAtUtc DATETIMEOFFSET NULL,
+    AttemptCount INT NOT NULL CONSTRAINT DF_AlertEvaluationOutbox_AttemptCount DEFAULT (0),
+    LastAttemptAtUtc DATETIMEOFFSET NULL,
+    CONSTRAINT FK_AlertEvaluationOutbox_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT CK_AlertEvaluationOutbox_Status CHECK (Status BETWEEN 1 AND 5)
+);
+GO
+CREATE INDEX IX_AlertEvaluationOutbox_Pending ON dbo.AlertEvaluationOutbox(CreatedAtUtc, Id)
+    INCLUDE (TenantId, Provider, Status, OccurredAtUtc)
+    WHERE PublishedAtUtc IS NULL;
+GO
+
+CREATE TABLE dbo.AlertEvaluationInbox
+(
+    EventId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_AlertEvaluationInbox PRIMARY KEY,
+    ProcessedAtUtc DATETIMEOFFSET NOT NULL
+);
+GO
+
+CREATE TRIGGER dbo.TR_SmsMessageStatusHistory_AlertEvaluationOutbox
+ON dbo.SmsMessageStatusHistory
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT dbo.AlertEvaluationOutbox(Id, TenantId, Provider, Status, OccurredAtUtc, CreatedAtUtc)
+    SELECT NEWID(), i.TenantId, m.Provider, i.Status, i.CreatedAt, SYSUTCDATETIME()
+    FROM inserted i
+    INNER JOIN dbo.SmsMessages m ON m.TenantId = i.TenantId AND m.Id = i.MessageId;
+END;
+GO
