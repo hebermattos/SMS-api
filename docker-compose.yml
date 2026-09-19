@@ -51,8 +51,8 @@ services:
         if ! database_exists "SmsApi"; then
           "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApi];"
           "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/schema.sql
-          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/seeds/example_tenant.sql
         fi
+        "$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/seeds/example_tenant.sql
 
         if ! database_exists "SmsApiLogs"; then
           "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApiLogs];"
