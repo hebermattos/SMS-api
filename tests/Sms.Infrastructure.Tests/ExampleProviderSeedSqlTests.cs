@@ -21,7 +21,8 @@ public sealed class ExampleProviderSeedSqlTests
         }).Build();
         var factory = new SqlConnectionFactory(configuration);
         var protector = new AesGcmSecretProtector(configuration);
-        var providers = new TenantSmsProviderRepository(factory, protector);
+        var configurationCache = TenantConfigurationCacheTestFactory.Create(factory);
+        var providers = new TenantSmsProviderRepository(factory, protector, configurationCache);
         var tenant = Guid.NewGuid();
         using var connection = factory.CreateConnection();
         await connection.ExecuteAsync("INSERT dbo.Tenants(Id,Name,IsActive,CreatedAt) VALUES(@Id,N'Seed test',1,SYSDATETIMEOFFSET());", new { Id = tenant });

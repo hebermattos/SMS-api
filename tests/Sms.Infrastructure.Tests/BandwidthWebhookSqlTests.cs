@@ -35,7 +35,8 @@ public sealed class BandwidthWebhookSqlTests
             ["Encryption:MasterKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
         }).Build();
         var factory = new SqlConnectionFactory(configuration);
-        var providers = new TenantSmsProviderRepository(factory, new AesGcmSecretProtector(configuration));
+        var configurationCache = TenantConfigurationCacheTestFactory.Create(factory);
+        var providers = new TenantSmsProviderRepository(factory, new AesGcmSecretProtector(configuration), configurationCache);
         var contentProtector = new AesGcmSmsContentProtector(configuration);
         var messages = new SmsMessageRepository(factory, contentProtector);
         var service = new ReceiveSmsWebhookService(messages, new(new TestOptOutRepository()));
