@@ -1,7 +1,10 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.Caching.Distributed;
 using Sms.Application.Common;
 using Sms.Application.Messages;
 using Sms.Application.Providers;
@@ -12,7 +15,8 @@ public sealed class BandwidthSmsProvider(
     HttpClient messagingClient,
     IHttpClientFactory httpClientFactory,
     ITenantContext tenantContext,
-    ITenantSmsProviderRepository configurations) : ISmsProvider
+    ITenantSmsProviderRepository configurations,
+    IDistributedCache cache) : ISmsProvider
 {
     public string Name => "Bandwidth";
 
@@ -40,14 +44,39 @@ public sealed class BandwidthSmsProvider(
 
     private async Task<string> GetAccessTokenAsync(string clientId, string clientSecret, CancellationToken cancellationToken)
     {
+        var cacheKey = BuildAccessTokenCacheKey(clientId, clientSecret);
+        var cachedToken = await cache.GetStringAsync(cacheKey, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(cachedToken)) return cachedToken;
+
         var client = httpClientFactory.CreateClient("BandwidthOAuth");
         using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/oauth2/token");
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}")));
         request.Content = new FormUrlEncodedContent(new Dictionary<string,string> { ["grant_type"] = "client_credentials" });
         using var response = await client.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Bandwidth OAuth returned HTTP {(int)response.StatusCode}.");
+
         var token = await response.Content.ReadFromJsonAsync<OAuthResponse>(cancellationToken: cancellationToken);
-        return string.IsNullOrWhiteSpace(token?.AccessToken) ? throw new InvalidOperationException("Bandwidth OAuth response did not include an access token.") : token.AccessToken;
+        if (string.IsNullOrWhiteSpace(token?.AccessToken))
+            throw new InvalidOperationException("Bandwidth OAuth response did not include an access token.");
+
+        if (token.ExpiresIn > 0)
+        {
+            var lifetimeSeconds = Math.Max(1, token.ExpiresIn - 60);
+            await cache.SetStringAsync(cacheKey, token.AccessToken,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(lifetimeSeconds)
+                },
+                cancellationToken);
+        }
+
+        return token.AccessToken;
+    }
+
+    private static string BuildAccessTokenCacheKey(string clientId, string clientSecret)
+    {
+        var material = Encoding.UTF8.GetBytes($"{clientId}\0{clientSecret}");
+        return $"bandwidth:oauth:{Convert.ToHexString(SHA256.HashData(material))}";
     }
 
     private static BandwidthSettings ParseSettings(string? json)
@@ -60,6 +89,8 @@ public sealed class BandwidthSmsProvider(
     }
 
     private sealed record BandwidthSettings(string AccountId, string ApplicationId);
-    private sealed record OAuthResponse([property: System.Text.Json.Serialization.JsonPropertyName("access_token")] string AccessToken);
+    private sealed record OAuthResponse(
+        [property: JsonPropertyName("access_token")] string AccessToken,
+        [property: JsonPropertyName("expires_in")] int ExpiresIn);
     private sealed record BandwidthMessageResponse(string Id);
 }
