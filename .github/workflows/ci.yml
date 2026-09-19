@@ -145,7 +145,7 @@ jobs:
           PY
       - name: Show initialization logs
         if: failure()
-        run: docker compose logs sqlserver db-init provider-init api
+        run: docker compose logs sqlserver db-init provider-init rabbitmq api
       - name: Clean up
         if: always()
         run: docker compose down --remove-orphans --volumes
