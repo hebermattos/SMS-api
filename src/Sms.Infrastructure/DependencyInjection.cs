@@ -71,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantTimeZoneProvider, TenantTimeZoneProvider>();
         services.AddScoped<ITenantProvisioner, TenantProvisioner>();
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();
+        services.AddScoped<ISmsSendEventPublisher, SmsSendEventPublisher>();
         services.AddScoped<ISmsReportRepository, SmsReportRepository>();
         services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<ILogEntryRepository, LogEntryRepository>();
