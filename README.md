@@ -254,7 +254,6 @@ Jwt__Audience
 Jwt__Key
 Jwt__ExpirationMinutes
 Encryption__MasterKey
-Admin__ProvisioningKey
 Sms__DefaultProvider
 Sms__PublicBaseUrl
 ```
@@ -278,7 +277,7 @@ This update adds `PlatformAdministrators` to the complete schema. Following the 
 
 A tenant and its initial API client are created transactionally. The generated client secret is returned once and cannot be recovered from the database.
 
-For HTTP provisioning, configure `Admin__ProvisioningKey` and call `POST /api/v1/admin/tenants` with `X-Admin-Key`.
+The HTTP provisioning endpoint requires an authenticated platform-administrator JWT. Use the CLI provisioning tool for controlled initial setup before the first administrator exists.
 
 A command-line provisioning tool also exists under `tools/Sms.Provision`.
 
