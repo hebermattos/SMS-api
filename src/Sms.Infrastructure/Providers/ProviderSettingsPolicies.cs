@@ -29,9 +29,9 @@ public sealed class BandwidthSettingsPolicy : IProviderSettingsPolicy
         "OAuth Client ID",
         "OAuth Client Secret",
         [
-            new("accountId", "Messaging Account ID", Secret: false, Required: true),
-            new("applicationId", "Application ID", Secret: false, Required: true),
-            new("webhookPassword", "Webhook password", Secret: true, Required: true)
+            new("accountId", "Messaging Account ID", false, true),
+            new("applicationId", "Application ID", false, true),
+            new("webhookPassword", "Webhook password", true, true)
         ]);
 
     public string MergeAndValidate(string? existing, IReadOnlyDictionary<string, string?> changes)
