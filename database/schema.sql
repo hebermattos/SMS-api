@@ -153,6 +153,10 @@ CREATE TABLE dbo.SmsMessageStatusHistory
 GO
 CREATE INDEX IX_SmsMessageStatusHistory_Tenant_Message_CreatedAt ON dbo.SmsMessageStatusHistory(TenantId, MessageId, CreatedAt);
 GO
+CREATE INDEX IX_SmsMessageStatusHistory_Tenant_Status_CreatedAt
+    ON dbo.SmsMessageStatusHistory(TenantId, Status, CreatedAt)
+    INCLUDE (MessageId);
+GO
 
 
 CREATE TABLE dbo.AlertRules
