@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sms.Application.Tenants;
@@ -10,22 +9,17 @@ namespace Sms.Api.Controllers;
 public sealed record CreateTenantRequest(string Name, string? ClientId);
 
 [ApiController]
+[Authorize(Policy = PortalSecurity.AdminPolicy)]
 [ServiceFilter(typeof(PortalExceptionFilter))]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/admin/tenants")]
-public sealed class AdminTenantsController(TenantProvisioningService provisioning, IConfiguration configuration) : ControllerBase
+public sealed class AdminTenantsController(TenantProvisioningService provisioning) : ControllerBase
 {
-    [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateTenantRequest request, CancellationToken cancellationToken)
     {
-        var expected = configuration["Admin:ProvisioningKey"];
-        var isAdministrator = User.Identity?.IsAuthenticated == true && User.HasClaim(PortalSecurity.AdminClaim, "true")
-            && !User.HasClaim(x => x.Type == "tenant_id");
-        if (!isAdministrator && (string.IsNullOrWhiteSpace(expected) || !TryValidateKey(expected, Request.Headers["X-Admin-Key"].ToString())))
-            return Unauthorized();
-
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequest(new { error = "Name is required." });
+
         var result = await provisioning.CreateAsync(request.Name, request.ClientId, cancellationToken);
         return Created($"/api/v1/admin/tenants/{result.TenantId}", new
         {
@@ -35,12 +29,5 @@ public sealed class AdminTenantsController(TenantProvisioningService provisionin
             client_secret = result.ClientSecret,
             warning = "Store client_secret now. It cannot be recovered."
         });
-    }
-
-    private static bool TryValidateKey(string expected, string supplied)
-    {
-        var a = System.Text.Encoding.UTF8.GetBytes(expected);
-        var b = System.Text.Encoding.UTF8.GetBytes(supplied);
-        return a.Length == b.Length && CryptographicOperations.FixedTimeEquals(a, b);
     }
 }

@@ -27,7 +27,7 @@ Start the local stack with `docker compose up --build` and open `http://localhos
 
 For frontend development, use Node.js 20.19+ or 22.12+ (Angular 21 compatible), run `npm ci` and `npm start` from `ui/`, and keep the API running on port 8080. The development proxy defaults to `http://localhost:8080`; set `SMS_API_URL` to change its upstream. `npm run build` compiles the production bundle into `ui/dist/console/browser`. Serve it with an SPA fallback and a same-origin `/api/` reverse proxy. The Angular project is built separately from `Sms.Api.sln`.
 
-Administrator login accepts `username` and `password` at `POST /api/v1/admin/auth/token`. Accounts are stored in `PlatformAdministrators`; passwords use PBKDF2-SHA256 with 600,000 iterations and a unique random salt. Usernames are case-insensitive. Provisioned passwords must contain 15–128 characters. Successful login returns a 15-minute JWT with the administrator ID, username, and `platform_admin` privilege, with no tenant claim. The API rechecks account activation on every authenticated administrator request, so disabling an account also blocks existing tokens. Unknown users, incorrect passwords, and inactive accounts all receive HTTP 401; the existing IP login rate limiter remains enabled. Tenant tokens cannot access administrative endpoints; administrator tokens cannot access tenant messages or logs. Old shared-key administrator sessions are rejected and must sign in again. The `X-Admin-Key` tenant-bootstrap endpoint remains supported separately; its key can no longer be exchanged for a console token.
+Administrator login accepts `username` and `password` at `POST /api/v1/admin/auth/token`. Accounts are stored in `PlatformAdministrators`; passwords use PBKDF2-SHA256 with 600,000 iterations and a unique random salt. Usernames are case-insensitive. Provisioned passwords must contain 15–128 characters. Successful login returns a 15-minute JWT with the administrator ID, username, and `platform_admin` privilege, with no tenant claim. The API rechecks account activation on every authenticated administrator request, so disabling an account also blocks existing tokens. Unknown users, incorrect passwords, and inactive accounts all receive HTTP 401; the existing IP login rate limiter remains enabled. Tenant tokens cannot access administrative endpoints; administrator tokens cannot access tenant messages or logs. Old shared-key administrator sessions are rejected and must sign in again. Tenant provisioning requires an authenticated platform-administrator JWT. The CLI provisioning tool remains available for controlled bootstrap access before the first administrator can use the console.
 
 The responsive Angular sign-in screen provides separate client and administrator access, labeled fields, credential visibility controls, Caps Lock feedback, and accessible validation, loading, and error states. A valid existing session redirects to the appropriate workspace without another login request.
 
@@ -114,7 +114,7 @@ Sign in again and perform an action to generate new audit events; existing sessi
 Twilio webhook endpoints are anonymous by design and validate `X-Twilio-Signature` using the tenant provider secret.
 Twilio accounts may be shared by multiple tenants. Callback ownership is resolved by the unique active combination of provider, account ID, and configured sender number. A tenant cannot override its configured sender number when sending.
 
-The tenant provisioning endpoint uses `X-Admin-Key`. It is intended as bootstrap administration and should not be exposed publicly without additional administrative access controls.
+The tenant provisioning endpoint requires the `PlatformAdministrator` policy and cannot be called with a static bootstrap header. Use the CLI provisioning tool for controlled initial setup, then create tenants through the authenticated administration console or API.
 
 ## Bandwidth webhooks
 
@@ -174,7 +174,6 @@ These credentials and the Compose fallback secrets are for local development onl
 SQL_SA_PASSWORD
 JWT_KEY
 ENCRYPTION_MASTER_KEY
-ADMIN_PROVISIONING_KEY
 ADMIN_USERNAME
 ADMIN_PASSWORD
 ADMIN_EMAIL

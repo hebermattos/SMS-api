@@ -74,7 +74,6 @@ services:
       ConnectionStrings__LogsSqlServer: "Server=sqlserver;Database=SmsApiLogs;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
       Jwt__Key: "${JWT_KEY:-local-development-jwt-key-change-me-1234567890}"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
-      Admin__ProvisioningKey: "${ADMIN_PROVISIONING_KEY:-local-admin-key-change-me}"
       Sms__PublicBaseUrl: "${SMS_PUBLIC_BASE_URL:-https://localhost:8080}"
     ports: ["8080:8080"]
 
