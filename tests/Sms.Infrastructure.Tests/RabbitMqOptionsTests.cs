@@ -14,6 +14,7 @@ public sealed class RabbitMqOptionsTests
         Assert.Equal(5672, options.Port);
         Assert.Equal("sms.alert.evaluation", options.Queue);
         Assert.Equal("sms.send", options.SendQueue);
+        Assert.Equal("sms.reporting.overview", options.ReportingQueue);
     }
 
     [Fact]
@@ -27,7 +28,8 @@ public sealed class RabbitMqOptionsTests
             ["RabbitMq:Password"] = "secret",
             ["RabbitMq:VirtualHost"] = "/sms",
             ["RabbitMq:Queue"] = "alerts.queue",
-            ["RabbitMq:SendQueue"] = "send.queue"
+            ["RabbitMq:SendQueue"] = "send.queue",
+            ["RabbitMq:ReportingQueue"] = "reporting.queue"
         }).Build();
 
         var options = RabbitMqAlertOptions.From(configuration);
@@ -39,5 +41,6 @@ public sealed class RabbitMqOptionsTests
         Assert.Equal("/sms", options.VirtualHost);
         Assert.Equal("alerts.queue", options.Queue);
         Assert.Equal("send.queue", options.SendQueue);
+        Assert.Equal("reporting.queue", options.ReportingQueue);
     }
 }

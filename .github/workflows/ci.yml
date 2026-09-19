@@ -66,6 +66,7 @@ jobs:
           --health-interval=10s --health-timeout=5s --health-retries=20 --health-start-period=20s
     env:
       SMS_TEST_SQLSERVER: 'Server=localhost;Database=SmsApiWebhookTests;User Id=sa;Password=SmsApi_Local_2026!;TrustServerCertificate=True'
+      SMS_TEST_REPORTING_SQLSERVER: 'Server=localhost;Database=SmsApiReportingTests;User Id=sa;Password=SmsApi_Local_2026!;TrustServerCertificate=True'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -77,8 +78,10 @@ jobs:
         run: |
           docker exec "$SQL_CONTAINER" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'SmsApi_Local_2026!' -C -I -b -Q 'CREATE DATABASE SmsApiWebhookTests;'
           docker exec -i "$SQL_CONTAINER" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'SmsApi_Local_2026!' -C -I -b -d SmsApiWebhookTests < database/schema.sql
+          docker exec "$SQL_CONTAINER" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'SmsApi_Local_2026!' -C -I -b -Q 'CREATE DATABASE SmsApiReportingTests;'
+          docker exec -i "$SQL_CONTAINER" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'SmsApi_Local_2026!' -C -I -b -d SmsApiReportingTests < database/reporting-schema.sql
       - name: Verify webhook and administration persistence against SQL Server
-        run: dotnet test Sms.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests|FullyQualifiedName~AlertSqlTests|FullyQualifiedName~ExampleProviderSeedSqlTests|FullyQualifiedName~AdministratorSqlTests'
+        run: dotnet test Sms.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests|FullyQualifiedName~AlertSqlTests|FullyQualifiedName~ReportingSqlTests|FullyQualifiedName~ExampleProviderSeedSqlTests|FullyQualifiedName~AdministratorSqlTests'
 
   frontend-quality:
     name: Frontend build and unit tests

@@ -14,15 +14,17 @@ namespace Sms.Infrastructure.Tests;
 [Collection(SqlServerTestCollection.Name)]
 public sealed class AdministrationSqlTests
 {
-    [SqlServerFact]
+    [ReportingSqlFact]
     public async Task Administration_PreservesIsolationSecretsAndSingleDefault()
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:SqlServer"] = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER"),
+            ["ConnectionStrings:ReportingSqlServer"] = Environment.GetEnvironmentVariable("SMS_TEST_REPORTING_SQLSERVER"),
             ["Encryption:MasterKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
         }).Build();
         var factory = new SqlConnectionFactory(configuration);
+        var reportingFactory = new ReportingSqlConnectionFactory(configuration);
         var protector = new AesGcmSecretProtector(configuration);
         var repository = new AdministrationRepository(factory, protector);
         var providers = new TenantSmsProviderRepository(factory, protector);
@@ -30,7 +32,9 @@ public sealed class AdministrationSqlTests
         var credentials = new ApiClientRepository(factory);
         var tenant = Guid.NewGuid(); var other = Guid.NewGuid(); var account = Guid.NewGuid().ToString("N");
         using var connection = new SqlConnection(configuration.GetConnectionString("SqlServer"));
+        using var reportingConnection = new SqlConnection(configuration.GetConnectionString("ReportingSqlServer"));
         await connection.OpenAsync();
+        await reportingConnection.OpenAsync();
         try
         {
             await connection.ExecuteAsync("""
@@ -76,12 +80,20 @@ public sealed class AdministrationSqlTests
             Assert.Single(await service.ListProvidersAsync(tenant, default), x => x.IsDefault);
             Assert.Equal("Twilio", (await providers.GetDefaultAsync(other))!.Provider);
 
-            var overview = await new TenantPortalRepository(factory).GetOverviewAsync(tenant, default);
-            Assert.Equal("Renamed", overview!.Name); Assert.Equal(0, overview.Outbound); Assert.Equal(2, overview.Providers.Count);
-            Assert.Null(await new TenantPortalRepository(factory).GetOverviewAsync(Guid.NewGuid(), default));
+            await reportingConnection.ExecuteAsync("""
+                INSERT dbo.TenantSmsOverview(TenantId, Outbound, Inbound, Delivered, Failed, Pending, UpdatedAtUtc)
+                VALUES (@Tenant, 12, 3, 8, 1, 3, SYSUTCDATETIME());
+                """, new { Tenant = tenant });
+
+            var overview = await new TenantPortalRepository(factory, reportingFactory).GetOverviewAsync(tenant, default);
+            Assert.Equal("Renamed", overview!.Name); Assert.Equal(12, overview.Outbound); Assert.Equal(3, overview.Inbound);
+            Assert.Equal(8, overview.Delivered); Assert.Equal(1, overview.Failed); Assert.Equal(3, overview.Pending);
+            Assert.Equal(2, overview.Providers.Count);
+            Assert.Null(await new TenantPortalRepository(factory, reportingFactory).GetOverviewAsync(Guid.NewGuid(), default));
         }
         finally
         {
+            await reportingConnection.ExecuteAsync("DELETE dbo.TenantSmsOverview WHERE TenantId IN (@Tenant, @Other);", new { Tenant = tenant, Other = other });
             await connection.ExecuteAsync("""
                 DELETE dbo.TenantSmsProviders WHERE TenantId IN (@Tenant, @Other);
                 DELETE dbo.ApiClients WHERE TenantId IN (@Tenant, @Other);

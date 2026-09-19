@@ -24,11 +24,13 @@ public static class DependencyInjection
     {
         services.AddSingleton<SqlConnectionFactory>();
         services.AddSingleton<LogsSqlConnectionFactory>();
+        services.AddSingleton<ReportingSqlConnectionFactory>();
         var rabbitMq = RabbitMqAlertOptions.From(configuration);
         services.AddMassTransit(bus =>
         {
             bus.AddConsumer<AlertEvaluationConsumer>();
             bus.AddConsumer<SmsSendConsumer>();
+            bus.AddConsumer<TenantSmsOverviewConsumer>();
             bus.UsingRabbitMq((context, rabbit) =>
             {
                 rabbit.Host(rabbitMq.Host, (ushort)rabbitMq.Port, rabbitMq.VirtualHost, host =>
@@ -49,6 +51,13 @@ public static class DependencyInjection
                     endpoint.ConcurrentMessageLimit = 1;
                     endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
                     endpoint.ConfigureConsumer<SmsSendConsumer>(context);
+                });
+                rabbit.ReceiveEndpoint(rabbitMq.ReportingQueue, endpoint =>
+                {
+                    endpoint.PrefetchCount = 1;
+                    endpoint.ConcurrentMessageLimit = 1;
+                    endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
+                    endpoint.ConfigureConsumer<TenantSmsOverviewConsumer>(context);
                 });
             });
         });
