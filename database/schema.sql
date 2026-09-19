@@ -115,8 +115,7 @@ CREATE TABLE dbo.TenantSmsProviders
     IsActive BIT NOT NULL CONSTRAINT DF_TenantSmsProviders_IsActive DEFAULT (1),
     CreatedAt DATETIMEOFFSET NOT NULL,
     UpdatedAt DATETIMEOFFSET NULL,
-    CONSTRAINT FK_TenantSmsProviders_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT CK_TenantSmsProviders_SettingsJson CHECK (Settings IS NULL OR ISJSON(Settings) = 1)
+    CONSTRAINT FK_TenantSmsProviders_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id)
 );
 GO
 CREATE UNIQUE INDEX UX_TenantSmsProviders_Tenant_Provider ON dbo.TenantSmsProviders(TenantId, Provider);
