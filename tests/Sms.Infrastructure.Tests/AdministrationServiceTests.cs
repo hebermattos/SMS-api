@@ -150,7 +150,7 @@ public sealed class AdministrationServiceTests
     internal static AdministrationService Service(AdministrationFakeRepository repository) =>
         new(repository, repository, [new TwilioSettingsPolicy(), new BandwidthSettingsPolicy()], new TestProviderCatalogCache());
 
-    private sealed class TestProviderCatalogCache : IProviderCatalogCache
+    internal sealed class TestProviderCatalogCache : IProviderCatalogCache
     {
         public Task<IReadOnlyList<ProviderDefinition>> GetAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ProviderDefinition>>([
