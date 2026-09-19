@@ -12,7 +12,7 @@ public sealed class TenantProvisioner(SqlConnectionFactory connectionFactory) : 
     {
         await using var connection = connectionFactory.CreateSqlConnection();
         await connection.OpenAsync(cancellationToken);
-        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         try
         {
             var now = DateTimeOffset.UtcNow;
