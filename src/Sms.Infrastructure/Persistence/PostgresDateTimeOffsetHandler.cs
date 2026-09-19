@@ -5,6 +5,8 @@ namespace Sms.Infrastructure.Persistence;
 
 internal sealed class PostgresDateTimeOffsetHandler : SqlMapper.TypeHandler<DateTimeOffset>
 {
+    public static readonly PostgresDateTimeOffsetHandler Instance = new();
+
     public override void SetValue(IDbDataParameter parameter, DateTimeOffset value) =>
         parameter.Value = value.UtcDateTime;
 
