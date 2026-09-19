@@ -16,7 +16,7 @@ DECLARE @Now DATETIMEOFFSET = @OccurredAtUtc;
                   AND c.BucketStartUtc >= DATEADD(MINUTE, -r.WindowMinutes, @Now)
                   AND (r.Provider IS NULL OR c.Provider = r.Provider)
             ) counts
-            WHERE r.TenantId=@TenantId AND r.IsActive=1 AND r.Status=@Status
+            WHERE r.TenantId=@TenantId AND r.IsActive=1 AND r.DeletedAt IS NULL AND r.Status=@Status
               AND (r.Provider IS NULL OR r.Provider=@Provider)
               AND (r.IsTriggered=0 OR (r.RepeatMode=2 AND
                    (r.LastTriggeredAt IS NULL OR r.LastTriggeredAt<=DATEADD(MINUTE,-r.RepeatIntervalMinutes,@Now))))
