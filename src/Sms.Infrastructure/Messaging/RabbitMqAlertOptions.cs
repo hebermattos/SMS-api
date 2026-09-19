@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+
 namespace Sms.Infrastructure.Messaging;
 
 public sealed class RabbitMqAlertOptions
