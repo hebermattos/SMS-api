@@ -23,6 +23,7 @@ import { IconComponent } from './shared/icon.component';
           <a routerLink="/app/users" routerLinkActive="active"><sms-icon name="users"/>Users</a>
           <a routerLink="/app/reports" routerLinkActive="active"><sms-icon name="grid"/>Reports</a>
           <a routerLink="/app/alerts" routerLinkActive="active"><sms-icon name="alert"/>Alerts</a>
+          <a routerLink="/app/opt-outs" routerLinkActive="active"><sms-icon name="shield"/>Opt-outs</a>
           <a routerLink="/app/logs" routerLinkActive="active"><sms-icon name="logs"/>Activity logs</a>
         }
       </nav>

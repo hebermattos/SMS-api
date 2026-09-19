@@ -1,5 +1,6 @@
 using Sms.Application.Common;
 using Sms.Domain.Messages;
+using Sms.Application.OptOut;
 
 namespace Sms.Application.Messages;
 
@@ -7,12 +8,15 @@ public sealed class SendSmsService(
     ITenantContext tenantContext,
     ISmsMessageRepository repository,
     ISmsProviderResolver providerResolver,
-    ISmsSendEventPublisher eventPublisher)
+    ISmsSendEventPublisher eventPublisher,
+    OptOutService optOut)
 {
     public async Task<SendSmsResult> SendAsync(SendSmsRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.To)) throw new ArgumentException("Destination phone number is required.");
         if (string.IsNullOrWhiteSpace(request.Body)) throw new ArgumentException("Message body is required.");
+
+        await optOut.EnsureCanSendAsync(tenantContext.TenantId, request.To, cancellationToken);
 
         var provider = providerResolver.Resolve(request.Provider);
         var message = new SmsMessage

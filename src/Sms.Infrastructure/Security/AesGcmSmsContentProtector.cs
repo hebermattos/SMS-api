@@ -75,6 +75,15 @@ public sealed class AesGcmSmsContentProtector : ISmsContentProtector
         }
     }
 
+    public byte[] Fingerprint(Guid tenantId, string purpose, string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(purpose);
+        ArgumentNullException.ThrowIfNull(value);
+        var key = DeriveTenantKey(tenantId);
+        try { return HMACSHA256.HashData(key, Encoding.UTF8.GetBytes($"{purpose}:{value}")); }
+        finally { CryptographicOperations.ZeroMemory(key); }
+    }
+
     private byte[] DeriveTenantKey(Guid tenantId) => HMACSHA256.HashData(_masterKey,
         Encoding.UTF8.GetBytes($"sms-content-v1:{tenantId:N}"));
 

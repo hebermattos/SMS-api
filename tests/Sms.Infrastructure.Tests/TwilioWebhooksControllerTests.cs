@@ -82,7 +82,7 @@ public sealed class TwilioWebhooksControllerTests
         var repository=new ProviderRepository(config);
         var webhookUrls=new ConfiguredSmsWebhookUrlProvider(new Microsoft.Extensions.Configuration.ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string,string?> { ["Sms:PublicBaseUrl"]="https://sms.example.com" }).Build());
-        var controller=new TwilioWebhooksController(repository,messages,new TwilioWebhookValidator(),webhookUrls);
+        var controller=new TwilioWebhooksController(repository,messages,new TwilioWebhookValidator(),webhookUrls,new(new TestOptOutRepository()));
         var context=new DefaultHttpContext();
         context.Request.Scheme="https"; context.Request.Host=new HostString("sms.example.com"); context.Request.Path="/api/v1/webhooks/twilio/inbound";
         context.Request.ContentType="application/x-www-form-urlencoded";

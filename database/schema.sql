@@ -102,6 +102,27 @@ GO
 CREATE UNIQUE INDEX UX_SmsMessages_Tenant_Provider_Message ON dbo.SmsMessages(TenantId, Provider, ProviderMessageId) WHERE ProviderMessageId IS NOT NULL;
 GO
 
+CREATE TABLE dbo.SmsOptOuts
+(
+    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_SmsOptOuts PRIMARY KEY,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    PhoneHash VARBINARY(32) NOT NULL,
+    PhoneNumber NVARCHAR(256) NOT NULL,
+    Source NVARCHAR(30) NOT NULL,
+    Reason NVARCHAR(200) NULL,
+    CreatedAt DATETIMEOFFSET NOT NULL,
+    UpdatedAt DATETIMEOFFSET NULL,
+    CONSTRAINT FK_SmsOptOuts_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT UQ_SmsOptOuts_Tenant_Id UNIQUE (TenantId, Id),
+    CONSTRAINT CK_SmsOptOuts_Source CHECK (Source IN ('Manual', 'Import', 'InboundKeyword'))
+);
+GO
+CREATE UNIQUE INDEX UX_SmsOptOuts_Tenant_PhoneHash ON dbo.SmsOptOuts(TenantId, PhoneHash);
+GO
+CREATE INDEX IX_SmsOptOuts_Tenant_CreatedAt ON dbo.SmsOptOuts(TenantId, CreatedAt DESC, Id DESC)
+    INCLUDE (Source, Reason, UpdatedAt);
+GO
+
 CREATE TABLE dbo.TenantSmsProviders
 (
     Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_TenantSmsProviders PRIMARY KEY,

@@ -289,7 +289,7 @@ public sealed class BandwidthWebhooksControllerTests
 
         public BandwidthWebhooksController Controller(JsonArray payload, string? authorization)
         {
-            var controller = new BandwidthWebhooksController(new ReceiveSmsWebhookService(Messages), new BandwidthWebhookParser(Providers));
+            var controller = new BandwidthWebhooksController(new ReceiveSmsWebhookService(Messages, new(new TestOptOutRepository())), new BandwidthWebhookParser(Providers));
             controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
             controller.Request.ContentType = "application/json";
             controller.Request.Headers.Authorization = authorization;

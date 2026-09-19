@@ -4,6 +4,7 @@ using Sms.Application.Messages;
 using Sms.Application.Providers;
 using Sms.Domain.Messages;
 using Sms.Infrastructure.Providers;
+using Sms.Application.OptOut;
 
 namespace Sms.Api.Controllers;
 
@@ -14,7 +15,8 @@ public sealed class TwilioWebhooksController(
     ITenantSmsProviderRepository providers,
     ISmsMessageRepository messages,
     TwilioWebhookValidator validator,
-    ISmsWebhookUrlProvider webhookUrls) : ControllerBase
+    ISmsWebhookUrlProvider webhookUrls,
+    OptOutService optOuts) : ControllerBase
 {
     [HttpPost("inbound")]
     public async Task<IActionResult> Inbound(CancellationToken cancellationToken)
@@ -28,10 +30,13 @@ public sealed class TwilioWebhooksController(
         var to = form["To"].ToString();
         if (string.IsNullOrWhiteSpace(sid) || string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to)) return BadRequest();
 
+        var body = form["Body"].ToString();
+        await optOuts.ProcessInboundAsync(config.TenantId, from, body, DateTimeOffset.UtcNow, cancellationToken);
+
         await messages.InsertInboundIfNotExistsAsync(new SmsMessage
         {
             Id = Guid.NewGuid(), TenantId = config.TenantId, From = from, To = to,
-            Body = form["Body"].ToString(), Provider = "Twilio", ProviderMessageId = sid,
+            Body = body, Provider = "Twilio", ProviderMessageId = sid,
             Direction = SmsDirection.Inbound, Status = SmsStatus.Received, CreatedAt = DateTimeOffset.UtcNow
         }, cancellationToken);
 

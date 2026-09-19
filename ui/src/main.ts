@@ -27,6 +27,7 @@ const routes: Routes = [
       { path: 'messages/:id', loadComponent: () => import('./app/pages/message-detail.component').then(m => m.MessageDetailComponent) },
       { path: 'reports', loadComponent: () => import('./app/pages/sms-reports.component').then(m => m.SmsReportsComponent) },
       { path: 'alerts', loadComponent: () => import('./app/pages/alerts.component').then(m => m.AlertsComponent) },
+      { path: 'opt-outs', loadComponent: () => import('./app/pages/opt-outs.component').then(m => m.OptOutsComponent) },
       { path: 'logs', loadComponent: () => import('./app/pages/logs.component').then(m => m.LogsComponent) }
     ]
   },
