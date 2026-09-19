@@ -26,6 +26,6 @@ public sealed class ApiClientRepository(
             CreatedAt = DateTimeOffset.UtcNow
         }, cancellationToken: cancellationToken));
 
-        await configurationCache.InvalidateAsync(client.TenantId, previous, cancellationToken: cancellationToken);
+        await configurationCache.InvalidateAsync(client.TenantId, previous, cancellationToken: CancellationToken.None);
     }
 }
