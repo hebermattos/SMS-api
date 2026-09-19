@@ -84,7 +84,8 @@ public sealed class AdministrationController(AdministrationService service, Admi
         Ok(await service.RotateClientSecretAsync(tenantId, clientId, cancellationToken));
 
     [HttpGet("providers/catalog")]
-    public IActionResult Catalog() => Ok(service.ProviderCatalog);
+    public async Task<IActionResult> Catalog(CancellationToken cancellationToken) =>
+        Ok(await service.GetProviderCatalogAsync(cancellationToken));
 
     [HttpGet("tenants/{tenantId:guid}/providers")]
     public async Task<IActionResult> Providers(Guid tenantId, CancellationToken cancellationToken) =>
