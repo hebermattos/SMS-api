@@ -9,7 +9,7 @@ public sealed class ProviderCatalogCache(
     IDistributedCache cache,
     CacheOptions cacheOptions,
     IEnumerable<IProviderSettingsPolicy> policies,
-    ILogger<ProviderCatalogCache> logger)
+    ILogger<ProviderCatalogCache> logger) : IProviderCatalogCache
 {
     private const string CacheKey = "provider-catalog";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
