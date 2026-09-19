@@ -172,6 +172,7 @@ Application data, logs, reporting data, opt-outs, provider credentials, alerts, 
 
 - Tenant ownership is derived from authenticated JWT claims.
 - JWT separates tenant users, tenant administrators, and platform administrators.
+- Tenant portal users authenticate with tenant code + username + password, so usernames may be reused safely across tenants.
 - SMS content and provider secrets use AES-256-GCM encryption.
 - Passwords and client secrets use PBKDF2-SHA256 with at least 600,000 iterations.
 - Provider webhooks are authenticated whenever supported.
