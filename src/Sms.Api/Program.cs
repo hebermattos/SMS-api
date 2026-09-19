@@ -47,7 +47,9 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<PortalExceptionFilter>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
+builder.Services.AddScoped<HttpTenantContext>();
+builder.Services.AddScoped<ITenantContext>(services => services.GetRequiredService<HttpTenantContext>());
+builder.Services.AddScoped<IWorkerTenantContext>(services => services.GetRequiredService<HttpTenantContext>());
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.MapInboundClaims = false;
@@ -72,6 +74,8 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHostedService<Sms.Infrastructure.Messaging.AlertEvaluationOutboxPublisher>();
 builder.Services.AddHostedService<Sms.Infrastructure.Messaging.AlertEvaluationConsumer>();
+builder.Services.AddHostedService<Sms.Infrastructure.Messaging.SmsSendOutboxPublisher>();
+builder.Services.AddHostedService<Sms.Infrastructure.Messaging.SmsSendConsumer>();
 
 var app = builder.Build();
 app.UseHttpsRedirection();
