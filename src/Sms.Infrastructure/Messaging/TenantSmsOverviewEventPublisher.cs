@@ -2,8 +2,8 @@ using MassTransit;
 
 namespace Sms.Infrastructure.Messaging;
 
-public sealed class TenantSmsOverviewEventPublisher(IPublishEndpoint publishEndpoint) : ITenantSmsOverviewEventPublisher
+public sealed class TenantSmsOverviewEventPublisher(IBus bus) : ITenantSmsOverviewEventPublisher
 {
     public Task PublishAsync(TenantSmsOverviewEvent item, CancellationToken cancellationToken = default) =>
-        publishEndpoint.Publish(item, cancellationToken);
+        bus.Publish(item, cancellationToken);
 }
