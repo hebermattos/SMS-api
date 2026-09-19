@@ -50,8 +50,8 @@ public sealed class BandwidthWebhookSqlTests
         {
             await connection.ExecuteAsync("""
                 INSERT Tenants (Id, Name, IsActive, CreatedAt)
-                VALUES (@Tenant, 'Webhook test', 1, CURRENT_TIMESTAMP),
-                       (@OtherTenant, 'Other webhook test', 1, CURRENT_TIMESTAMP);
+                VALUES (@Tenant, 'Webhook test', TRUE, CURRENT_TIMESTAMP),
+                       (@OtherTenant, 'Other webhook test', TRUE, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant, OtherTenant = otherTenant });
             var settings = "{\"accountId\":\"bandwidth-account\",\"applicationId\":\"app-1\",\"webhookPassword\":\"callback-password\"}";
             await providers.UpsertAsync(new(tenant, "Bandwidth", account, "oauth-secret", "+15550000001", true, true, settings));
@@ -70,7 +70,7 @@ public sealed class BandwidthWebhookSqlTests
             Assert.Equal(SmsStatus.Received, inbound.Status);
             Assert.Equal("test body", inbound.Body);
             var encrypted = await connection.QuerySingleAsync<(string From, string To, string Body)>(
-                "SELECT "From", "To", Body FROM SmsMessages WHERE Id=@Id;", new { inbound.Id });
+                """SELECT "From", "To", Body FROM SmsMessages WHERE Id=@Id;""", new { inbound.Id });
             Assert.DoesNotContain(inbound.From, encrypted.From);
             Assert.DoesNotContain(inbound.To, encrypted.To);
             Assert.DoesNotContain(inbound.Body, encrypted.Body);

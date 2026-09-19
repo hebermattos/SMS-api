@@ -25,7 +25,7 @@ public sealed class ExampleProviderSeedSqlTests
         var providers = new TenantSmsProviderRepository(factory, protector, configurationCache);
         var tenant = Guid.NewGuid();
         using var connection = factory.CreateConnection();
-        await connection.ExecuteAsync("INSERT Tenants(Id,Name,IsActive,CreatedAt) VALUES(@Id,'Seed test',1,CURRENT_TIMESTAMP);", new { Id = tenant });
+        await connection.ExecuteAsync("INSERT Tenants(Id,Name,IsActive,CreatedAt) VALUES(@Id,'Seed test',TRUE,CURRENT_TIMESTAMP);", new { Id = tenant });
         try
         {
             await ExampleProviders.SeedAsync(providers, tenant);

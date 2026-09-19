@@ -26,7 +26,7 @@ public sealed class AlertSqlTests
         {
             await connection.ExecuteAsync("""
                 INSERT Tenants(Id,Name,IsActive,CreatedAt) VALUES
-                    (@Tenant,'Alert tenant',1,CURRENT_TIMESTAMP),(@Other,'Other tenant',1,CURRENT_TIMESTAMP);
+                    (@Tenant,'Alert tenant',TRUE,CURRENT_TIMESTAMP),(@Other,'Other tenant',TRUE,CURRENT_TIMESTAMP);
                 INSERT SmsMessages(Id,TenantId,"From","To",Body,Provider,Direction,Status,CreatedAt) VALUES
                     (@Message1,@Tenant,'x','x','x','Twilio',1,4,CURRENT_TIMESTAMP),
                     (@Message2,@Tenant,'x','x','x','Twilio',1,4,CURRENT_TIMESTAMP);
@@ -34,7 +34,7 @@ public sealed class AlertSqlTests
                     (gen_random_uuid(),@Tenant,@Message1,4,CURRENT_TIMESTAMP),
                     (gen_random_uuid(),@Tenant,@Message2,4,CURRENT_TIMESTAMP);
                 INSERT AlertStatusCounters(TenantId,Provider,Status,BucketStartUtc,MessageCount,UpdatedAtUtc)
-                VALUES (@Tenant,'Twilio',4,DATEADD(MINUTE,DATEDIFF(MINUTE,0,CAST(CURRENT_TIMESTAMP AS datetime2)),0) AT TIME ZONE 'UTC',2,CURRENT_TIMESTAMP);
+                VALUES (@Tenant,'Twilio',4,date_trunc('minute', CURRENT_TIMESTAMP),2,CURRENT_TIMESTAMP);
                 """, new { Tenant = tenantId, Other = otherTenantId, Message1 = message1, Message2 = message2 });
 
             await repository.CreateRuleAsync(new(ruleId, tenantId, "Failures", "Twilio", SmsStatus.Failed,
@@ -47,10 +47,10 @@ public sealed class AlertSqlTests
 
             await connection.ExecuteAsync("""
                 UPDATE SmsMessageStatusHistory
-                SET CreatedAt=DATEADD(HOUR,-1,CURRENT_TIMESTAMP)
+                SET CreatedAt=CURRENT_TIMESTAMP - INTERVAL '1 hour'
                 WHERE TenantId=@Tenant;
                 UPDATE AlertStatusCounters
-                SET BucketStartUtc=DATEADD(HOUR,-1,BucketStartUtc), UpdatedAtUtc=DATEADD(HOUR,-1,CURRENT_TIMESTAMP)
+                SET BucketStartUtc=BucketStartUtc - INTERVAL '1 hour', UpdatedAtUtc=CURRENT_TIMESTAMP - INTERVAL '1 hour'
                 WHERE TenantId=@Tenant;
                 """, new { Tenant = tenantId });
             await repository.EvaluateAsync(tenantId);

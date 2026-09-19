@@ -43,7 +43,7 @@ public sealed class ReportingSqlTests
         {
             await application.ExecuteAsync("""
                 INSERT Tenants(Id, Name, IsActive, CreatedAt)
-                VALUES (@TenantId, 'Reporting tenant', 1, CURRENT_TIMESTAMP);
+                VALUES (@TenantId, 'Reporting tenant', TRUE, CURRENT_TIMESTAMP);
 
                 INSERT SmsMessages
                     (Id, TenantId, "From", "To", Body, Provider, Direction, Status, CreatedAt)

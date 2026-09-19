@@ -40,7 +40,7 @@ public sealed class AdministrationSqlTests
         {
             await connection.ExecuteAsync("""
                 INSERT Tenants(Id, Name, IsActive, CreatedAt)
-                VALUES (@Tenant, 'Portal test', 1, CURRENT_TIMESTAMP), (@Other, 'Other portal test', 1, CURRENT_TIMESTAMP);
+                VALUES (@Tenant, 'Portal test', TRUE, CURRENT_TIMESTAMP), (@Other, 'Other portal test', TRUE, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant, Other = other });
             var issued = await service.CreateClientAsync(tenant, null, default);
             var stored = await credentials.GetActiveByClientIdAsync(issued.ClientId);
@@ -118,8 +118,8 @@ public sealed class AdministrationSqlTests
         {
             await connection.ExecuteAsync("""
                 INSERT Tenants(Id, Name, IsActive, CreatedAt)
-                VALUES (@Tenant, 'Integrity tenant', 1, CURRENT_TIMESTAMP),
-                       (@OtherTenant, 'Other integrity tenant', 1, CURRENT_TIMESTAMP);
+                VALUES (@Tenant, 'Integrity tenant', TRUE, CURRENT_TIMESTAMP),
+                       (@OtherTenant, 'Other integrity tenant', TRUE, CURRENT_TIMESTAMP);
 
                 INSERT SmsMessages
                     (Id, TenantId, "From", "To", Body, Provider, ProviderMessageId, Direction, Status, CreatedAt)
@@ -133,15 +133,15 @@ public sealed class AdministrationSqlTests
                     (Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive, CreatedAt)
                 VALUES
                     (gen_random_uuid(), @MissingTenant, 'invalid-user', 'invalid@example.com',
-                     0x00, 0x00, 600000, 'tenant', 'user', 1, CURRENT_TIMESTAMP);
+                     decode('00','hex'), decode('00','hex'), 600000, 'tenant', 'user', TRUE, CURRENT_TIMESTAMP);
                 """, new { MissingTenant = missingTenant }));
-            Assert.Equal(547, invalidUser.Number);
+            Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, invalidUser.SqlState);
 
             var crossTenantHistory = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync("""
                 INSERT SmsMessageStatusHistory(Id, TenantId, MessageId, Status, CreatedAt)
                 VALUES (gen_random_uuid(), @OtherTenant, @MessageId, 1, CURRENT_TIMESTAMP);
                 """, new { OtherTenant = otherTenant, MessageId = messageId }));
-            Assert.Equal(547, crossTenantHistory.Number);
+            Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, crossTenantHistory.SqlState);
         }
         finally
         {
