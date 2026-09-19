@@ -2,21 +2,21 @@ using Sms.Domain.Messages;
 
 namespace Sms.Application.Alerts;
 
-public sealed class AlertService(IAlertRepository repository)
+public sealed class AlertService(IAlertRepository repository, TimeProvider clock)
 {
     public Task<IReadOnlyList<AlertRule>> ListRulesAsync(Guid tenantId, CancellationToken cancellationToken = default) =>
         repository.ListRulesAsync(tenantId, cancellationToken);
 
     public async Task<Guid> CreateRuleAsync(Guid tenantId, SaveAlertRule request, CancellationToken cancellationToken = default)
     {
-        var rule = Build(Guid.NewGuid(), tenantId, request, DateTimeOffset.UtcNow);
+        var rule = CreateValidatedRule(Guid.NewGuid(), tenantId, request, clock.GetUtcNow());
         await repository.CreateRuleAsync(rule, cancellationToken);
         return rule.Id;
     }
 
     public async Task UpdateRuleAsync(Guid tenantId, Guid id, SaveAlertRule request, CancellationToken cancellationToken = default)
     {
-        var rule = Build(id, tenantId, request, DateTimeOffset.UtcNow);
+        var rule = CreateValidatedRule(id, tenantId, request, clock.GetUtcNow());
         if (!await repository.UpdateRuleAsync(rule, cancellationToken))
             throw new KeyNotFoundException("Alert rule was not found.");
     }
@@ -43,7 +43,7 @@ public sealed class AlertService(IAlertRepository repository)
     public Task MarkAllReadAsync(Guid tenantId, CancellationToken cancellationToken = default) =>
         repository.MarkAllReadAsync(tenantId, cancellationToken);
 
-    internal static AlertRule Build(Guid id, Guid tenantId, SaveAlertRule request, DateTimeOffset now)
+    internal static AlertRule CreateValidatedRule(Guid id, Guid tenantId, SaveAlertRule request, DateTimeOffset now)
     {
         var name = request.Name?.Trim();
         if (string.IsNullOrWhiteSpace(name) || name.Length > 120)
