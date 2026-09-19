@@ -155,7 +155,7 @@ All providers implement `ISmsProvider` and are selected through `ISmsProviderRes
 - Twilio: signed callbacks using `X-Twilio-Signature`.
 - Bandwidth: OAuth 2.0 Client Credentials and Basic-authenticated callbacks.
 
-Outbound messages are persisted with status `Queued`, then their RabbitMQ event is published immediately. A MassTransit consumer receives the event, loads the tenant-specific provider configuration, sends the SMS, and updates its status asynchronously. Provider credentials are tenant-specific and encrypted at rest. Configure Bandwidth callbacks at:
+Immediate outbound messages are persisted with status `Queued`, then their RabbitMQ event is published immediately. Scheduled outbound messages are persisted with status `Scheduled` and a UTC `ScheduledAtUtc`; a background publisher queues them only when they become due. A MassTransit consumer receives the event, loads the tenant-specific provider configuration, sends the SMS, and updates its status asynchronously. Provider credentials are tenant-specific and encrypted at rest. Configure Bandwidth callbacks at:
 
 ```text
 /api/v1/webhooks/bandwidth/inbound
@@ -171,6 +171,7 @@ Important environment variables:
 ```text
 ConnectionStrings__SqlServer
 ConnectionStrings__LogsSqlServer
+ConnectionStrings__ReportingSqlServer
 Jwt__Issuer
 Jwt__Audience
 Jwt__Key
@@ -192,10 +193,13 @@ Runtime Dapper queries are stored as embedded `.sql` resources under `src/Sms.In
 
 The project does not use migrations. Initialize new databases with:
 
-- `database/schema.sql`
-- `database/logs-schema.sql`
+- `database/schema.sql` for the application database (`SmsApi`)
+- `database/logs-schema.sql` for the observability database (`SmsApiLogs`)
+- `database/reporting-schema.sql` for the reporting database (`SmsApiReporting`)
 
-The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, minute-level alert status counters, an inbox for SMS-send deduplication, and transactional outbox/inbox tables for alert evaluation. Status history inserts create alert-evaluation outbox events in the same SQL transaction; a MassTransit publisher delivers them through RabbitMQ and an idempotent consumer evaluates only the affected tenant/status/provider. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
+The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, minute-level alert status counters, scheduled-delivery state, an inbox for SMS-send deduplication, and transactional outbox/inbox tables for alert evaluation and reporting updates. Status history inserts create alert-evaluation outbox events in the same SQL transaction; a MassTransit publisher delivers them through RabbitMQ and an idempotent consumer evaluates only the affected tenant/status/provider.
+
+The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics. The `SmsApiReporting` database stores tenant-level SMS overview projections and an idempotent reporting inbox. Reporting projections are updated asynchronously through RabbitMQ/MassTransit so tenant overview queries do not need to aggregate the full message history on every request.
 
 Each tenant has an isolated opt-out list. Numbers are encrypted at rest and indexed using a tenant-specific keyed fingerprint. Inbound `STOP`, `UNSUBSCRIBE`, and `CANCEL` messages block future outbound messages after webhook authentication; `START` removes the block. Tenant administrators can manage, import, and export the list in the UI. Imports accept up to 1,000 rows with `PhoneNumber` and optional `Reason` columns.
 
