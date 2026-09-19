@@ -17,7 +17,7 @@ public sealed class TwilioWebhooksControllerTests
     public async Task Inbound_PersistsValidatedMessage()
     {
         var tenantId=Guid.NewGuid(); var messages=new MessageRepository();
-        var controller=Create(tenantId,messages,Form(("AccountSid","AC1"),("MessageSid","SM1"),("From","+1"),("To","+2"),("Body","hello")));
+        var controller=Create(tenantId,messages,Form(("AccountSid","AC1"),("MessageSid","SM1"),("From","+15551234567"),("To","+15557654321"),("Body","hello")));
         var result=await controller.Inbound(default);
         Assert.IsType<ContentResult>(result);
         Assert.NotNull(messages.Inbound);
@@ -78,7 +78,7 @@ public sealed class TwilioWebhooksControllerTests
     private static TwilioWebhooksController Create(Guid tenantId,MessageRepository messages,Dictionary<string,string> values,bool validSignature=true,bool configurationExists=true)
     {
         const string token="auth-token";
-        var config=configurationExists ? new TenantSmsProviderConfiguration(tenantId,"Twilio","AC1",token,"+2",true,true) : null;
+        var config=configurationExists ? new TenantSmsProviderConfiguration(tenantId,"Twilio","AC1",token,"+15557654321",true,true) : null;
         var repository=new ProviderRepository(config);
         var webhookUrls=new ConfiguredSmsWebhookUrlProvider(new Microsoft.Extensions.Configuration.ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string,string?> { ["Sms:PublicBaseUrl"]="https://sms.example.com" }).Build());
@@ -107,7 +107,7 @@ public sealed class TwilioWebhooksControllerTests
     {
         public Task<TenantSmsProviderConfiguration?> GetAsync(Guid t,string p,CancellationToken c=default)=>Task.FromResult(config);
         public Task<TenantSmsProviderConfiguration?> GetDefaultAsync(Guid t,CancellationToken c=default)=>Task.FromResult(config);
-        public Task<TenantSmsProviderConfiguration?> GetByAccountAndNumberAsync(string p,string a,string n,CancellationToken c=default)=>Task.FromResult(n=="+2"?config:null);
+        public Task<TenantSmsProviderConfiguration?> GetByAccountAndNumberAsync(string p,string a,string n,CancellationToken c=default)=>Task.FromResult(n=="+15557654321"?config:null);
         public Task UpsertAsync(TenantSmsProviderConfiguration x,CancellationToken c=default)=>Task.CompletedTask;
     }
     private sealed class MessageRepository:ISmsMessageRepository
