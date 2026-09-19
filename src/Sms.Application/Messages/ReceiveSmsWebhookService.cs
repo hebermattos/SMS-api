@@ -5,33 +5,61 @@ namespace Sms.Application.Messages;
 
 public sealed class ReceiveSmsWebhookService(ISmsMessageRepository messages, OptOutService optOut)
 {
-    public async Task<SmsWebhookResult> ReceiveAsync(ISmsWebhookParser parser, string authorization,
-        Stream body, SmsDirection direction, CancellationToken cancellationToken = default)
+    public async Task<SmsWebhookResult> ReceiveAsync(
+        ISmsWebhookParser parser,
+        string authorization,
+        Stream body,
+        SmsDirection direction,
+        CancellationToken cancellationToken = default)
     {
         // Authenticate and validate the entire batch before making any changes.
         var batch = await parser.ParseAsync(authorization, body, direction, cancellationToken);
-        if (batch.Result != SmsWebhookResult.Accepted) return batch.Result;
+        if (batch.Result != SmsWebhookResult.Accepted)
+            return batch.Result;
 
-        foreach (var item in batch.Events)
+        foreach (var webhookEvent in batch.Events)
         {
-            if (item.Direction == SmsDirection.Inbound)
+            if (webhookEvent.Direction == SmsDirection.Inbound)
             {
-                await optOut.ProcessInboundAsync(item.TenantId, item.From, item.Body, item.Time, cancellationToken);
-                await messages.InsertInboundIfNotExistsAsync(new SmsMessage
-                {
-                    Id = Guid.NewGuid(), TenantId = item.TenantId, Provider = item.Provider,
-                    ProviderMessageId = item.ProviderMessageId, Direction = item.Direction,
-                    Status = item.Status, From = item.From, To = item.To, Body = item.Body,
-                    CreatedAt = item.Time
-                }, cancellationToken);
+                await ProcessInboundAsync(webhookEvent, cancellationToken);
+                continue;
             }
-            else
-            {
-                await messages.UpdateStatusByProviderMessageIdAsync(item.TenantId, item.Provider,
-                    item.ProviderMessageId, item.Status, item.Time, cancellationToken);
-            }
+
+            await messages.UpdateStatusByProviderMessageIdAsync(
+                webhookEvent.TenantId,
+                webhookEvent.Provider,
+                webhookEvent.ProviderMessageId,
+                webhookEvent.Status,
+                webhookEvent.Time,
+                cancellationToken);
         }
 
         return SmsWebhookResult.Accepted;
+    }
+
+    private async Task ProcessInboundAsync(SmsWebhookEvent webhookEvent, CancellationToken cancellationToken)
+    {
+        await optOut.ProcessInboundAsync(
+            webhookEvent.TenantId,
+            webhookEvent.From,
+            webhookEvent.Body,
+            webhookEvent.Time,
+            cancellationToken);
+
+        var message = new SmsMessage
+        {
+            Id = Guid.NewGuid(),
+            TenantId = webhookEvent.TenantId,
+            Provider = webhookEvent.Provider,
+            ProviderMessageId = webhookEvent.ProviderMessageId,
+            Direction = webhookEvent.Direction,
+            Status = webhookEvent.Status,
+            From = webhookEvent.From,
+            To = webhookEvent.To,
+            Body = webhookEvent.Body,
+            CreatedAt = webhookEvent.Time
+        };
+
+        await messages.InsertInboundIfNotExistsAsync(message, cancellationToken);
     }
 }
