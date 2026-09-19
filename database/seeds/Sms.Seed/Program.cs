@@ -12,7 +12,7 @@ var password = configuration["Admin:Password"] ?? throw new InvalidOperationExce
 var email = configuration["Admin:Email"] ?? throw new InvalidOperationException("Admin:Email is required for local bootstrap.");
 if (await administrators.GetByUsernameAsync(username.Trim()) is null)
 {
-    var allowInsecure = configuration.GetValue<bool>("Admin:AllowInsecureBootstrapPassword");
+    var allowInsecure = string.Equals(configuration["Admin:AllowInsecureBootstrapPassword"], "true", StringComparison.OrdinalIgnoreCase);
     if (!allowInsecure || password.Length >= 15)
     {
         await new AdministratorAuthenticationService(administrators).CreateAsync(username, email, password);
