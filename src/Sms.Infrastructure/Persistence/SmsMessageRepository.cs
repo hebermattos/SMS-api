@@ -47,6 +47,13 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
 
             INSERT INTO dbo.SmsMessageStatusHistory (Id, TenantId, MessageId, Status, CreatedAt)
             VALUES (NEWID(), @TenantId, @Id, @Status, @CreatedAt);
+            DECLARE @BucketStartUtc DATETIMEOFFSET = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, CAST(@CreatedAt AS datetime2)), 0) AT TIME ZONE 'UTC';
+            UPDATE dbo.AlertStatusCounters WITH (UPDLOCK, SERIALIZABLE)
+            SET MessageCount = MessageCount + 1, UpdatedAtUtc = @CreatedAt
+            WHERE TenantId = @TenantId AND Provider = @Provider AND Status = @Status AND BucketStartUtc = @BucketStartUtc;
+            IF @@ROWCOUNT = 0
+                INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
+                VALUES (@TenantId, @Provider, @Status, @BucketStartUtc, 1, @CreatedAt);
 
             COMMIT TRANSACTION;
             """;
@@ -60,7 +67,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
             SET XACT_ABORT ON;
             BEGIN TRANSACTION;
 
-            DECLARE @InsertedMessages TABLE (Id UNIQUEIDENTIFIER);
+            DECLARE @InsertedMessages TABLE (Id UNIQUEIDENTIFIER, Provider NVARCHAR(50));
 
             IF NOT EXISTS (
                 SELECT 1 FROM dbo.SmsMessages WITH (UPDLOCK, HOLDLOCK)
@@ -68,12 +75,23 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
             )
             BEGIN
                 INSERT INTO dbo.SmsMessages (Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, UpdatedAt)
-                OUTPUT INSERTED.Id INTO @InsertedMessages
+                OUTPUT INSERTED.Id, INSERTED.Provider INTO @InsertedMessages
                 VALUES (@Id, @TenantId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @Status, @CreatedAt, @UpdatedAt);
             END
 
             INSERT INTO dbo.SmsMessageStatusHistory (Id, TenantId, MessageId, Status, CreatedAt)
             SELECT NEWID(), @TenantId, Id, @Status, @CreatedAt FROM @InsertedMessages;
+
+            DECLARE @BucketStartUtc DATETIMEOFFSET = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, CAST(@CreatedAt AS datetime2)), 0) AT TIME ZONE 'UTC';
+            UPDATE c WITH (UPDLOCK, SERIALIZABLE)
+            SET MessageCount = MessageCount + 1, UpdatedAtUtc = @CreatedAt
+            FROM dbo.AlertStatusCounters c
+            INNER JOIN @InsertedMessages i ON i.Provider = c.Provider
+            WHERE c.TenantId = @TenantId AND c.Status = @Status AND c.BucketStartUtc = @BucketStartUtc;
+            IF EXISTS (SELECT 1 FROM @InsertedMessages) AND @@ROWCOUNT = 0
+                INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
+                SELECT @TenantId, Provider, @Status, @BucketStartUtc, COUNT(*), @CreatedAt
+                FROM @InsertedMessages GROUP BY Provider;
 
             COMMIT TRANSACTION;
             """;
@@ -87,17 +105,29 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
             SET XACT_ABORT ON;
             BEGIN TRANSACTION;
 
-            DECLARE @ChangedMessages TABLE (Id UNIQUEIDENTIFIER, PreviousStatus INT);
+            DECLARE @ChangedMessages TABLE (Id UNIQUEIDENTIFIER, PreviousStatus INT, Provider NVARCHAR(50));
 
             UPDATE dbo.SmsMessages
             SET Status = @Status, ProviderMessageId = COALESCE(@ProviderMessageId, ProviderMessageId), UpdatedAt = @UpdatedAt
-            OUTPUT INSERTED.Id, DELETED.Status INTO @ChangedMessages
+            OUTPUT INSERTED.Id, DELETED.Status, INSERTED.Provider INTO @ChangedMessages
             WHERE TenantId = @TenantId AND Id = @Id;
 
             INSERT INTO dbo.SmsMessageStatusHistory (Id, TenantId, MessageId, Status, CreatedAt)
             SELECT NEWID(), @TenantId, Id, @Status, @UpdatedAt
             FROM @ChangedMessages
             WHERE PreviousStatus <> @Status;
+
+            DECLARE @BucketStartUtc DATETIMEOFFSET = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, CAST(@UpdatedAt AS datetime2)), 0) AT TIME ZONE 'UTC';
+            UPDATE c WITH (UPDLOCK, SERIALIZABLE)
+            SET MessageCount = c.MessageCount + x.Amount, UpdatedAtUtc = @UpdatedAt
+            FROM dbo.AlertStatusCounters c
+            INNER JOIN (SELECT Provider, COUNT(*) AS Amount FROM @ChangedMessages WHERE PreviousStatus <> @Status GROUP BY Provider) x
+              ON x.Provider = c.Provider
+            WHERE c.TenantId = @TenantId AND c.Status = @Status AND c.BucketStartUtc = @BucketStartUtc;
+            IF @@ROWCOUNT = 0
+                INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
+                SELECT @TenantId, Provider, @Status, @BucketStartUtc, COUNT(*), @UpdatedAt
+                FROM @ChangedMessages WHERE PreviousStatus <> @Status GROUP BY Provider;
 
             COMMIT TRANSACTION;
             """;
@@ -126,6 +156,18 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
             SELECT NEWID(), @TenantId, Id, @Status, @UpdatedAt
             FROM @ChangedMessages
             WHERE PreviousStatus <> @Status;
+
+            DECLARE @BucketStartUtc DATETIMEOFFSET = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, CAST(@UpdatedAt AS datetime2)), 0) AT TIME ZONE 'UTC';
+            UPDATE c WITH (UPDLOCK, SERIALIZABLE)
+            SET MessageCount = c.MessageCount + x.Amount, UpdatedAtUtc = @UpdatedAt
+            FROM dbo.AlertStatusCounters c
+            INNER JOIN (SELECT Provider, COUNT(*) AS Amount FROM @ChangedMessages WHERE PreviousStatus <> @Status GROUP BY Provider) x
+              ON x.Provider = c.Provider
+            WHERE c.TenantId = @TenantId AND c.Status = @Status AND c.BucketStartUtc = @BucketStartUtc;
+            IF @@ROWCOUNT = 0
+                INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
+                SELECT @TenantId, Provider, @Status, @BucketStartUtc, COUNT(*), @UpdatedAt
+                FROM @ChangedMessages WHERE PreviousStatus <> @Status GROUP BY Provider;
 
             COMMIT TRANSACTION;
             """;
