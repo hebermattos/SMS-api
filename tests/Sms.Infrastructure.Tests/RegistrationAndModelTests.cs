@@ -8,7 +8,8 @@ using Sms.Application.Providers;
 using Sms.Application.Tenants;
 using Sms.Domain.Tenants;
 using Sms.Infrastructure;
-using Sms.Infrastructure.Providers;\nusing Sms.Infrastructure.Persistence;
+using Sms.Infrastructure.Providers;
+using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Tests;
 
@@ -46,7 +47,8 @@ public sealed class RegistrationAndModelTests
         Assert.Contains(services, x => x.ServiceType == typeof(BandwidthSmsProvider));
         Assert.Contains(services, x => x.ServiceType == typeof(BandwidthWebhookParser) && x.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(services, x => x.ServiceType == typeof(IHttpClientFactory));
-        Assert.Contains(services, x => x.ServiceType == typeof(IDistributedCache));\n        Assert.Contains(services, x => x.ServiceType == typeof(TenantConfigurationCache) && x.Lifetime == ServiceLifetime.Singleton);
+        Assert.Contains(services, x => x.ServiceType == typeof(IDistributedCache));
+        Assert.Contains(services, x => x.ServiceType == typeof(TenantConfigurationCache) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsProviderResolver));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsMessageRepository));
         Assert.Contains(services, x => x.ServiceType == typeof(IAlertRepository));
