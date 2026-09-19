@@ -61,7 +61,7 @@ describe('Login screen', () => {
 
   it('redirects an existing session to the workspace without logging in again', () => {
     const token = `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 900 }))}.s`;
-    sessionStorage.setItem('sms-console-session', JSON.stringify({ token, role: 'tenant', identity: 'client' }));
+    sessionStorage.setItem('sms-ui-session', JSON.stringify({ token, role: 'tenant', identity: 'client' }));
     TestBed.createComponent(LoginComponent);
     expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/app');
     http.expectNone('/api/v1/auth/token');
