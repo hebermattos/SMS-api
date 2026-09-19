@@ -37,7 +37,7 @@ public sealed class ReceiveSmsWebhookService(ISmsMessageRepository messages, Opt
         return SmsWebhookResult.Accepted;
     }
 
-    private async Task ProcessInboundAsync(SmsWebhookEvent webhookEvent, CancellationToken cancellationToken)
+    private async Task ProcessInboundAsync(ValidatedSmsWebhook webhookEvent, CancellationToken cancellationToken)
     {
         await optOut.ProcessInboundAsync(
             webhookEvent.TenantId,
