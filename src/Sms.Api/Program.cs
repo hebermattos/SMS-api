@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.OpenApi.Models;
 using Sms.Api.Filters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -46,6 +47,35 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<PortalExceptionFilter>();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "SMS API",
+        Version = "v1",
+        Description = "Multi-tenant API for sending, receiving, and tracking SMS messages."
+    });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter the JWT access token."
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecurityScheme
+        {
+            Reference = new OpenApiReference
+            {
+                Type = ReferenceType.SecurityScheme,
+                Id = "Bearer"
+            }
+        }] = Array.Empty<string>()
+    });
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<HttpTenantContext>();
 builder.Services.AddScoped<ITenantContext>(services => services.GetRequiredService<HttpTenantContext>());
@@ -75,6 +105,11 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHostedService<Sms.Infrastructure.Messaging.AlertEvaluationOutboxPublisher>();
 
 var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseMiddleware<ClientLoginAuditMiddleware>();
