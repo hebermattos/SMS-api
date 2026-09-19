@@ -13,7 +13,7 @@ public sealed class AlertsControllerTests
     {
         var tenantId = Guid.NewGuid();
         var repository = new Repository();
-        var controller = new AlertsController(new TenantContext(tenantId), new AlertService(repository));
+        var controller = new AlertsController(new TenantContext(tenantId), new AlertService(repository, TimeProvider.System));
         var request = new SaveAlertRule("Failures", "Twilio", SmsStatus.Failed, 2, 15, AlertRepeatMode.Once, null, true);
 
         var created = Assert.IsType<CreatedResult>(await controller.CreateRule(request, default));
