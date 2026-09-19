@@ -28,3 +28,14 @@ export interface SmsReportProviderSummary { provider: string; totalMessages: num
 export interface SmsReportSummary { totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; outbound: number; inbound: number; byProvider: SmsReportProviderSummary[]; }
 export interface PlatformSmsReportTenantSummary { tenantId: string; tenantName: string; totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; }
 export interface PlatformSmsReportSummary { totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; byTenant: PlatformSmsReportTenantSummary[]; }
+
+export type AlertRepeatMode = 1 | 2;
+export interface AlertRule {
+  id: string; name: string; provider: string | null; status: number; threshold: number;
+  windowMinutes: number; repeatMode: AlertRepeatMode; repeatIntervalMinutes: number | null;
+  isActive: boolean; isTriggered: boolean; lastTriggeredAt: string | null; createdAt: string;
+}
+export interface AlertNotification {
+  id: string; ruleId: string; ruleName: string; provider: string | null; status: number;
+  matchCount: number; windowMinutes: number; createdAt: string; isRead: boolean; readAt: string | null;
+}
