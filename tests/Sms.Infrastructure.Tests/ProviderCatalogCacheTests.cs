@@ -22,7 +22,14 @@ public sealed class ProviderCatalogCacheTests
         var second = await cache.GetAsync();
 
         Assert.Equal(2, first.Count);
-        Assert.Equal(first, second);
+        Assert.Equal(first.Count, second.Count);
+        for (var index = 0; index < first.Count; index++)
+        {
+            Assert.Equal(first[index].Name, second[index].Name);
+            Assert.Equal(first[index].AccountLabel, second[index].AccountLabel);
+            Assert.Equal(first[index].SecretLabel, second[index].SecretLabel);
+            Assert.Equal(first[index].Fields.ToArray(), second[index].Fields.ToArray());
+        }
         Assert.Equal(1, policies.EnumerationCount);
     }
 
