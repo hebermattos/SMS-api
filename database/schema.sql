@@ -214,3 +214,25 @@ GO
 CREATE INDEX IX_Alerts_Tenant_CreatedAt ON dbo.Alerts(TenantId, CreatedAt DESC, Id DESC)
     INCLUDE (IsRead, RuleId, Status, Provider, MatchCount);
 GO
+
+CREATE TABLE dbo.AlertStatusCounters
+(
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    Provider NVARCHAR(50) NOT NULL,
+    Status INT NOT NULL,
+    BucketStartUtc DATETIMEOFFSET NOT NULL,
+    MessageCount INT NOT NULL CONSTRAINT CK_AlertStatusCounters_MessageCount CHECK (MessageCount > 0),
+    UpdatedAtUtc DATETIMEOFFSET NOT NULL,
+    CONSTRAINT PK_AlertStatusCounters PRIMARY KEY (TenantId, Provider, Status, BucketStartUtc),
+    CONSTRAINT FK_AlertStatusCounters_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT CK_AlertStatusCounters_Status CHECK (Status BETWEEN 1 AND 5)
+);
+GO
+CREATE INDEX IX_AlertStatusCounters_Tenant_Status_Bucket
+    ON dbo.AlertStatusCounters(TenantId, Status, BucketStartUtc)
+    INCLUDE (Provider, MessageCount);
+GO
+CREATE INDEX IX_AlertStatusCounters_Tenant_Provider_Status_Bucket
+    ON dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc)
+    INCLUDE (MessageCount);
+GO
