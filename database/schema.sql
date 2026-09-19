@@ -224,7 +224,7 @@ CREATE TABLE dbo.AlertStatusCounters
     MessageCount INT NOT NULL CONSTRAINT CK_AlertStatusCounters_MessageCount CHECK (MessageCount > 0),
     UpdatedAtUtc DATETIMEOFFSET NOT NULL,
     CONSTRAINT PK_AlertStatusCounters PRIMARY KEY (TenantId, Provider, Status, BucketStartUtc),
-    CONSTRAINT FK_AlertStatusCounters_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT FK_AlertStatusCounters_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id) ON DELETE CASCADE,
     CONSTRAINT CK_AlertStatusCounters_Status CHECK (Status BETWEEN 1 AND 5)
 );
 GO
@@ -249,7 +249,7 @@ CREATE TABLE dbo.AlertEvaluationOutbox
     PublishedAtUtc DATETIMEOFFSET NULL,
     AttemptCount INT NOT NULL CONSTRAINT DF_AlertEvaluationOutbox_AttemptCount DEFAULT (0),
     LastAttemptAtUtc DATETIMEOFFSET NULL,
-    CONSTRAINT FK_AlertEvaluationOutbox_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT FK_AlertEvaluationOutbox_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id) ON DELETE CASCADE,
     CONSTRAINT CK_AlertEvaluationOutbox_Status CHECK (Status BETWEEN 1 AND 5)
 );
 GO
