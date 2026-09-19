@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Npgsql;
 using Sms.Infrastructure.Messaging;
 using Sms.Infrastructure.Caching;
 
@@ -28,17 +28,17 @@ public static class DependencyHealthChecks
 
         services.AddHealthChecks()
             .AddCheck<ApplicationDatabaseHealthCheck>(
-                "sql.application",
+                "postgres.application",
                 failureStatus: HealthStatus.Unhealthy,
                 tags: ["database", "internal"],
                 timeout: TimeSpan.FromSeconds(3))
             .AddCheck<ObservabilityDatabaseHealthCheck>(
-                "sql.observability",
+                "postgres.observability",
                 failureStatus: HealthStatus.Degraded,
                 tags: ["database", "internal"],
                 timeout: TimeSpan.FromSeconds(3))
             .AddCheck<ReportingDatabaseHealthCheck>(
-                "sql.reporting",
+                "postgres.reporting",
                 failureStatus: HealthStatus.Degraded,
                 tags: ["database", "internal"],
                 timeout: TimeSpan.FromSeconds(3))
@@ -66,7 +66,7 @@ public static class DependencyHealthChecks
         return services;
     }
 
-    public abstract class SqlServerHealthCheck(string connectionString) : IHealthCheck
+    public abstract class PostgresHealthCheck(string connectionString) : IHealthCheck
     {
         public async Task<HealthCheckResult> CheckHealthAsync(
             HealthCheckContext context,
@@ -74,7 +74,7 @@ public static class DependencyHealthChecks
         {
             try
             {
-                await using var connection = new SqlConnection(connectionString);
+                await using var connection = new NpgsqlConnection(connectionString);
                 await connection.OpenAsync(cancellationToken);
 
                 await using var command = connection.CreateCommand();
@@ -83,24 +83,24 @@ public static class DependencyHealthChecks
                 var result = await command.ExecuteScalarAsync(cancellationToken);
 
                 return Convert.ToInt32(result) == 1
-                    ? HealthCheckResult.Healthy("SQL Server responded.")
-                    : Failure(context, "SQL Server returned an unexpected result.");
+                    ? HealthCheckResult.Healthy("PostgreSQL responded.")
+                    : Failure(context, "PostgreSQL returned an unexpected result.");
             }
             catch
             {
-                return Failure(context, "SQL Server connection failed.");
+                return Failure(context, "PostgreSQL connection failed.");
             }
         }
     }
 
     public sealed class ApplicationDatabaseHealthCheck(IConfiguration configuration)
-        : SqlServerHealthCheck(RequiredConnectionString(configuration, "SqlServer"));
+        : PostgresHealthCheck(RequiredConnectionString(configuration, "Postgres"));
 
     public sealed class ObservabilityDatabaseHealthCheck(IConfiguration configuration)
-        : SqlServerHealthCheck(RequiredConnectionString(configuration, "LogsSqlServer"));
+        : PostgresHealthCheck(RequiredConnectionString(configuration, "LogsPostgres"));
 
     public sealed class ReportingDatabaseHealthCheck(IConfiguration configuration)
-        : SqlServerHealthCheck(RequiredConnectionString(configuration, "ReportingSqlServer"));
+        : PostgresHealthCheck(RequiredConnectionString(configuration, "ReportingPostgres"));
 
     public sealed class RedisHealthCheck(IDistributedCache cache, CacheOptions cacheOptions) : IHealthCheck
     {
