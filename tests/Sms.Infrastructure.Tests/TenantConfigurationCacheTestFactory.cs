@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
 using Sms.Infrastructure.Persistence;
@@ -11,7 +12,7 @@ internal static class TenantConfigurationCacheTestFactory
 
     private sealed class TestDistributedCache : IDistributedCache
     {
-        private readonly Dictionary<string, byte[]> _values = new(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<string, byte[]> _values = new(StringComparer.Ordinal);
 
         public byte[]? Get(string key) => _values.GetValueOrDefault(key);
 
@@ -24,7 +25,7 @@ internal static class TenantConfigurationCacheTestFactory
 
         public Task RefreshAsync(string key, CancellationToken token = default) => Task.CompletedTask;
 
-        public void Remove(string key) => _values.Remove(key);
+        public void Remove(string key) => _values.TryRemove(key, out _);
 
         public Task RemoveAsync(string key, CancellationToken token = default)
         {
