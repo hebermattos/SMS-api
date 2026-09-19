@@ -280,6 +280,8 @@ Pushes to `main` automatically build and test the .NET solution and Angular UI a
 
 ## Architecture
 
+![SMS API architecture](docs/images/sms-api-architecture.svg)
+
 ```text
 src/Sms.Api             HTTP, authentication, authorization
 src/Sms.Application     Use cases and contracts
