@@ -30,8 +30,8 @@ Open:
 Local credentials:
 
 ```text
-Client:         example-client / example-secret-change-me
-Administrator:  admin / Admin_Local_2026!
+Client:    client / client
+Platform:  platform / platform
 ```
 
 Override local administrator settings with `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `ADMIN_EMAIL`.
