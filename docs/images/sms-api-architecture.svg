@@ -23,7 +23,7 @@
 
   <rect width="1400" height="1100" fill="#ffffff"/>
   <text x="700" y="48" text-anchor="middle" class="title">SMS API Architecture</text>
-  <text x="700" y="78" text-anchor="middle" class="sub">Multi-tenant SMS platform with REST API, Angular, SQL Server, RabbitMQ, Redis, providers, and OpenTelemetry</text>
+  <text x="700" y="78" text-anchor="middle" class="sub">Multi-tenant SMS platform with REST API, Angular, PostgreSQL, RabbitMQ, Redis, providers, and OpenTelemetry</text>
 
   <rect x="25" y="105" width="1050" height="175" fill="#eef8ff" stroke="#8fc7f8" class="box"/>
   <text x="45" y="135" class="h">Clients / Users</text>

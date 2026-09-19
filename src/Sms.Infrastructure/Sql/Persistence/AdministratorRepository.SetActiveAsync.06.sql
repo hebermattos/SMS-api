@@ -1,1 +1,4 @@
-SELECT IsActive FROM dbo.PlatformAdministrators WITH (UPDLOCK, HOLDLOCK) WHERE Id=@Id;
+SELECT IsActive
+FROM PlatformAdministrators
+WHERE Id=@Id
+FOR UPDATE;

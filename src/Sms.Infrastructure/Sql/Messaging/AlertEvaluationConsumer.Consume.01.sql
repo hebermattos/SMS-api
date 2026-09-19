@@ -1,3 +1,3 @@
-INSERT dbo.AlertEvaluationInbox(EventId, ProcessedAtUtc)
-            SELECT @EventId, SYSUTCDATETIME()
-            WHERE NOT EXISTS (SELECT 1 FROM dbo.AlertEvaluationInbox WITH (UPDLOCK, HOLDLOCK) WHERE EventId=@EventId);
+INSERT INTO AlertEvaluationInbox(EventId, ProcessedAtUtc)
+VALUES(@EventId, CURRENT_TIMESTAMP)
+ON CONFLICT (EventId) DO NOTHING;

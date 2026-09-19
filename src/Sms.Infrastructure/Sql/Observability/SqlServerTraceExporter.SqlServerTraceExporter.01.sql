@@ -1,4 +1,4 @@
-INSERT INTO dbo.Traces
-            (StartedAt, DurationMilliseconds, TraceId, SpanId, ParentSpanId, Name, Source, Kind, Status, Attributes)
-        VALUES
-            (@StartedAt, @DurationMilliseconds, @TraceId, @SpanId, @ParentSpanId, @Name, @Source, @Kind, @Status, @Attributes);
+INSERT INTO Traces
+    (StartedAt, DurationMilliseconds, TraceId, SpanId, ParentSpanId, Name, Source, Kind, Status, Attributes)
+VALUES
+    (@StartedAt, @DurationMilliseconds, @TraceId, @SpanId, @ParentSpanId, @Name, @Source, @Kind, @Status, @Attributes);

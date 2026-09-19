@@ -1,5 +1,5 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 
 namespace Sms.Infrastructure.Persistence;
 
@@ -9,9 +9,9 @@ public sealed class ReportingSqlConnectionFactory
 
     public ReportingSqlConnectionFactory(IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("ReportingSqlServer")
-            ?? throw new InvalidOperationException("Connection string 'ReportingSqlServer' is not configured.");
+        _connectionString = configuration.GetConnectionString("ReportingPostgres")
+            ?? throw new InvalidOperationException("Connection string 'ReportingPostgres' is not configured.");
     }
 
-    public SqlConnection CreateConnection() => new(_connectionString);
+    public NpgsqlConnection CreateConnection() => new(_connectionString);
 }

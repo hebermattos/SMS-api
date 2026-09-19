@@ -5,7 +5,7 @@
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
           <!-- SQL adapters and the Compose-validated seed executable are integration concerns, not unit-test coverage targets. -->
-          <Exclude>[Sms.Seed]*,[Sms.Infrastructure]Sms.Infrastructure.Persistence.*,[Sms.Infrastructure]Sms.Infrastructure.Observability.SqlServer*Exporter,[Sms.Infrastructure]Sms.Infrastructure.Messaging.AlertEvaluationOutboxPublisher*,[Sms.Infrastructure]Sms.Infrastructure.Messaging.AlertEvaluationConsumer*,[Sms.Infrastructure]Sms.Infrastructure.Messaging.SmsSendOutboxPublisher*,[Sms.Infrastructure]Sms.Infrastructure.Messaging.SmsSendConsumer*,[Sms.Infrastructure]Sms.Infrastructure.Messaging.ScheduledSmsPublisher*</Exclude>
+          <Exclude>[Sms.Seed]*,[Sms.Infrastructure]Sms.Infrastructure.Persistence.*,[Sms.Infrastructure]Sms.Infrastructure.Observability.Postgres*Exporter,[Sms.Infrastructure]Sms.Infrastructure.Messaging.AlertEvaluationOutboxPublisher*,[Sms.Infrastructure]Sms.Infrastructure.Messaging.AlertEvaluationConsumer*,[Sms.Infrastructure]Sms.Infrastructure.Messaging.SmsSendOutboxPublisher*,[Sms.Infrastructure]Sms.Infrastructure.Messaging.SmsSendConsumer*,[Sms.Infrastructure]Sms.Infrastructure.Messaging.ScheduledSmsPublisher*</Exclude>
         </Configuration>
       </DataCollector>
     </DataCollectors>

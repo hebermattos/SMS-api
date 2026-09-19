@@ -1,5 +1,5 @@
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Sms.Application.Auth;
 
 namespace Sms.Infrastructure.Persistence;
@@ -24,7 +24,7 @@ public sealed class TenantPortalUserManagementRepository(SqlConnectionFactory co
             await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantPortalUserManagementRepository.CreateAsync.02.sql"), user, cancellationToken: cancellationToken));
             return user.Id;
         }
-        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
         {
             throw new PortalUserConflictException();
         }

@@ -1,1 +1,3 @@
-UPDATE dbo.PlatformAdministrators SET IsActive=@IsActive WHERE Id=@Id;
+UPDATE PlatformAdministrators
+SET IsActive=@IsActive
+WHERE Id=@Id;

@@ -1,1 +1,3 @@
-UPDATE dbo.Alerts SET IsRead=1,ReadAt=SYSUTCDATETIME() WHERE TenantId=@TenantId AND IsRead=0;
+UPDATE Alerts
+SET IsRead=TRUE, ReadAt=CURRENT_TIMESTAMP
+WHERE TenantId=@TenantId AND NOT IsRead;

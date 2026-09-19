@@ -1,2 +1,2 @@
-INSERT INTO dbo.Tenants (Id, Name, TimeZoneId, IsActive, CreatedAt)
-            VALUES (@Id, @Name, 'UTC', 1, @CreatedAt);
+INSERT INTO Tenants(Id, Name, TimeZoneId, IsActive, CreatedAt)
+VALUES(@Id, @Name, 'UTC', TRUE, @CreatedAt);

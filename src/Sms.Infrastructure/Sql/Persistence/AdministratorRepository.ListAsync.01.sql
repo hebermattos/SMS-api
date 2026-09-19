@@ -1,1 +1,3 @@
-SELECT Id,Username,Email,IsActive,CreatedAt FROM dbo.PlatformAdministrators ORDER BY Username;
+SELECT Id, Username, Email, IsActive, CreatedAt
+FROM PlatformAdministrators
+ORDER BY Username;

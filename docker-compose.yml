@@ -22,59 +22,58 @@ services:
       timeout: 3s
       retries: 20
 
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    mem_reservation: 2g
+  postgres:
+    image: postgres:17-alpine
+    mem_reservation: 512m
     environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}"
-    ports: ["1434:1433"]
+      POSTGRES_USER: "${POSTGRES_USER:-sms}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      POSTGRES_DB: "postgres"
+    ports: ["5432:5432"]
     volumes:
-      - sqlserver-data:/var/opt/mssql
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d postgres"]
+      interval: 5s
       timeout: 5s
       retries: 20
-      start_period: 20s
+      start_period: 10s
 
   db-init:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: postgres:17-alpine
     mem_reservation: 128m
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
     volumes:
       - ./database:/database:ro
     environment:
-      SQLCMDPASSWORD: "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}"
-    entrypoint: ["/bin/bash","-c"]
+      PGHOST: "postgres"
+      PGPORT: "5432"
+      PGUSER: "${POSTGRES_USER:-sms}"
+      PGPASSWORD: "${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+    entrypoint: ["/bin/sh","-c"]
     command:
       - |
-        set -euo pipefail
-        sqlcmd="/opt/mssql-tools18/bin/sqlcmd"
+        set -eu
         database_exists() {
-          local database="$$1"
-          local result
-          result="$$( "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -h -1 -W -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID(N'$$database') IS NULL THEN 0 ELSE 1 END;" )"
-          result="$$(printf '%s' "$$result" | tr -d '[:space:]')"
-          [ "$$result" = "1" ]
+          [ "$$(psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$$1'")" = "1" ]
         }
 
-        if ! database_exists "SmsApi"; then
-          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApi];"
-          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/schema.sql
+        if ! database_exists "sms_api"; then
+          createdb sms_api
+          psql -v ON_ERROR_STOP=1 -d sms_api -f /database/schema.sql
         fi
-        /opt/mssql-tools18/bin/sqlcmd -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApi -i /database/seeds/example_tenant.sql
+        psql -v ON_ERROR_STOP=1 -d sms_api -f /database/seeds/example_tenant.sql
 
-        if ! database_exists "SmsApiLogs"; then
-          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApiLogs];"
-          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApiLogs -i /database/logs-schema.sql
+        if ! database_exists "sms_api_logs"; then
+          createdb sms_api_logs
+          psql -v ON_ERROR_STOP=1 -d sms_api_logs -f /database/logs-schema.sql
         fi
 
-        if ! database_exists "SmsApiReporting"; then
-          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApiReporting];"
-          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApiReporting -i /database/reporting-schema.sql
+        if ! database_exists "sms_api_reporting"; then
+          createdb sms_api_reporting
+          psql -v ON_ERROR_STOP=1 -d sms_api_reporting -f /database/reporting-schema.sql
         fi
 
   provider-init:
@@ -90,7 +89,7 @@ services:
       Admin__Password: "${ADMIN_PASSWORD:-platform}"
       Admin__Email: "${ADMIN_EMAIL:-platform@example.com}"
       Admin__AllowInsecureBootstrapPassword: "true"
-      ConnectionStrings__SqlServer: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
 
   api:
@@ -108,9 +107,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
-      ConnectionStrings__SqlServer: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
-      ConnectionStrings__LogsSqlServer: "Server=sqlserver;Database=SmsApiLogs;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
-      ConnectionStrings__ReportingSqlServer: "Server=sqlserver;Database=SmsApiReporting;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__LogsPostgres: "Host=postgres;Port=5432;Database=sms_api_logs;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__ReportingPostgres: "Host=postgres;Port=5432;Database=sms_api_reporting;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
       ConnectionStrings__Redis: "redis:6379"
       Cache__Enabled: "${CACHE_ENABLED:-true}"
       Jwt__Key: "${JWT_KEY:-local-development-jwt-key-change-me-1234567890}"
@@ -132,7 +131,7 @@ services:
       db-init:
         condition: service_completed_successfully
     environment:
-      SMS_TEST_SQLSERVER: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
+      SMS_TEST_POSTGRES: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
 
   ui:
     mem_reservation: 32m
@@ -142,4 +141,4 @@ services:
     ports: ["4200:80"]
 
 volumes:
-  sqlserver-data:
+  postgres-data:

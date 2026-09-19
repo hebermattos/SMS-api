@@ -26,21 +26,21 @@ builder.Logging.AddSimpleConsole(options =>
     options.TimestampFormat = "yyyy-MM-dd HH:mm:ss 'UTC' ";
     options.UseUtcTimestamp = true;
 });
-var logsConnectionString = builder.Configuration.GetConnectionString("LogsSqlServer")
-    ?? throw new InvalidOperationException("Connection string 'LogsSqlServer' is not configured.");
+var logsConnectionString = builder.Configuration.GetConnectionString("LogsPostgres")
+    ?? throw new InvalidOperationException("Connection string 'LogsPostgres' is not configured.");
 builder.Logging.AddOpenTelemetry(options =>
 {
     options.IncludeFormattedMessage = true;
     options.ParseStateValues = true;
-    options.AddProcessor(new BatchLogRecordExportProcessor(new SqlServerLogExporter(logsConnectionString)));
+    options.AddProcessor(new BatchLogRecordExportProcessor(new PostgresLogExporter(logsConnectionString)));
 });
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing
         .AddAspNetCoreInstrumentation()
-        .AddProcessor(new BatchActivityExportProcessor(new SqlServerTraceExporter(logsConnectionString))))
+        .AddProcessor(new BatchActivityExportProcessor(new PostgresTraceExporter(logsConnectionString))))
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
-        .AddReader(new PeriodicExportingMetricReader(new SqlServerMetricExporter(logsConnectionString))));
+        .AddReader(new PeriodicExportingMetricReader(new PostgresMetricExporter(logsConnectionString))));
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 if (string.IsNullOrWhiteSpace(jwt.Key) || jwt.Key.Length < 32) throw new InvalidOperationException("Jwt:Key must be configured with at least 32 characters.");
 

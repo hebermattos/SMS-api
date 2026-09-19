@@ -1,1 +1,5 @@
-UPDATE dbo.AlertEvaluationOutbox SET PublishedAtUtc=SYSUTCDATETIME(), AttemptCount=AttemptCount+1, LastAttemptAtUtc=SYSUTCDATETIME() WHERE Id=@Id AND PublishedAtUtc IS NULL;
+UPDATE AlertEvaluationOutbox
+SET PublishedAtUtc=CURRENT_TIMESTAMP,
+    AttemptCount=AttemptCount+1,
+    LastAttemptAtUtc=CURRENT_TIMESTAMP
+WHERE Id=@Id AND PublishedAtUtc IS NULL;

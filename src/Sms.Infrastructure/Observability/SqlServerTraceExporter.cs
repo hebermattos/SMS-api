@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using OpenTelemetry;
 
 namespace Sms.Infrastructure.Observability;
 
-public sealed class SqlServerTraceExporter(string connectionString) : BaseExporter<Activity>
+public sealed class PostgresTraceExporter(string connectionString) : BaseExporter<Activity>
 {
     private static readonly string InsertSql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerTraceExporter.SqlServerTraceExporter.01.sql");
 
@@ -13,7 +13,7 @@ public sealed class SqlServerTraceExporter(string connectionString) : BaseExport
     {
         try
         {
-            using var connection = new SqlConnection(connectionString);
+            using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
             foreach (var activity in batch)

@@ -1,7 +1,14 @@
-SELECT Id, TenantId, Username, PasswordHash, PasswordSalt, PasswordIterations,
-                   Context, Role, IsActive
-            FROM dbo.PortalUsers
-            WHERE Id = @Id
-              AND IsActive = 1
-              AND (Context = 'platform' OR EXISTS
-                  (SELECT 1 FROM dbo.Tenants t WHERE t.Id = TenantId AND t.IsActive = 1));
+SELECT Id, TenantId, Username, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive
+FROM PortalUsers u
+WHERE u.Id=@Id
+  AND u.IsActive
+  AND
+  (
+      u.Context='platform'
+      OR EXISTS
+      (
+          SELECT 1
+          FROM Tenants t
+          WHERE t.Id=u.TenantId AND t.IsActive
+      )
+  );

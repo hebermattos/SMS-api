@@ -1,5 +1,5 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 
 namespace Sms.Infrastructure.Persistence;
 
@@ -9,9 +9,9 @@ public sealed class LogsSqlConnectionFactory
 
     public LogsSqlConnectionFactory(IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("LogsSqlServer")
-            ?? throw new InvalidOperationException("Connection string 'LogsSqlServer' is not configured.");
+        _connectionString = configuration.GetConnectionString("LogsPostgres")
+            ?? throw new InvalidOperationException("Connection string 'LogsPostgres' is not configured.");
     }
 
-    public SqlConnection CreateConnection() => new(_connectionString);
+    public NpgsqlConnection CreateConnection() => new(_connectionString);
 }

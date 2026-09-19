@@ -1,416 +1,367 @@
-SET QUOTED_IDENTIFIER ON;
-GO
+CREATE EXTENSION IF NOT EXISTS citext;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE dbo.PlatformAdministrators
+CREATE TABLE Tenants
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_PlatformAdministrators PRIMARY KEY,
-    Username NVARCHAR(100) COLLATE Latin1_General_100_CI_AS NOT NULL CONSTRAINT UQ_PlatformAdministrators_Username UNIQUE,
-    Email NVARCHAR(320) COLLATE Latin1_General_100_CI_AS NOT NULL,
-    PasswordHash VARBINARY(32) NOT NULL,
-    PasswordSalt VARBINARY(32) NOT NULL,
-    PasswordIterations INT NOT NULL CONSTRAINT CK_PlatformAdministrators_Iterations CHECK (PasswordIterations >= 600000),
-    IsActive BIT NOT NULL CONSTRAINT DF_PlatformAdministrators_IsActive DEFAULT (1),
-    CreatedAt DATETIMEOFFSET NOT NULL
+    Id UUID PRIMARY KEY,
+    Name VARCHAR(200) NOT NULL,
+    Code CITEXT NOT NULL DEFAULT (gen_random_uuid()::text),
+    TimeZoneId VARCHAR(100) NOT NULL DEFAULT 'UTC',
+    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+    CreatedAt TIMESTAMPTZ NOT NULL
 );
-GO
+CREATE UNIQUE INDEX UX_Tenants_Code ON Tenants(Code);
 
-CREATE TABLE dbo.PortalUsers
+CREATE TABLE PlatformAdministrators
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_PortalUsers PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NULL,
-    Username NVARCHAR(100) COLLATE Latin1_General_100_CI_AS NOT NULL,
-    Email NVARCHAR(320) COLLATE Latin1_General_100_CI_AS NOT NULL,
-    PasswordHash VARBINARY(32) NOT NULL,
-    PasswordSalt VARBINARY(32) NOT NULL,
-    PasswordIterations INT NOT NULL CONSTRAINT CK_PortalUsers_Iterations CHECK (PasswordIterations >= 600000),
-    Context NVARCHAR(20) NOT NULL,
-    Role NVARCHAR(20) NOT NULL,
-    IsActive BIT NOT NULL CONSTRAINT DF_PortalUsers_IsActive DEFAULT (1),
-    CreatedAt DATETIMEOFFSET NOT NULL,
-    UpdatedAt DATETIMEOFFSET NULL,
-    CONSTRAINT CK_PortalUsers_Context CHECK (Context IN ('tenant', 'platform')),
-    CONSTRAINT CK_PortalUsers_Role CHECK (Role IN ('user', 'administrator')),
-    CONSTRAINT CK_PortalUsers_TenantContext CHECK
+    Id UUID PRIMARY KEY,
+    Username CITEXT NOT NULL UNIQUE,
+    Email CITEXT NOT NULL,
+    PasswordHash BYTEA NOT NULL,
+    PasswordSalt BYTEA NOT NULL,
+    PasswordIterations INTEGER NOT NULL CHECK (PasswordIterations >= 600000),
+    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+    CreatedAt TIMESTAMPTZ NOT NULL
+);
+CREATE UNIQUE INDEX UX_PlatformAdministrators_Email ON PlatformAdministrators(Email);
+
+CREATE TABLE PortalUsers
+(
+    Id UUID PRIMARY KEY,
+    TenantId UUID NULL REFERENCES Tenants(Id),
+    Username CITEXT NOT NULL,
+    Email CITEXT NOT NULL,
+    PasswordHash BYTEA NOT NULL,
+    PasswordSalt BYTEA NOT NULL,
+    PasswordIterations INTEGER NOT NULL CHECK (PasswordIterations >= 600000),
+    Context VARCHAR(20) NOT NULL,
+    Role VARCHAR(20) NOT NULL,
+    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+    CreatedAt TIMESTAMPTZ NOT NULL,
+    UpdatedAt TIMESTAMPTZ NULL,
+    CHECK (Context IN ('tenant', 'platform')),
+    CHECK (Role IN ('user', 'administrator')),
+    CHECK
     (
         (Context = 'tenant' AND TenantId IS NOT NULL)
         OR (Context = 'platform' AND TenantId IS NULL)
     )
 );
-GO
-CREATE UNIQUE INDEX UX_PlatformAdministrators_Email ON dbo.PlatformAdministrators(Email);
-GO
-
 CREATE UNIQUE INDEX UX_PortalUsers_PlatformEmail
-    ON dbo.PortalUsers(Email)
-    WHERE Context = 'platform';
-GO
+    ON PortalUsers(Email) WHERE Context = 'platform';
 CREATE UNIQUE INDEX UX_PortalUsers_TenantEmail
-    ON dbo.PortalUsers(TenantId, Email)
-    WHERE Context = 'tenant';
-GO
+    ON PortalUsers(TenantId, Email) WHERE Context = 'tenant';
 CREATE UNIQUE INDEX UX_PortalUsers_PlatformUsername
-    ON dbo.PortalUsers(Username)
-    WHERE Context = 'platform';
-GO
+    ON PortalUsers(Username) WHERE Context = 'platform';
 CREATE UNIQUE INDEX UX_PortalUsers_TenantUsername
-    ON dbo.PortalUsers(TenantId, Username)
-    WHERE Context = 'tenant';
-GO
-CREATE INDEX IX_PortalUsers_TenantId ON dbo.PortalUsers(TenantId) WHERE TenantId IS NOT NULL;
-GO
+    ON PortalUsers(TenantId, Username) WHERE Context = 'tenant';
+CREATE INDEX IX_PortalUsers_TenantId ON PortalUsers(TenantId) WHERE TenantId IS NOT NULL;
 
-CREATE TABLE dbo.Tenants
+CREATE TABLE SmsMessages
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_Tenants PRIMARY KEY,
-    Name NVARCHAR(200) NOT NULL,
-    Code NVARCHAR(100) COLLATE Latin1_General_100_CI_AS NOT NULL
-        CONSTRAINT DF_Tenants_Code DEFAULT (CONVERT(NVARCHAR(36), NEWID())),
-    TimeZoneId NVARCHAR(100) NOT NULL CONSTRAINT DF_Tenants_TimeZoneId DEFAULT ('UTC'),
-    IsActive BIT NOT NULL CONSTRAINT DF_Tenants_IsActive DEFAULT (1),
-    CreatedAt DATETIMEOFFSET NOT NULL
-);
-GO
-CREATE UNIQUE INDEX UX_Tenants_Code ON dbo.Tenants(Code);
-GO
-
-ALTER TABLE dbo.PortalUsers
-    ADD CONSTRAINT FK_PortalUsers_Tenants
-        FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
-GO
-
-CREATE TABLE dbo.SmsMessages
-(
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_SmsMessages PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    [From] NVARCHAR(256) NOT NULL,
-    [To] NVARCHAR(256) NOT NULL,
-    Body NVARCHAR(MAX) NOT NULL,
-    Provider NVARCHAR(50) NOT NULL,
-    ProviderMessageId NVARCHAR(200) NULL,
-    Direction INT NOT NULL,
-    Status INT NOT NULL,
-    CreatedAt DATETIMEOFFSET NOT NULL,
-    ScheduledAtUtc DATETIMEOFFSET NULL,
-    UpdatedAt DATETIMEOFFSET NULL,
-    CONSTRAINT FK_SmsMessages_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT UQ_SmsMessages_Tenant_Id UNIQUE (TenantId, Id),
-    CONSTRAINT CK_SmsMessages_Direction CHECK (Direction IN (1, 2)),
-    CONSTRAINT CK_SmsMessages_Status CHECK (Status BETWEEN 1 AND 6),
-    CONSTRAINT CK_SmsMessages_Schedule CHECK
+    Id UUID PRIMARY KEY,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id),
+    "From" VARCHAR(256) NOT NULL,
+    "To" VARCHAR(256) NOT NULL,
+    Body TEXT NOT NULL,
+    Provider VARCHAR(50) NOT NULL,
+    ProviderMessageId VARCHAR(200) NULL,
+    Direction INTEGER NOT NULL,
+    Status INTEGER NOT NULL,
+    CreatedAt TIMESTAMPTZ NOT NULL,
+    ScheduledAtUtc TIMESTAMPTZ NULL,
+    UpdatedAt TIMESTAMPTZ NULL,
+    UNIQUE (TenantId, Id),
+    CHECK (Direction IN (1, 2)),
+    CHECK (Status BETWEEN 1 AND 6),
+    CHECK
     (
         (Status = 6 AND Direction = 1 AND ScheduledAtUtc IS NOT NULL)
         OR Status <> 6
     )
 );
-GO
-CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON dbo.SmsMessages(TenantId, CreatedAt DESC, Id DESC);
-GO
-CREATE INDEX IX_SmsMessages_Scheduled ON dbo.SmsMessages(ScheduledAtUtc, Id)
+CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON SmsMessages(TenantId, CreatedAt DESC, Id DESC);
+CREATE INDEX IX_SmsMessages_Scheduled ON SmsMessages(ScheduledAtUtc, Id)
     INCLUDE (TenantId) WHERE Status = 6;
-GO
-CREATE UNIQUE INDEX UX_SmsMessages_Tenant_Provider_Message ON dbo.SmsMessages(TenantId, Provider, ProviderMessageId) WHERE ProviderMessageId IS NOT NULL;
-GO
+CREATE UNIQUE INDEX UX_SmsMessages_Tenant_Provider_Message
+    ON SmsMessages(TenantId, Provider, ProviderMessageId)
+    WHERE ProviderMessageId IS NOT NULL;
 
-CREATE TABLE dbo.SmsOptOuts
+CREATE TABLE SmsOptOuts
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_SmsOptOuts PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    PhoneHash VARBINARY(32) NOT NULL,
-    PhoneNumber NVARCHAR(256) NOT NULL,
-    Source NVARCHAR(30) NOT NULL,
-    Reason NVARCHAR(200) NULL,
-    CreatedAt DATETIMEOFFSET NOT NULL,
-    UpdatedAt DATETIMEOFFSET NULL,
-    CONSTRAINT FK_SmsOptOuts_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT UQ_SmsOptOuts_Tenant_Id UNIQUE (TenantId, Id),
-    CONSTRAINT CK_SmsOptOuts_Source CHECK (Source IN ('Manual', 'Import', 'InboundKeyword'))
+    Id UUID PRIMARY KEY,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id),
+    PhoneHash BYTEA NOT NULL,
+    PhoneNumber VARCHAR(256) NOT NULL,
+    Source VARCHAR(30) NOT NULL,
+    Reason VARCHAR(200) NULL,
+    CreatedAt TIMESTAMPTZ NOT NULL,
+    UpdatedAt TIMESTAMPTZ NULL,
+    UNIQUE (TenantId, Id),
+    CHECK (Source IN ('Manual', 'Import', 'InboundKeyword'))
 );
-GO
-CREATE UNIQUE INDEX UX_SmsOptOuts_Tenant_PhoneHash ON dbo.SmsOptOuts(TenantId, PhoneHash);
-GO
-CREATE INDEX IX_SmsOptOuts_Tenant_CreatedAt ON dbo.SmsOptOuts(TenantId, CreatedAt DESC, Id DESC)
+CREATE UNIQUE INDEX UX_SmsOptOuts_Tenant_PhoneHash ON SmsOptOuts(TenantId, PhoneHash);
+CREATE INDEX IX_SmsOptOuts_Tenant_CreatedAt ON SmsOptOuts(TenantId, CreatedAt DESC, Id DESC)
     INCLUDE (Source, Reason, UpdatedAt);
-GO
 
-CREATE TABLE dbo.TenantSmsProviders
+CREATE TABLE TenantSmsProviders
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_TenantSmsProviders PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    Provider NVARCHAR(50) NOT NULL,
-    AccountId NVARCHAR(200) NOT NULL,
-    ApiSecret NVARCHAR(1000) NOT NULL,
-    FromNumber NVARCHAR(32) NULL,
-    Settings NVARCHAR(MAX) NULL,
-    IsDefault BIT NOT NULL CONSTRAINT DF_TenantSmsProviders_IsDefault DEFAULT (0),
-    IsActive BIT NOT NULL CONSTRAINT DF_TenantSmsProviders_IsActive DEFAULT (1),
-    CreatedAt DATETIMEOFFSET NOT NULL,
-    UpdatedAt DATETIMEOFFSET NULL,
-    CONSTRAINT FK_TenantSmsProviders_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id)
+    Id UUID PRIMARY KEY,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id),
+    Provider VARCHAR(50) NOT NULL,
+    AccountId VARCHAR(200) NOT NULL,
+    ApiSecret VARCHAR(1000) NOT NULL,
+    FromNumber VARCHAR(32) NULL,
+    Settings TEXT NULL,
+    IsDefault BOOLEAN NOT NULL DEFAULT FALSE,
+    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+    CreatedAt TIMESTAMPTZ NOT NULL,
+    UpdatedAt TIMESTAMPTZ NULL
 );
-GO
-CREATE UNIQUE INDEX UX_TenantSmsProviders_Tenant_Provider ON dbo.TenantSmsProviders(TenantId, Provider);
-GO
-CREATE UNIQUE INDEX UX_TenantSmsProviders_Default ON dbo.TenantSmsProviders(TenantId) WHERE IsDefault=1 AND IsActive=1;
-GO
-CREATE UNIQUE INDEX UX_TenantSmsProviders_CallbackRoute ON dbo.TenantSmsProviders(Provider, AccountId, FromNumber) WHERE IsActive=1 AND FromNumber IS NOT NULL;
-GO
+CREATE UNIQUE INDEX UX_TenantSmsProviders_Tenant_Provider ON TenantSmsProviders(TenantId, Provider);
+CREATE UNIQUE INDEX UX_TenantSmsProviders_Default
+    ON TenantSmsProviders(TenantId) WHERE IsDefault AND IsActive;
+CREATE UNIQUE INDEX UX_TenantSmsProviders_CallbackRoute
+    ON TenantSmsProviders(Provider, AccountId, FromNumber)
+    WHERE IsActive AND FromNumber IS NOT NULL;
 
-CREATE TABLE dbo.ApiClients
+CREATE TABLE ApiClients
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_ApiClients PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    ClientId NVARCHAR(100) NOT NULL,
-    SecretHash VARBINARY(32) NOT NULL,
-    SecretSalt VARBINARY(32) NOT NULL,
-    SecretIterations INT NOT NULL,
-    IsActive BIT NOT NULL CONSTRAINT DF_ApiClients_IsActive DEFAULT (1),
-    CreatedAt DATETIMEOFFSET NOT NULL,
-    UpdatedAt DATETIMEOFFSET NULL,
-    CONSTRAINT FK_ApiClients_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT CK_ApiClients_SecretIterations CHECK (SecretIterations >= 600000)
+    Id UUID PRIMARY KEY,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id),
+    ClientId CITEXT NOT NULL,
+    SecretHash BYTEA NOT NULL,
+    SecretSalt BYTEA NOT NULL,
+    SecretIterations INTEGER NOT NULL CHECK (SecretIterations >= 600000),
+    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+    CreatedAt TIMESTAMPTZ NOT NULL,
+    UpdatedAt TIMESTAMPTZ NULL
 );
-GO
-CREATE UNIQUE INDEX UX_ApiClients_ClientId ON dbo.ApiClients(ClientId);
-GO
-CREATE INDEX IX_ApiClients_TenantId ON dbo.ApiClients(TenantId);
-GO
+CREATE UNIQUE INDEX UX_ApiClients_ClientId ON ApiClients(ClientId);
+CREATE INDEX IX_ApiClients_TenantId ON ApiClients(TenantId);
 
-CREATE TABLE dbo.SmsMessageStatusHistory
+CREATE TABLE SmsMessageStatusHistory
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_SmsMessageStatusHistory PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    MessageId UNIQUEIDENTIFIER NOT NULL,
-    Status INT NOT NULL,
-    CreatedAt DATETIMEOFFSET NOT NULL,
-    CONSTRAINT FK_SmsMessageStatusHistory_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT FK_SmsMessageStatusHistory_TenantMessage
-        FOREIGN KEY (TenantId, MessageId) REFERENCES dbo.SmsMessages(TenantId, Id)
+    Id UUID PRIMARY KEY,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id),
+    MessageId UUID NOT NULL,
+    Status INTEGER NOT NULL,
+    CreatedAt TIMESTAMPTZ NOT NULL,
+    FOREIGN KEY (TenantId, MessageId) REFERENCES SmsMessages(TenantId, Id)
 );
-GO
-CREATE INDEX IX_SmsMessageStatusHistory_Tenant_Message_CreatedAt ON dbo.SmsMessageStatusHistory(TenantId, MessageId, CreatedAt);
-GO
+CREATE INDEX IX_SmsMessageStatusHistory_Tenant_Message_CreatedAt
+    ON SmsMessageStatusHistory(TenantId, MessageId, CreatedAt);
 CREATE INDEX IX_SmsMessageStatusHistory_Tenant_Status_CreatedAt
-    ON dbo.SmsMessageStatusHistory(TenantId, Status, CreatedAt)
+    ON SmsMessageStatusHistory(TenantId, Status, CreatedAt)
     INCLUDE (MessageId);
-GO
 
-
-CREATE TABLE dbo.AlertRules
+CREATE TABLE AlertRules
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_AlertRules PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    Name NVARCHAR(120) NOT NULL,
-    Provider NVARCHAR(50) NULL,
-    Status INT NOT NULL,
-    Threshold INT NOT NULL,
-    WindowMinutes INT NOT NULL,
-    RepeatMode INT NOT NULL,
-    RepeatIntervalMinutes INT NULL,
-    IsActive BIT NOT NULL,
-    IsTriggered BIT NOT NULL CONSTRAINT DF_AlertRules_IsTriggered DEFAULT (0),
-    LastTriggeredAt DATETIMEOFFSET NULL,
-    CreatedAt DATETIMEOFFSET NOT NULL,
-    UpdatedAt DATETIMEOFFSET NULL,
-    DeletedAt DATETIMEOFFSET NULL,
-    CONSTRAINT FK_AlertRules_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT UQ_AlertRules_Tenant_Id UNIQUE (TenantId, Id),
-    CONSTRAINT CK_AlertRules_Status CHECK (Status BETWEEN 1 AND 5),
-    CONSTRAINT CK_AlertRules_Threshold CHECK (Threshold BETWEEN 1 AND 1000000),
-    CONSTRAINT CK_AlertRules_Window CHECK (WindowMinutes BETWEEN 1 AND 43200),
-    CONSTRAINT CK_AlertRules_RepeatMode CHECK (RepeatMode IN (1,2)),
-    CONSTRAINT CK_AlertRules_RepeatInterval CHECK
+    Id UUID PRIMARY KEY,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id),
+    Name VARCHAR(120) NOT NULL,
+    Provider VARCHAR(50) NULL,
+    Status INTEGER NOT NULL,
+    Threshold INTEGER NOT NULL,
+    WindowMinutes INTEGER NOT NULL,
+    RepeatMode INTEGER NOT NULL,
+    RepeatIntervalMinutes INTEGER NULL,
+    IsActive BOOLEAN NOT NULL,
+    IsTriggered BOOLEAN NOT NULL DEFAULT FALSE,
+    LastTriggeredAt TIMESTAMPTZ NULL,
+    CreatedAt TIMESTAMPTZ NOT NULL,
+    UpdatedAt TIMESTAMPTZ NULL,
+    DeletedAt TIMESTAMPTZ NULL,
+    UNIQUE (TenantId, Id),
+    CHECK (Status BETWEEN 1 AND 5),
+    CHECK (Threshold BETWEEN 1 AND 1000000),
+    CHECK (WindowMinutes BETWEEN 1 AND 43200),
+    CHECK (RepeatMode IN (1, 2)),
+    CHECK
     (
-        (RepeatMode=1 AND RepeatIntervalMinutes IS NULL)
-        OR (RepeatMode=2 AND RepeatIntervalMinutes BETWEEN 1 AND 43200)
+        (RepeatMode = 1 AND RepeatIntervalMinutes IS NULL)
+        OR (RepeatMode = 2 AND RepeatIntervalMinutes BETWEEN 1 AND 43200)
     )
 );
-GO
-CREATE UNIQUE INDEX UX_AlertRules_Tenant_Name ON dbo.AlertRules(TenantId, Name) WHERE DeletedAt IS NULL;
-GO
-CREATE INDEX IX_AlertRules_Active ON dbo.AlertRules(IsActive, TenantId)
+CREATE UNIQUE INDEX UX_AlertRules_Tenant_Name
+    ON AlertRules(TenantId, Name) WHERE DeletedAt IS NULL;
+CREATE INDEX IX_AlertRules_Active
+    ON AlertRules(IsActive, TenantId)
     INCLUDE (Status, Provider, Threshold, WindowMinutes)
     WHERE DeletedAt IS NULL;
-GO
 
-CREATE TABLE dbo.Alerts
+CREATE TABLE Alerts
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_Alerts PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    RuleId UNIQUEIDENTIFIER NOT NULL,
-    RuleName NVARCHAR(120) NOT NULL,
-    Provider NVARCHAR(50) NULL,
-    Status INT NOT NULL,
-    MatchCount INT NOT NULL,
-    WindowMinutes INT NOT NULL,
-    CreatedAt DATETIMEOFFSET NOT NULL,
-    IsRead BIT NOT NULL CONSTRAINT DF_Alerts_IsRead DEFAULT (0),
-    ReadAt DATETIMEOFFSET NULL,
-    CONSTRAINT FK_Alerts_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT FK_Alerts_TenantRule FOREIGN KEY (TenantId, RuleId) REFERENCES dbo.AlertRules(TenantId, Id),
-    CONSTRAINT CK_Alerts_Status CHECK (Status BETWEEN 1 AND 5),
-    CONSTRAINT CK_Alerts_MatchCount CHECK (MatchCount >= 0),
-    CONSTRAINT CK_Alerts_ReadState CHECK
+    Id UUID PRIMARY KEY,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id),
+    RuleId UUID NOT NULL,
+    RuleName VARCHAR(120) NOT NULL,
+    Provider VARCHAR(50) NULL,
+    Status INTEGER NOT NULL,
+    MatchCount INTEGER NOT NULL,
+    WindowMinutes INTEGER NOT NULL,
+    CreatedAt TIMESTAMPTZ NOT NULL,
+    IsRead BOOLEAN NOT NULL DEFAULT FALSE,
+    ReadAt TIMESTAMPTZ NULL,
+    FOREIGN KEY (TenantId, RuleId) REFERENCES AlertRules(TenantId, Id),
+    CHECK (Status BETWEEN 1 AND 5),
+    CHECK (MatchCount >= 0),
+    CHECK
     (
-        (IsRead = 0 AND ReadAt IS NULL)
-        OR (IsRead = 1 AND ReadAt IS NOT NULL)
+        (NOT IsRead AND ReadAt IS NULL)
+        OR (IsRead AND ReadAt IS NOT NULL)
     )
 );
-GO
-CREATE INDEX IX_Alerts_Tenant_CreatedAt ON dbo.Alerts(TenantId, CreatedAt DESC, Id DESC)
+CREATE INDEX IX_Alerts_Tenant_CreatedAt ON Alerts(TenantId, CreatedAt DESC, Id DESC)
     INCLUDE (IsRead, RuleId, Status, Provider, MatchCount);
-GO
 
-CREATE TABLE dbo.AlertStatusCounters
+CREATE TABLE AlertStatusCounters
 (
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    Provider NVARCHAR(50) NOT NULL,
-    Status INT NOT NULL,
-    BucketStartUtc DATETIMEOFFSET NOT NULL,
-    MessageCount INT NOT NULL CONSTRAINT CK_AlertStatusCounters_MessageCount CHECK (MessageCount > 0),
-    UpdatedAtUtc DATETIMEOFFSET NOT NULL,
-    CONSTRAINT PK_AlertStatusCounters PRIMARY KEY (TenantId, Provider, Status, BucketStartUtc),
-    CONSTRAINT FK_AlertStatusCounters_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id) ON DELETE CASCADE,
-    CONSTRAINT CK_AlertStatusCounters_Status CHECK (Status BETWEEN 1 AND 5)
+    TenantId UUID NOT NULL,
+    Provider VARCHAR(50) NOT NULL,
+    Status INTEGER NOT NULL,
+    BucketStartUtc TIMESTAMPTZ NOT NULL,
+    MessageCount INTEGER NOT NULL CHECK (MessageCount > 0),
+    UpdatedAtUtc TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (TenantId, Provider, Status, BucketStartUtc),
+    FOREIGN KEY (TenantId) REFERENCES Tenants(Id) ON DELETE CASCADE,
+    CHECK (Status BETWEEN 1 AND 5)
 );
-GO
 CREATE INDEX IX_AlertStatusCounters_Tenant_Status_Bucket
-    ON dbo.AlertStatusCounters(TenantId, Status, BucketStartUtc)
+    ON AlertStatusCounters(TenantId, Status, BucketStartUtc)
     INCLUDE (Provider, MessageCount);
-GO
 CREATE INDEX IX_AlertStatusCounters_Tenant_Provider_Status_Bucket
-    ON dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc)
+    ON AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc)
     INCLUDE (MessageCount);
-GO
 
-
-CREATE TABLE dbo.AlertEvaluationOutbox
+CREATE TABLE AlertEvaluationOutbox
 (
-    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_AlertEvaluationOutbox PRIMARY KEY,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
-    Provider NVARCHAR(50) NOT NULL,
-    Status INT NOT NULL,
-    OccurredAtUtc DATETIMEOFFSET NOT NULL,
-    CreatedAtUtc DATETIMEOFFSET NOT NULL,
-    PublishedAtUtc DATETIMEOFFSET NULL,
-    AttemptCount INT NOT NULL CONSTRAINT DF_AlertEvaluationOutbox_AttemptCount DEFAULT (0),
-    LastAttemptAtUtc DATETIMEOFFSET NULL,
-    CONSTRAINT FK_AlertEvaluationOutbox_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id) ON DELETE CASCADE,
-    CONSTRAINT CK_AlertEvaluationOutbox_Status CHECK (Status BETWEEN 1 AND 5)
+    Id UUID PRIMARY KEY,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id) ON DELETE CASCADE,
+    Provider VARCHAR(50) NOT NULL,
+    Status INTEGER NOT NULL,
+    OccurredAtUtc TIMESTAMPTZ NOT NULL,
+    CreatedAtUtc TIMESTAMPTZ NOT NULL,
+    PublishedAtUtc TIMESTAMPTZ NULL,
+    AttemptCount INTEGER NOT NULL DEFAULT 0,
+    LastAttemptAtUtc TIMESTAMPTZ NULL,
+    CHECK (Status BETWEEN 1 AND 5)
 );
-GO
-CREATE INDEX IX_AlertEvaluationOutbox_Pending ON dbo.AlertEvaluationOutbox(CreatedAtUtc, Id)
+CREATE INDEX IX_AlertEvaluationOutbox_Pending
+    ON AlertEvaluationOutbox(CreatedAtUtc, Id)
     INCLUDE (TenantId, Provider, Status, OccurredAtUtc)
     WHERE PublishedAtUtc IS NULL;
-GO
-
 CREATE INDEX IX_AlertEvaluationOutbox_PublishedAtUtc
-    ON dbo.AlertEvaluationOutbox(PublishedAtUtc, Id)
+    ON AlertEvaluationOutbox(PublishedAtUtc, Id)
     WHERE PublishedAtUtc IS NOT NULL;
-GO
 
-CREATE TABLE dbo.AlertEvaluationInbox
+CREATE TABLE AlertEvaluationInbox
 (
-    EventId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_AlertEvaluationInbox PRIMARY KEY,
-    ProcessedAtUtc DATETIMEOFFSET NOT NULL
+    EventId UUID PRIMARY KEY,
+    ProcessedAtUtc TIMESTAMPTZ NOT NULL
 );
-GO
 CREATE INDEX IX_AlertEvaluationInbox_ProcessedAtUtc
-    ON dbo.AlertEvaluationInbox(ProcessedAtUtc, EventId);
-GO
+    ON AlertEvaluationInbox(ProcessedAtUtc, EventId);
 
-CREATE TRIGGER dbo.TR_SmsMessageStatusHistory_AlertEvaluationOutbox
-ON dbo.SmsMessageStatusHistory
-AFTER INSERT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    INSERT dbo.AlertEvaluationOutbox(Id, TenantId, Provider, Status, OccurredAtUtc, CreatedAtUtc)
-    SELECT NEWID(), i.TenantId, m.Provider, i.Status, i.CreatedAt, SYSUTCDATETIME()
-    FROM inserted i
-    INNER JOIN dbo.SmsMessages m ON m.TenantId = i.TenantId AND m.Id = i.MessageId
-    WHERE i.Status BETWEEN 1 AND 5;
-END;
-GO
-
-
-CREATE TABLE dbo.SmsSendInbox
+CREATE TABLE SmsSendInbox
 (
-    EventId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_SmsSendInbox PRIMARY KEY,
-    ProcessedAtUtc DATETIMEOFFSET NOT NULL
+    EventId UUID PRIMARY KEY,
+    ProcessedAtUtc TIMESTAMPTZ NOT NULL
 );
-GO
 CREATE INDEX IX_SmsSendInbox_ProcessedAtUtc
-    ON dbo.SmsSendInbox(ProcessedAtUtc, EventId);
-GO
+    ON SmsSendInbox(ProcessedAtUtc, EventId);
 
-CREATE TABLE dbo.TenantSmsOverviewOutbox
+CREATE TABLE TenantSmsOverviewOutbox
 (
-    SequenceNumber BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_TenantSmsOverviewOutbox PRIMARY KEY,
-    EventId UNIQUEIDENTIFIER NOT NULL CONSTRAINT UQ_TenantSmsOverviewOutbox_EventId UNIQUE,
-    TenantId UNIQUEIDENTIFIER NOT NULL,
+    SequenceNumber BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    EventId UUID NOT NULL UNIQUE,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id) ON DELETE CASCADE,
     OutboundDelta BIGINT NOT NULL,
     InboundDelta BIGINT NOT NULL,
     DeliveredDelta BIGINT NOT NULL,
     FailedDelta BIGINT NOT NULL,
     PendingDelta BIGINT NOT NULL,
-    OccurredAtUtc DATETIMEOFFSET NOT NULL,
-    PublishedAtUtc DATETIMEOFFSET NULL,
-    AttemptCount INT NOT NULL CONSTRAINT DF_TenantSmsOverviewOutbox_AttemptCount DEFAULT (0),
-    LastAttemptAtUtc DATETIMEOFFSET NULL,
-    CONSTRAINT FK_TenantSmsOverviewOutbox_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id) ON DELETE CASCADE
+    OccurredAtUtc TIMESTAMPTZ NOT NULL,
+    PublishedAtUtc TIMESTAMPTZ NULL,
+    AttemptCount INTEGER NOT NULL DEFAULT 0,
+    LastAttemptAtUtc TIMESTAMPTZ NULL
 );
-GO
-
 CREATE INDEX IX_TenantSmsOverviewOutbox_Pending
-    ON dbo.TenantSmsOverviewOutbox(SequenceNumber)
+    ON TenantSmsOverviewOutbox(SequenceNumber)
     INCLUDE (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
     WHERE PublishedAtUtc IS NULL;
-GO
 
-CREATE TRIGGER dbo.TR_SmsMessages_TenantSmsOverview_Insert
-ON dbo.SmsMessages
-AFTER INSERT
-AS
+CREATE OR REPLACE FUNCTION enqueue_alert_evaluation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    SET NOCOUNT ON;
-
-    INSERT dbo.TenantSmsOverviewOutbox
-        (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
-    SELECT
-        NEWID(),
-        TenantId,
-        SUM(CASE WHEN Direction = 1 THEN CONVERT(BIGINT, 1) ELSE 0 END),
-        SUM(CASE WHEN Direction = 2 THEN CONVERT(BIGINT, 1) ELSE 0 END),
-        SUM(CASE WHEN Direction = 1 AND Status = 3 THEN CONVERT(BIGINT, 1) ELSE 0 END),
-        SUM(CASE WHEN Direction = 1 AND Status = 4 THEN CONVERT(BIGINT, 1) ELSE 0 END),
-        SUM(CASE WHEN Direction = 1 AND Status IN (1, 2, 6) THEN CONVERT(BIGINT, 1) ELSE 0 END),
-        SYSUTCDATETIME()
-    FROM inserted
-    GROUP BY TenantId;
+    IF NEW.Status BETWEEN 1 AND 5 THEN
+        INSERT INTO AlertEvaluationOutbox
+            (Id, TenantId, Provider, Status, OccurredAtUtc, CreatedAtUtc)
+        SELECT
+            gen_random_uuid(), NEW.TenantId, m.Provider, NEW.Status, NEW.CreatedAt, CURRENT_TIMESTAMP
+        FROM SmsMessages m
+        WHERE m.TenantId = NEW.TenantId AND m.Id = NEW.MessageId;
+    END IF;
+    RETURN NEW;
 END;
-GO
+$$;
 
-CREATE TRIGGER dbo.TR_SmsMessages_TenantSmsOverview_Update
-ON dbo.SmsMessages
-AFTER UPDATE
-AS
+CREATE TRIGGER TR_SmsMessageStatusHistory_AlertEvaluationOutbox
+AFTER INSERT ON SmsMessageStatusHistory
+FOR EACH ROW EXECUTE FUNCTION enqueue_alert_evaluation();
+
+CREATE OR REPLACE FUNCTION enqueue_tenant_overview_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    SET NOCOUNT ON;
-
-    INSERT dbo.TenantSmsOverviewOutbox
+    INSERT INTO TenantSmsOverviewOutbox
         (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
-    SELECT
-        NEWID(),
-        i.TenantId,
-        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 THEN 1 ELSE 0 END),
-        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 2 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 2 THEN 1 ELSE 0 END),
-        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status = 3 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status = 3 THEN 1 ELSE 0 END),
-        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status = 4 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status = 4 THEN 1 ELSE 0 END),
-        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status IN (1, 2, 6) THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status IN (1, 2, 6) THEN 1 ELSE 0 END),
-        SYSUTCDATETIME()
-    FROM inserted i
-    INNER JOIN deleted d ON d.Id = i.Id
-    WHERE i.Direction <> d.Direction OR i.Status <> d.Status
-    GROUP BY i.TenantId;
+    VALUES
+        (
+            gen_random_uuid(),
+            NEW.TenantId,
+            CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END,
+            CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END,
+            CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END,
+            CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END,
+            CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2, 6) THEN 1 ELSE 0 END,
+            CURRENT_TIMESTAMP
+        );
+    RETURN NEW;
 END;
-GO
+$$;
+
+CREATE TRIGGER TR_SmsMessages_TenantSmsOverview_Insert
+AFTER INSERT ON SmsMessages
+FOR EACH ROW EXECUTE FUNCTION enqueue_tenant_overview_insert();
+
+CREATE OR REPLACE FUNCTION enqueue_tenant_overview_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.Direction IS DISTINCT FROM OLD.Direction OR NEW.Status IS DISTINCT FROM OLD.Status THEN
+        INSERT INTO TenantSmsOverviewOutbox
+            (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+        VALUES
+            (
+                gen_random_uuid(),
+                NEW.TenantId,
+                (CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 THEN 1 ELSE 0 END),
+                (CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 2 THEN 1 ELSE 0 END),
+                (CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 3 THEN 1 ELSE 0 END),
+                (CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 4 THEN 1 ELSE 0 END),
+                (CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2, 6) THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status IN (1, 2, 6) THEN 1 ELSE 0 END),
+                CURRENT_TIMESTAMP
+            );
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER TR_SmsMessages_TenantSmsOverview_Update
+AFTER UPDATE ON SmsMessages
+FOR EACH ROW EXECUTE FUNCTION enqueue_tenant_overview_update();

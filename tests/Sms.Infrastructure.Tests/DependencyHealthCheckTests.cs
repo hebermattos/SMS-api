@@ -26,9 +26,9 @@ public sealed class DependencyHealthCheckTests
         var options = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value;
         var names = options.Registrations.Select(x => x.Name).ToArray();
 
-        Assert.Contains("sql.application", names);
-        Assert.Contains("sql.observability", names);
-        Assert.Contains("sql.reporting", names);
+        Assert.Contains("postgres.application", names);
+        Assert.Contains("postgres.observability", names);
+        Assert.Contains("postgres.reporting", names);
         Assert.Contains("redis", names);
         Assert.Contains("rabbitmq", names);
         Assert.Contains("twilio", names);
@@ -36,18 +36,18 @@ public sealed class DependencyHealthCheckTests
     }
 
     [Fact]
-    public async Task ApplicationDatabaseHealthCheck_ReturnsUnhealthyWhenSqlServerIsUnavailable()
+    public async Task ApplicationDatabaseHealthCheck_ReturnsUnhealthyWhenPostgresIsUnavailable()
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:SqlServer"] = "Server=127.0.0.1,1;Database=SmsApi;User Id=sa;Password=test;TrustServerCertificate=True;Connect Timeout=1"
+            ["ConnectionStrings:Postgres"] = "Host=127.0.0.1;Port=1;Database=sms_api;Username=sms;Password=test;Timeout=1"
         }).Build();
         var check = new DependencyHealthChecks.ApplicationDatabaseHealthCheck(configuration);
 
         var result = await check.CheckHealthAsync(Context(check, HealthStatus.Unhealthy));
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Equal("SQL Server connection failed.", result.Description);
+        Assert.Equal("PostgreSQL connection failed.", result.Description);
     }
 
     [Fact]
@@ -215,9 +215,9 @@ public sealed class DependencyHealthCheckTests
     private static IConfiguration Configuration() =>
         new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:SqlServer"] = "Server=localhost;Database=SmsApi;Integrated Security=True",
-            ["ConnectionStrings:LogsSqlServer"] = "Server=localhost;Database=SmsApiLogs;Integrated Security=True",
-            ["ConnectionStrings:ReportingSqlServer"] = "Server=localhost;Database=SmsApiReporting;Integrated Security=True"
+            ["ConnectionStrings:Postgres"] = "Host=localhost;Database=sms_api;Username=sms;Password=test",
+            ["ConnectionStrings:LogsPostgres"] = "Host=localhost;Database=sms_api_logs;Username=sms;Password=test",
+            ["ConnectionStrings:ReportingPostgres"] = "Host=localhost;Database=sms_api_reporting;Username=sms;Password=test"
         }).Build();
 
     private static HealthCheckContext Context(IHealthCheck check, HealthStatus failureStatus) => new()

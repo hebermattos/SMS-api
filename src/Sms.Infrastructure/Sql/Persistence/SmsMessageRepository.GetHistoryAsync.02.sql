@@ -1,1 +1,5 @@
-SELECT Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, ScheduledAtUtc, UpdatedAt FROM dbo.SmsMessages WHERE TenantId = @TenantId ORDER BY CreatedAt DESC, Id DESC OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;
+SELECT Id, TenantId, "From", "To", Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, ScheduledAtUtc, UpdatedAt
+FROM SmsMessages
+WHERE TenantId=@TenantId
+ORDER BY CreatedAt DESC, Id DESC
+OFFSET @Skip LIMIT @Take;

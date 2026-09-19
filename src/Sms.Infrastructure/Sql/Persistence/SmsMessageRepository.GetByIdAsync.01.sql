@@ -1,1 +1,3 @@
-SELECT Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, ScheduledAtUtc, UpdatedAt FROM dbo.SmsMessages WHERE TenantId = @TenantId AND Id = @Id;
+SELECT Id, TenantId, "From", "To", Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, ScheduledAtUtc, UpdatedAt
+FROM SmsMessages
+WHERE TenantId=@TenantId AND Id=@Id;

@@ -1,19 +1,19 @@
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.Configuration;
 using Sms.Application.Auth;
 using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Tests;
 
-[Collection(SqlServerTestCollection.Name)]
+[Collection(PostgresTestCollection.Name)]
 public sealed class AdministratorSqlTests
 {
-    [SqlServerFact]
+    [PostgresFact]
     public async Task AccountsPersistHashedPasswordsAndEnforceUniqueCaseInsensitiveUsernames()
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        { ["ConnectionStrings:SqlServer"] = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER") }).Build();
+        { ["ConnectionStrings:Postgres"] = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES") }).Build();
         var factory = new SqlConnectionFactory(configuration);
         var repository = new AdministratorRepository(factory);
         var authentication = new AdministratorAuthenticationService(repository);
@@ -29,11 +29,11 @@ public sealed class AdministratorSqlTests
             Assert.NotNull(await authentication.AuthenticateAsync(username.ToUpperInvariant(), "local-admin-test-password"));
             Assert.Null(await authentication.AuthenticateAsync(username, "wrong-password"));
             await Assert.ThrowsAsync<AdministratorConflictException>(() => authentication.CreateAsync(username.ToUpperInvariant(), "admin2@example.com", "another-local-password"));
-            await connection.ExecuteAsync("UPDATE dbo.PlatformAdministrators SET IsActive=0 WHERE Id=@Id;", new { Id = id });
+            await connection.ExecuteAsync("UPDATE PlatformAdministrators SET IsActive=FALSE WHERE Id=@Id;", new { Id = id });
             Assert.False(await repository.IsActiveAsync(id));
             Assert.False(await repository.IsActiveAsync(Guid.NewGuid()));
             Assert.Null(await authentication.AuthenticateAsync(username, "local-admin-test-password"));
         }
-        finally { await connection.ExecuteAsync("DELETE dbo.PlatformAdministrators WHERE Id=@Id;", new { Id = id }); }
+        finally { await connection.ExecuteAsync("DELETE PlatformAdministrators WHERE Id=@Id;", new { Id = id }); }
     }
 }

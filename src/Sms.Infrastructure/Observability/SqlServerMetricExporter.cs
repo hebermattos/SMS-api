@@ -1,11 +1,11 @@
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 
 namespace Sms.Infrastructure.Observability;
 
-public sealed class SqlServerMetricExporter(string connectionString) : BaseExporter<Metric>
+public sealed class PostgresMetricExporter(string connectionString) : BaseExporter<Metric>
 {
     private static readonly string InsertSql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerMetricExporter.SqlServerMetricExporter.01.sql");
 
@@ -13,7 +13,7 @@ public sealed class SqlServerMetricExporter(string connectionString) : BaseExpor
     {
         try
         {
-            using var connection = new SqlConnection(connectionString);
+            using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
             foreach (var metric in batch)

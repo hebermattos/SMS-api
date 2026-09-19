@@ -1,1 +1,3 @@
-SELECT COUNT(1) FROM dbo.SmsSendInbox WHERE EventId=@EventId;
+SELECT COUNT(*)
+FROM SmsSendInbox
+WHERE EventId=@EventId;

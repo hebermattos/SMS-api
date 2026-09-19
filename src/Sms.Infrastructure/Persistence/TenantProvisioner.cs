@@ -1,5 +1,5 @@
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Sms.Application.Auth;
 using Sms.Application.Tenants;
 using Sms.Application.Administration;
@@ -29,7 +29,7 @@ public sealed class TenantProvisioner(SqlConnectionFactory connectionFactory) : 
 
             await transaction.CommitAsync(cancellationToken);
         }
-        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
         {
             await transaction.RollbackAsync(CancellationToken.None);
             throw new AdministrationConflictException();
