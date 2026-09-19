@@ -32,6 +32,7 @@ public sealed class RegistrationAndModelTests
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:SqlServer"] = "Server=localhost;Database=SmsApi;User Id=sa;Password=Password1!;TrustServerCertificate=True",
+            ["ConnectionStrings:ReportingSqlServer"] = "Server=localhost;Database=SmsApiReporting;User Id=sa;Password=Password1!;TrustServerCertificate=True",
             ["Encryption:MasterKey"] = Convert.ToBase64String(new byte[32])
         }).Build();
         var services = new ServiceCollection();
@@ -48,6 +49,7 @@ public sealed class RegistrationAndModelTests
         Assert.Contains(services, x => x.ServiceType == typeof(IAlertRepository));
         Assert.Contains(services, x => x.ServiceType == typeof(ITenantSmsProviderRepository));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsWebhookUrlProvider));
+        Assert.Contains(services, x => x.ServiceType == typeof(Sms.Infrastructure.Persistence.ReportingSqlConnectionFactory));
     }
 
     [Fact]
