@@ -1,3 +1,4 @@
+using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -74,7 +75,7 @@ public sealed class AlertEvaluationConsumer(
     private async Task EvaluateAsync(AlertEvaluationEvent message, CancellationToken cancellationToken)
     {
         using var connection = connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        connection.Open();
         using var transaction = connection.BeginTransaction(System.Data.IsolationLevel.Serializable);
 
         var inserted = await connection.ExecuteAsync(new CommandDefinition("""
