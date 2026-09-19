@@ -147,6 +147,7 @@ Jwt__ExpirationMinutes
 Encryption__MasterKey
 Sms__DefaultProvider
 Sms__PublicBaseUrl
+Alerts__EvaluationSeconds
 ```
 
 `Encryption__MasterKey` must be Base64 for exactly 32 bytes. `Sms__PublicBaseUrl` must be an HTTPS URL without credentials, query strings, or fragments.
