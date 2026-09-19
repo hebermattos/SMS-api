@@ -25,6 +25,7 @@ Open:
 
 - UI: http://localhost:4200
 - API: http://localhost:8080
+- Swagger: http://localhost:8080/swagger (Development only)
 - SQL Server: localhost,1434
 
 Local credentials:
