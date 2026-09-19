@@ -97,7 +97,7 @@ CREATE TABLE dbo.SmsMessages
     CONSTRAINT CK_SmsMessages_Status CHECK (Status BETWEEN 1 AND 5)
 );
 GO
-CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON dbo.SmsMessages(TenantId, CreatedAt DESC);
+CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON dbo.SmsMessages(TenantId, CreatedAt DESC, Id DESC);
 GO
 CREATE UNIQUE INDEX UX_SmsMessages_Tenant_Provider_Message ON dbo.SmsMessages(TenantId, Provider, ProviderMessageId) WHERE ProviderMessageId IS NOT NULL;
 GO
