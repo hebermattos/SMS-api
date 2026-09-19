@@ -52,8 +52,8 @@ services:
         database_exists() {
           local database="$$1"
           local result
-          result="$$(\"$$sqlcmd\" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -h -1 -W -Q \"SET NOCOUNT ON; SELECT CASE WHEN DB_ID(N'$$database') IS NULL THEN 0 ELSE 1 END;\")"
-          result="$$(printf '%s' \"$$result\" | tr -d '[:space:]')"
+          result="$$( "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -h -1 -W -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID(N'$$database') IS NULL THEN 0 ELSE 1 END;" )"
+          result="$$(printf '%s' "$$result" | tr -d '[:space:]')"
           [ "$$result" = "1" ]
         }
 
