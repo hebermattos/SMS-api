@@ -44,9 +44,25 @@ public sealed class AlertSqlTests
             Assert.Single(await repository.ListAlertsAsync(tenantId, false, 0, 20));
             Assert.Empty(await repository.ListAlertsAsync(otherTenantId, false, 0, 20));
 
-            await connection.ExecuteAsync("UPDATE dbo.SmsMessageStatusHistory SET CreatedAt=DATEADD(HOUR,-1,SYSUTCDATETIME()) WHERE TenantId=@Tenant;", new { Tenant = tenantId });
+            await connection.ExecuteAsync("""
+                UPDATE dbo.SmsMessageStatusHistory
+                SET CreatedAt=DATEADD(HOUR,-1,SYSUTCDATETIME())
+                WHERE TenantId=@Tenant;
+                UPDATE dbo.AlertStatusCounters
+                SET BucketStartUtc=DATEADD(HOUR,-1,BucketStartUtc), UpdatedAtUtc=DATEADD(HOUR,-1,SYSUTCDATETIME())
+                WHERE TenantId=@Tenant;
+                """, new { Tenant = tenantId });
             await repository.EvaluateAsync();
-            await connection.ExecuteAsync("UPDATE dbo.SmsMessageStatusHistory SET CreatedAt=SYSUTCDATETIME() WHERE TenantId=@Tenant;", new { Tenant = tenantId });
+
+            await connection.ExecuteAsync("""
+                UPDATE dbo.SmsMessageStatusHistory
+                SET CreatedAt=SYSUTCDATETIME()
+                WHERE TenantId=@Tenant;
+                UPDATE dbo.AlertStatusCounters
+                SET BucketStartUtc=DATEADD(MINUTE,DATEDIFF(MINUTE,0,CAST(SYSUTCDATETIME() AS datetime2)),0) AT TIME ZONE 'UTC',
+                    UpdatedAtUtc=SYSUTCDATETIME()
+                WHERE TenantId=@Tenant;
+                """, new { Tenant = tenantId });
             await repository.EvaluateAsync();
 
             Assert.Equal(2, (await repository.ListAlertsAsync(tenantId, false, 0, 20)).Count);
