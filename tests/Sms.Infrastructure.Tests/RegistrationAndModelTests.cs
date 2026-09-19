@@ -50,6 +50,8 @@ public sealed class RegistrationAndModelTests
         Assert.Contains(services, x => x.ServiceType == typeof(ITenantSmsProviderRepository));
         Assert.Contains(services, x => x.ServiceType == typeof(ISmsWebhookUrlProvider));
         Assert.Contains(services, x => x.ServiceType == typeof(Sms.Infrastructure.Persistence.ReportingSqlConnectionFactory));
+        Assert.Contains(services, x => x.ServiceType == typeof(Sms.Infrastructure.Messaging.ITenantSmsOverviewOutbox) && x.Lifetime == ServiceLifetime.Singleton);
+        Assert.Contains(services, x => x.ServiceType == typeof(Sms.Infrastructure.Messaging.ITenantSmsOverviewEventPublisher) && x.Lifetime == ServiceLifetime.Singleton);
     }
 
     [Fact]
