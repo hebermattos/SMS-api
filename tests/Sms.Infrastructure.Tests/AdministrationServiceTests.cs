@@ -136,7 +136,7 @@ public sealed class AdministrationServiceTests
         Assert.Empty(mock.Describe(null).Item1);
         Assert.Empty(mock.Describe(null).Item2);
         Assert.Throws<ArgumentException>(() => mock.MergeAndValidate(null, new Dictionary<string, string?> { ["unexpected"] = "value" }));
-        Assert.Null(mock.MergeAndValidate("existing", new Dictionary<string, string?>()));
+        Assert.Equal("existing", mock.MergeAndValidate("existing", new Dictionary<string, string?>()));
         var bandwidth = new BandwidthSettingsPolicy();
         Assert.Throws<ArgumentException>(() => bandwidth.MergeAndValidate(null, new Dictionary<string, string?>()));
         Assert.Throws<ArgumentException>(() => bandwidth.Describe("invalid"));
