@@ -1,14 +1,11 @@
-using Dapper;
-using MassTransit;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Messaging;
 
 public sealed class TenantSmsOverviewOutboxPublisher(
-    SqlConnectionFactory connectionFactory,
-    IPublishEndpoint publishEndpoint,
+    ITenantSmsOverviewOutbox outbox,
+    ITenantSmsOverviewEventPublisher eventPublisher,
     ILogger<TenantSmsOverviewOutboxPublisher> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -23,19 +20,12 @@ public sealed class TenantSmsOverviewOutboxPublisher(
         }
     }
 
-    private async Task PublishBatchAsync(CancellationToken cancellationToken)
+    public async Task PublishBatchAsync(CancellationToken cancellationToken = default)
     {
-        using var connection = connectionFactory.CreateConnection();
-        var events = await connection.QueryAsync<TenantSmsOverviewEvent>(new CommandDefinition(
-            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/TenantSmsOverviewOutboxPublisher.PublishBatchAsync.01.sql"),
-            cancellationToken: cancellationToken));
-
-        foreach (var item in events)
+        foreach (var item in await outbox.GetPendingAsync(cancellationToken))
         {
-            await publishEndpoint.Publish(item, cancellationToken);
-            await connection.ExecuteAsync(new CommandDefinition(
-                Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/TenantSmsOverviewOutboxPublisher.PublishBatchAsync.02.sql"),
-                new { item.EventId }, cancellationToken: cancellationToken));
+            await eventPublisher.PublishAsync(item, cancellationToken);
+            await outbox.MarkPublishedAsync(item.EventId, cancellationToken);
         }
     }
 }
