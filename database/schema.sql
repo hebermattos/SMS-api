@@ -69,6 +69,11 @@ CREATE TABLE dbo.Tenants
 );
 GO
 
+ALTER TABLE dbo.PortalUsers
+    ADD CONSTRAINT FK_PortalUsers_Tenants
+        FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
+GO
+
 CREATE TABLE dbo.SmsMessages
 (
     Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_SmsMessages PRIMARY KEY,
@@ -82,7 +87,8 @@ CREATE TABLE dbo.SmsMessages
     Status INT NOT NULL,
     CreatedAt DATETIMEOFFSET NOT NULL,
     UpdatedAt DATETIMEOFFSET NULL,
-    CONSTRAINT FK_SmsMessages_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id)
+    CONSTRAINT FK_SmsMessages_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+    CONSTRAINT UQ_SmsMessages_Tenant_Id UNIQUE (TenantId, Id)
 );
 GO
 CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON dbo.SmsMessages(TenantId, CreatedAt DESC);
@@ -141,7 +147,8 @@ CREATE TABLE dbo.SmsMessageStatusHistory
     Status INT NOT NULL,
     CreatedAt DATETIMEOFFSET NOT NULL,
     CONSTRAINT FK_SmsMessageStatusHistory_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
-    CONSTRAINT FK_SmsMessageStatusHistory_Messages FOREIGN KEY (MessageId) REFERENCES dbo.SmsMessages(Id)
+    CONSTRAINT FK_SmsMessageStatusHistory_TenantMessage
+        FOREIGN KEY (TenantId, MessageId) REFERENCES dbo.SmsMessages(TenantId, Id)
 );
 GO
 CREATE INDEX IX_SmsMessageStatusHistory_Tenant_Message_CreatedAt ON dbo.SmsMessageStatusHistory(TenantId, MessageId, CreatedAt);
