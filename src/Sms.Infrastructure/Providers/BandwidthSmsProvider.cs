@@ -44,7 +44,7 @@ public sealed class BandwidthSmsProvider(
 
     private async Task<string> GetAccessTokenAsync(string clientId, string clientSecret, CancellationToken cancellationToken)
     {
-        var cacheKey = BuildAccessTokenCacheKey(clientId, clientSecret);
+        var cacheKey = BuildAccessTokenCacheKey(tenantContext.TenantId, clientId, clientSecret);
         var cachedToken = await cache.GetStringAsync(cacheKey, cancellationToken);
         if (!string.IsNullOrWhiteSpace(cachedToken)) return cachedToken;
 
@@ -73,10 +73,10 @@ public sealed class BandwidthSmsProvider(
         return token.AccessToken;
     }
 
-    private static string BuildAccessTokenCacheKey(string clientId, string clientSecret)
+    private static string BuildAccessTokenCacheKey(Guid tenantId, string clientId, string clientSecret)
     {
         var material = Encoding.UTF8.GetBytes($"{clientId}\0{clientSecret}");
-        return $"bandwidth:oauth:{Convert.ToHexString(SHA256.HashData(material))}";
+        return $"bandwidth:oauth:{tenantId:N}:{Convert.ToHexString(SHA256.HashData(material))}";
     }
 
     private static BandwidthSettings ParseSettings(string? json)
