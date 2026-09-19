@@ -29,7 +29,7 @@ public sealed class ReportingSqlTests
         {
             ["ConnectionStrings:ReportingSqlServer"] = reportingConnectionString
         }).Build();
-        var consumer = new TenantSmsOverviewConsumer(new ReportingSqlConnectionFactory(configuration));
+        var consumer = new TenantSmsOverviewConsumer(new TenantSmsOverviewProjection(new ReportingSqlConnectionFactory(configuration)));
         var tenantId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
         var eventIds = new List<Guid>();
