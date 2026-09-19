@@ -19,56 +19,102 @@ public sealed class SmsSendConsumer(
 {
     public async Task Consume(ConsumeContext<SmsSendEvent> context)
     {
-        var item = context.Message;
-        using var connection = connectionFactory.CreateConnection();
-        var processed = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
-            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsSendConsumer.Consume.02.sql"),
-            new { item.EventId }, cancellationToken: context.CancellationToken));
-        if (processed != 0) return;
+        var sendEvent = context.Message;
+        if (await IsProcessedAsync(sendEvent.EventId, context.CancellationToken))
+            return;
 
-        tenantContext.SetTenant(item.TenantId);
-        var message = await repository.GetByIdAsync(item.TenantId, item.MessageId, context.CancellationToken)
+        tenantContext.SetTenant(sendEvent.TenantId);
+
+        var message = await repository.GetByIdAsync(
+            sendEvent.TenantId,
+            sendEvent.MessageId,
+            context.CancellationToken)
             ?? throw new InvalidOperationException("Queued SMS message was not found.");
-        if (item.EventId == item.MessageId)
+
+        if (IsScheduledMessageEvent(sendEvent))
         {
-            var now = DateTimeOffset.UtcNow;
-            if (!await repository.TryQueueScheduledAsync(item.TenantId, item.MessageId, now, context.CancellationToken))
+            var queued = await repository.TryQueueScheduledAsync(
+                sendEvent.TenantId,
+                sendEvent.MessageId,
+                DateTimeOffset.UtcNow,
+                context.CancellationToken);
+
+            if (!queued)
                 return;
+
             message.Status = SmsStatus.Queued;
         }
+
         if (message.Status != SmsStatus.Queued)
         {
-            await MarkProcessedAsync(item.EventId, context.CancellationToken);
+            await MarkProcessedAsync(sendEvent.EventId, context.CancellationToken);
             return;
         }
 
+        await SendAsync(sendEvent, message, context.CancellationToken);
+        await MarkProcessedAsync(sendEvent.EventId, context.CancellationToken);
+    }
+
+    private async Task SendAsync(SmsSendEvent sendEvent, SmsMessage message, CancellationToken cancellationToken)
+    {
         try
         {
-            await optOut.EnsureCanSendAsync(item.TenantId, message.To, context.CancellationToken);
+            await optOut.EnsureCanSendAsync(sendEvent.TenantId, message.To, cancellationToken);
+
             var provider = providerResolver.Resolve(message.Provider);
-            var result = await provider.SendAsync(message.From, message.To, message.Body, context.CancellationToken);
-            await repository.UpdateStatusAsync(item.TenantId, item.MessageId, ParseStatus(result.Status),
-                result.ProviderMessageId, DateTimeOffset.UtcNow, context.CancellationToken);
+            var sendResult = await provider.SendAsync(message.From, message.To, message.Body, cancellationToken);
+            var status = ParseStatus(sendResult.Status);
+
+            await repository.UpdateStatusAsync(
+                sendEvent.TenantId,
+                sendEvent.MessageId,
+                status,
+                sendResult.ProviderMessageId,
+                DateTimeOffset.UtcNow,
+                cancellationToken);
         }
-        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "SMS provider rejected queued message {MessageId}.", item.MessageId);
-            await repository.UpdateStatusAsync(item.TenantId, item.MessageId, SmsStatus.Failed, null,
-                DateTimeOffset.UtcNow, context.CancellationToken);
-        }
+            logger.LogError(exception, "SMS provider rejected queued message {MessageId}.", sendEvent.MessageId);
 
-        await MarkProcessedAsync(item.EventId, context.CancellationToken);
+            await repository.UpdateStatusAsync(
+                sendEvent.TenantId,
+                sendEvent.MessageId,
+                SmsStatus.Failed,
+                null,
+                DateTimeOffset.UtcNow,
+                cancellationToken);
+        }
+    }
+
+    private async Task<bool> IsProcessedAsync(Guid eventId, CancellationToken cancellationToken)
+    {
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsSendConsumer.Consume.02.sql");
+        using var connection = connectionFactory.CreateConnection();
+
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            sql,
+            new { EventId = eventId },
+            cancellationToken: cancellationToken)) != 0;
     }
 
     private async Task MarkProcessedAsync(Guid eventId, CancellationToken cancellationToken)
     {
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsSendConsumer.MarkProcessedAsync.01.sql");
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsSendConsumer.MarkProcessedAsync.01.sql"), new { EventId = eventId }, cancellationToken: cancellationToken));
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            sql,
+            new { EventId = eventId },
+            cancellationToken: cancellationToken));
     }
+
+    private static bool IsScheduledMessageEvent(SmsSendEvent sendEvent) =>
+        sendEvent.EventId == sendEvent.MessageId;
 
     private static SmsStatus ParseStatus(string status) => status.ToLowerInvariant() switch
     {

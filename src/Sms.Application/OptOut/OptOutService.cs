@@ -2,26 +2,47 @@ namespace Sms.Application.OptOut;
 
 public sealed class OptOutService(IOptOutRepository repository)
 {
-    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    private const int MaxImportSize = 1_000;
+    private const int MaxReasonLength = 200;
+
+    private static readonly HashSet<string> StopKeywords = new(StringComparer.OrdinalIgnoreCase)
         { "STOP", "UNSUBSCRIBE", "CANCEL" };
-    private static readonly HashSet<string> StartWords = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> StartKeywords = new(StringComparer.OrdinalIgnoreCase)
         { "START" };
 
     public Task<IReadOnlyList<BlockedNumber>> ListAsync(Guid tenantId, int skip, int take, CancellationToken cancellationToken = default)
     {
-        if (skip < 0) throw new ArgumentException("skip must be zero or greater.");
+        if (skip < 0)
+            throw new ArgumentException("skip must be zero or greater.");
+
         return repository.ListAsync(tenantId, skip, Math.Clamp(take, 1, 200), cancellationToken);
     }
 
     public Task AddAsync(Guid tenantId, string phoneNumber, string? reason, CancellationToken cancellationToken = default) =>
-        repository.AddOrUpdateAsync(tenantId, PhoneNumberNormalizer.Normalize(phoneNumber), "Manual", CleanReason(reason), DateTimeOffset.UtcNow, cancellationToken);
+        repository.AddOrUpdateAsync(
+            tenantId,
+            PhoneNumberNormalizer.Normalize(phoneNumber),
+            "Manual",
+            CleanReason(reason),
+            DateTimeOffset.UtcNow,
+            cancellationToken);
 
     public async Task ImportAsync(Guid tenantId, IEnumerable<AddBlockedNumber> rows, CancellationToken cancellationToken = default)
     {
-        var values = rows.Take(1001).ToArray();
-        if (values.Length > 1000) throw new ArgumentException("A maximum of 1,000 numbers can be imported at once.");
-        foreach (var row in values)
-            await repository.AddOrUpdateAsync(tenantId, PhoneNumberNormalizer.Normalize(row.PhoneNumber), "Import", CleanReason(row.Reason), DateTimeOffset.UtcNow, cancellationToken);
+        var importRows = rows.Take(MaxImportSize + 1).ToArray();
+        if (importRows.Length > MaxImportSize)
+            throw new ArgumentException($"A maximum of {MaxImportSize:N0} numbers can be imported at once.");
+
+        foreach (var row in importRows)
+        {
+            await repository.AddOrUpdateAsync(
+                tenantId,
+                PhoneNumberNormalizer.Normalize(row.PhoneNumber),
+                "Import",
+                CleanReason(row.Reason),
+                DateTimeOffset.UtcNow,
+                cancellationToken);
+        }
     }
 
     public Task<bool> RemoveAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default) =>
@@ -29,23 +50,38 @@ public sealed class OptOutService(IOptOutRepository repository)
 
     public async Task EnsureCanSendAsync(Guid tenantId, string phoneNumber, CancellationToken cancellationToken = default)
     {
-        var normalized = PhoneNumberNormalizer.Normalize(phoneNumber);
-        if (await repository.IsBlockedAsync(tenantId, normalized, cancellationToken)) throw new BlockedRecipientException();
+        var normalizedPhoneNumber = PhoneNumberNormalizer.Normalize(phoneNumber);
+        if (await repository.IsBlockedAsync(tenantId, normalizedPhoneNumber, cancellationToken))
+            throw new BlockedRecipientException();
     }
 
     public async Task ProcessInboundAsync(Guid tenantId, string phoneNumber, string body, DateTimeOffset occurredAt, CancellationToken cancellationToken = default)
     {
-        var command = body.Trim();
-        if (StopWords.Contains(command))
-            await repository.AddOrUpdateAsync(tenantId, PhoneNumberNormalizer.Normalize(phoneNumber), "InboundKeyword", command.ToUpperInvariant(), occurredAt, cancellationToken);
-        else if (StartWords.Contains(command))
-            await repository.RemoveByPhoneAsync(tenantId, PhoneNumberNormalizer.Normalize(phoneNumber), cancellationToken);
+        var keyword = body.Trim();
+        var normalizedPhoneNumber = PhoneNumberNormalizer.Normalize(phoneNumber);
+
+        if (StopKeywords.Contains(keyword))
+        {
+            await repository.AddOrUpdateAsync(
+                tenantId,
+                normalizedPhoneNumber,
+                "InboundKeyword",
+                keyword.ToUpperInvariant(),
+                occurredAt,
+                cancellationToken);
+        }
+        else if (StartKeywords.Contains(keyword))
+        {
+            await repository.RemoveByPhoneAsync(tenantId, normalizedPhoneNumber, cancellationToken);
+        }
     }
 
     private static string? CleanReason(string? reason)
     {
         reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
-        if (reason?.Length > 200) throw new ArgumentException("Reason must be 200 characters or fewer.");
+        if (reason?.Length > MaxReasonLength)
+            throw new ArgumentException($"Reason must be {MaxReasonLength} characters or fewer.");
+
         return reason;
     }
 }

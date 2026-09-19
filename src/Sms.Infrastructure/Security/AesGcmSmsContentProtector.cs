@@ -8,6 +8,12 @@ namespace Sms.Infrastructure.Security;
 public sealed class AesGcmSmsContentProtector : ISmsContentProtector
 {
     private const byte Version = 1;
+    private const int NonceSize = 12;
+    private const int TagSize = 16;
+    private const int NonceOffset = 1;
+    private const int TagOffset = NonceOffset + NonceSize;
+    private const int CiphertextOffset = TagOffset + TagSize;
+
     private readonly byte[] _masterKey;
 
     public AesGcmSmsContentProtector(IConfiguration configuration)
@@ -16,8 +22,14 @@ public sealed class AesGcmSmsContentProtector : ISmsContentProtector
         if (string.IsNullOrWhiteSpace(encodedKey))
             throw new InvalidOperationException("Encryption:MasterKey is not configured.");
 
-        try { _masterKey = Convert.FromBase64String(encodedKey); }
-        catch (FormatException ex) { throw new InvalidOperationException("Encryption:MasterKey must be Base64 encoded.", ex); }
+        try
+        {
+            _masterKey = Convert.FromBase64String(encodedKey);
+        }
+        catch (FormatException exception)
+        {
+            throw new InvalidOperationException("Encryption:MasterKey must be Base64 encoded.", exception);
+        }
 
         if (_masterKey.Length != 32)
             throw new InvalidOperationException("Encryption:MasterKey must decode to exactly 32 bytes for AES-256.");
@@ -27,21 +39,23 @@ public sealed class AesGcmSmsContentProtector : ISmsContentProtector
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(field);
         ArgumentNullException.ThrowIfNull(plaintext);
+
         var key = DeriveTenantKey(tenantId);
-        var nonce = RandomNumberGenerator.GetBytes(12);
+        var nonce = RandomNumberGenerator.GetBytes(NonceSize);
         var plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
         var ciphertext = new byte[plaintextBytes.Length];
-        var tag = new byte[16];
+        var tag = new byte[TagSize];
+
         try
         {
-            using var aes = new AesGcm(key, tag.Length);
+            using var aes = new AesGcm(key, TagSize);
             aes.Encrypt(nonce, plaintextBytes, ciphertext, tag, AssociatedData(tenantId, messageId, field));
 
-            var payload = new byte[1 + nonce.Length + tag.Length + ciphertext.Length];
+            var payload = new byte[CiphertextOffset + ciphertext.Length];
             payload[0] = Version;
-            Buffer.BlockCopy(nonce, 0, payload, 1, nonce.Length);
-            Buffer.BlockCopy(tag, 0, payload, 13, tag.Length);
-            Buffer.BlockCopy(ciphertext, 0, payload, 29, ciphertext.Length);
+            Buffer.BlockCopy(nonce, 0, payload, NonceOffset, nonce.Length);
+            Buffer.BlockCopy(tag, 0, payload, TagOffset, tag.Length);
+            Buffer.BlockCopy(ciphertext, 0, payload, CiphertextOffset, ciphertext.Length);
             return Convert.ToBase64String(payload);
         }
         finally
@@ -55,17 +69,24 @@ public sealed class AesGcmSmsContentProtector : ISmsContentProtector
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(field);
         ArgumentException.ThrowIfNullOrWhiteSpace(protectedValue);
+
         var payload = Convert.FromBase64String(protectedValue);
-        if (payload.Length < 29 || payload[0] != Version)
+        if (payload.Length < CiphertextOffset || payload[0] != Version)
             throw new CryptographicException("Invalid encrypted SMS content payload.");
 
         var key = DeriveTenantKey(tenantId);
-        var plaintext = new byte[payload.Length - 29];
+        var plaintext = new byte[payload.Length - CiphertextOffset];
+
         try
         {
-            using var aes = new AesGcm(key, 16);
-            aes.Decrypt(payload.AsSpan(1, 12), payload.AsSpan(29), payload.AsSpan(13, 16), plaintext,
+            using var aes = new AesGcm(key, TagSize);
+            aes.Decrypt(
+                payload.AsSpan(NonceOffset, NonceSize),
+                payload.AsSpan(CiphertextOffset),
+                payload.AsSpan(TagOffset, TagSize),
+                plaintext,
                 AssociatedData(tenantId, messageId, field));
+
             return Encoding.UTF8.GetString(plaintext);
         }
         finally
@@ -79,13 +100,20 @@ public sealed class AesGcmSmsContentProtector : ISmsContentProtector
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(purpose);
         ArgumentNullException.ThrowIfNull(value);
+
         var key = DeriveTenantKey(tenantId);
-        try { return HMACSHA256.HashData(key, Encoding.UTF8.GetBytes($"{purpose}:{value}")); }
-        finally { CryptographicOperations.ZeroMemory(key); }
+        try
+        {
+            return HMACSHA256.HashData(key, Encoding.UTF8.GetBytes($"{purpose}:{value}"));
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
     }
 
-    private byte[] DeriveTenantKey(Guid tenantId) => HMACSHA256.HashData(_masterKey,
-        Encoding.UTF8.GetBytes($"sms-content-v1:{tenantId:N}"));
+    private byte[] DeriveTenantKey(Guid tenantId) =>
+        HMACSHA256.HashData(_masterKey, Encoding.UTF8.GetBytes($"sms-content-v1:{tenantId:N}"));
 
     private static byte[] AssociatedData(Guid tenantId, Guid messageId, string field) =>
         Encoding.UTF8.GetBytes($"{tenantId:N}:{messageId:N}:{field}");
