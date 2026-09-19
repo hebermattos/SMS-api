@@ -19,7 +19,7 @@ public sealed class ExampleProviderSeedSqlTests
             ["ConnectionStrings:Postgres"] = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES"),
             ["Encryption:MasterKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
         }).Build();
-        var factory = new NpgsqlConnectionFactory(configuration);
+        var factory = new SqlConnectionFactory(configuration);
         var protector = new AesGcmSecretProtector(configuration);
         var configurationCache = TenantConfigurationCacheTestFactory.Create(factory);
         var providers = new TenantSmsProviderRepository(factory, protector, configurationCache);

@@ -23,8 +23,8 @@ public sealed class AdministrationSqlTests
             ["ConnectionStrings:ReportingPostgres"] = Environment.GetEnvironmentVariable("SMS_TEST_REPORTING_POSTGRES"),
             ["Encryption:MasterKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
         }).Build();
-        var factory = new NpgsqlConnectionFactory(configuration);
-        var reportingFactory = new ReportingNpgsqlConnectionFactory(configuration);
+        var factory = new SqlConnectionFactory(configuration);
+        var reportingFactory = new ReportingSqlConnectionFactory(configuration);
         var protector = new AesGcmSecretProtector(configuration);
         var configurationCache = TenantConfigurationCacheTestFactory.Create(factory);
         var repository = new AdministrationRepository(factory, protector, configurationCache);

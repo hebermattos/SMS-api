@@ -17,7 +17,7 @@ public sealed class AlertSqlTests
         {
             ["ConnectionStrings:Postgres"] = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES")
         }).Build();
-        var repository = new AlertRepository(new NpgsqlConnectionFactory(configuration));
+        var repository = new AlertRepository(new SqlConnectionFactory(configuration));
         var tenantId = Guid.NewGuid(); var otherTenantId = Guid.NewGuid();
         var ruleId = Guid.NewGuid(); var message1 = Guid.NewGuid(); var message2 = Guid.NewGuid();
         using var connection = new NpgsqlConnection(configuration.GetConnectionString("Postgres"));

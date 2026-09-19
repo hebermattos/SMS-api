@@ -14,7 +14,7 @@ public sealed class AdministratorSqlTests
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         { ["ConnectionStrings:Postgres"] = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES") }).Build();
-        var factory = new NpgsqlConnectionFactory(configuration);
+        var factory = new SqlConnectionFactory(configuration);
         var repository = new AdministratorRepository(factory);
         var authentication = new AdministratorAuthenticationService(repository);
         var username = "admin-" + Guid.NewGuid().ToString("N");
