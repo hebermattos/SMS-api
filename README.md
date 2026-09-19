@@ -54,6 +54,21 @@ docker compose up --build
 
 Docker is intended for local testing only. Never use fallback Compose credentials outside development.
 
+Docker Compose defines soft memory reservations for each service:
+
+| Service | Memory reservation |
+| --- | ---: |
+| SQL Server | 2 GB |
+| RabbitMQ | 256 MB |
+| Redis | 64 MB |
+| API | 256 MB |
+| UI | 32 MB |
+| Database initialization | 128 MB |
+| Provider initialization | 128 MB |
+| Webhook tests | 256 MB |
+
+These values are resource reservations, not hard memory limits. Docker may allow a container to use more memory when the host has capacity.
+
 ## Features
 
 ### Tenant

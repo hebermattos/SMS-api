@@ -1,6 +1,7 @@
 services:
   rabbitmq:
     image: rabbitmq:3.13-management
+    mem_reservation: 256m
     environment:
       RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-sms}"
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:-sms}"
@@ -13,6 +14,7 @@ services:
 
   redis:
     image: redis:7.4-alpine
+    mem_reservation: 64m
     ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -22,6 +24,7 @@ services:
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    mem_reservation: 2g
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "${SQL_SA_PASSWORD:-SmsApi_Local_2026!}"
@@ -37,6 +40,7 @@ services:
 
   db-init:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    mem_reservation: 128m
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -74,6 +78,7 @@ services:
         fi
 
   provider-init:
+    mem_reservation: 128m
     build:
       context: .
       dockerfile: database/seeds/Sms.Seed/Dockerfile
@@ -89,6 +94,7 @@ services:
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
 
   api:
+    mem_reservation: 256m
     build:
       context: .
       dockerfile: src/Sms.Api/Dockerfile
@@ -118,6 +124,7 @@ services:
 
   webhook-tests:
     profiles: [tests]
+    mem_reservation: 256m
     build:
       context: .
       dockerfile: tests/Dockerfile
@@ -128,6 +135,7 @@ services:
       SMS_TEST_SQLSERVER: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
 
   ui:
+    mem_reservation: 32m
     build:
       context: .
       dockerfile: ui/Dockerfile
