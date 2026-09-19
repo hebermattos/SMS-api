@@ -23,7 +23,7 @@ public sealed class AdministrationControllerTests
         Assert.IsType<OkObjectResult>(await controller.CreateClient(repo.Tenant.Id, new("client"), default));
         Assert.IsType<NoContentResult>(await controller.SetClientState(repo.Tenant.Id, repo.ClientId, new(false), default));
         Assert.IsType<OkObjectResult>(await controller.RotateSecret(repo.Tenant.Id, repo.ClientId, default));
-        Assert.IsType<OkObjectResult>(controller.Catalog());
+        Assert.IsType<OkObjectResult>(await controller.Catalog(default));
         Assert.IsType<OkObjectResult>(await controller.Providers(repo.Tenant.Id, default));
         Assert.IsType<NoContentResult>(await controller.SaveProvider(repo.Tenant.Id, "Twilio", new("account", "+15550000001", true, true, "secret", null), default));
         Assert.Equal(repo.Tenant.Id, repo.SavedProvider!.TenantId);
