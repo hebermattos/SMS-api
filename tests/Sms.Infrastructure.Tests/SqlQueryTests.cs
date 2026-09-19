@@ -12,7 +12,7 @@ public sealed class SqlQueryTests
         var first = SqlQuery.Load(path);
         var second = SqlQuery.Load(path);
 
-        Assert.Contains("FROM dbo.SmsMessages", first, StringComparison.Ordinal);
+        Assert.Contains("FROM SmsMessages", first, StringComparison.Ordinal);
         Assert.Same(first, second);
     }
 

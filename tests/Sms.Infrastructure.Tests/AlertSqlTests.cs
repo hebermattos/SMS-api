@@ -60,7 +60,7 @@ public sealed class AlertSqlTests
                 SET CreatedAt=CURRENT_TIMESTAMP
                 WHERE TenantId=@Tenant;
                 UPDATE AlertStatusCounters
-                SET BucketStartUtc=DATEADD(MINUTE,DATEDIFF(MINUTE,0,CAST(CURRENT_TIMESTAMP AS datetime2)),0) AT TIME ZONE 'UTC',
+                SET BucketStartUtc=date_trunc('minute', CURRENT_TIMESTAMP),
                     UpdatedAtUtc=CURRENT_TIMESTAMP
                 WHERE TenantId=@Tenant;
                 """, new { Tenant = tenantId });
