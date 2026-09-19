@@ -1,20 +1,16 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
 using Dapper;
+using MassTransit;
 using Microsoft.Extensions.Hosting;
-using RabbitMQ.Client;
+using Microsoft.Extensions.Logging;
 using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Messaging;
 
 public sealed class AlertEvaluationOutboxPublisher(
     SqlConnectionFactory connectionFactory,
-    IConfiguration configuration,
+    IPublishEndpoint publishEndpoint,
     ILogger<AlertEvaluationOutboxPublisher> logger) : BackgroundService
 {
-    private readonly RabbitMqAlertOptions options = RabbitMqAlertOptions.From(configuration);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -43,27 +39,10 @@ public sealed class AlertEvaluationOutboxPublisher(
             ORDER BY CreatedAtUtc, Id;
             """, cancellationToken: cancellationToken));
 
-        if (!rows.Any()) return;
-
-        var factory = new ConnectionFactory
-        {
-            HostName = options.Host, Port = options.Port, UserName = options.User,
-            Password = options.Password, VirtualHost = options.VirtualHost,
-            DispatchConsumersAsync = true
-        };
-        using var rabbit = factory.CreateConnection();
-        using var channel = rabbit.CreateModel();
-        channel.ExchangeDeclare(options.Exchange, ExchangeType.Direct, durable: true, autoDelete: false);
-        channel.QueueDeclare(options.Queue, durable: true, exclusive: false, autoDelete: false);
-        channel.QueueBind(options.Queue, options.Exchange, options.RoutingKey);
-        var properties = channel.CreateBasicProperties();
-        properties.Persistent = true;
-
         foreach (var row in rows)
         {
-            var body = JsonSerializer.SerializeToUtf8Bytes(new AlertEvaluationEvent(
-                row.EventId, row.TenantId, row.Provider, row.Status, row.OccurredAtUtc));
-            channel.BasicPublish(options.Exchange, options.RoutingKey, properties, body);
+            await publishEndpoint.Publish(new AlertEvaluationEvent(
+                row.EventId, row.TenantId, row.Provider, row.Status, row.OccurredAtUtc), cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(
                 "UPDATE dbo.AlertEvaluationOutbox SET PublishedAtUtc=SYSUTCDATETIME(), AttemptCount=AttemptCount+1, LastAttemptAtUtc=SYSUTCDATETIME() WHERE Id=@Id AND PublishedAtUtc IS NULL;",
                 new { Id = row.EventId }, cancellationToken: cancellationToken));
