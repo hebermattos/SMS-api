@@ -1,31 +1,31 @@
 # SMS API
 
-Multi-tenant REST API for sending, receiving, tracking, and querying SMS messages.
+Multi-tenant REST API for sending, receiving, scheduling, tracking, and querying SMS messages.
 
 ## Stack
 
 - ASP.NET Core / .NET 8
-- SQL Server and Dapper
-- Angular 21 administration UI
+- SQL Server + Dapper
+- Angular 21
 - JWT authentication
-- Twilio and Bandwidth providers
+- Twilio and Bandwidth
+- RabbitMQ + MassTransit
 - OpenTelemetry
-- RabbitMQ with MassTransit for reliable SMS delivery and alert evaluation
 - Docker Compose for local testing
 
 ## Quick start
 
-Requirements: Docker with Docker Compose.
+Requires Docker with Docker Compose.
 
 ```bash
 docker compose up --build
 ```
 
-Open:
+Local services:
 
 - UI: http://localhost:4200
-- API: http://localhost:8080 (redirects to Swagger in Development)
-- Swagger: http://localhost:8080/swagger (Development only)
+- API: http://localhost:8080
+- Swagger: http://localhost:8080/swagger
 - SQL Server: localhost,1434
 
 Local credentials:
@@ -36,108 +36,47 @@ Platform:  platform / platform
 RabbitMQ:  sms / sms
 ```
 
-Override local administrator settings with `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `ADMIN_EMAIL`.
+Override administrator defaults with `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `ADMIN_EMAIL`.
 
-Reset local databases:
+Reset the local environment:
 
 ```bash
 docker compose down --remove-orphans --volumes
 docker compose up --build
 ```
 
-Docker is for local testing only. The Compose fallback credentials must never be used outside local development.
-The local API exposes HTTP only; HTTPS redirection remains enabled outside Development.
+Docker is intended for local testing only. Never use fallback Compose credentials outside development.
 
-## UI
+## Features
 
-The Angular UI provides:
+### Tenant
 
-- Platform administration: administrators, tenants, API clients, and providers.
-- Tenant operations: send SMS, history, status history, reports, configurable alert rules, in-UI alerts, opt-out management, and tenant logs.
+- Send and schedule SMS messages.
+- Query message and status history.
+- Reports and overview dashboards.
+- Configurable alert rules and in-UI alerts.
+- Opt-out management with CSV import/export.
+- Tenant user administration.
+- Tenant-isolated activity logs.
 
-For frontend development:
+### Platform
 
-```bash
-cd ui
-npm ci
-npm start
-```
+- Manage platform administrators.
+- Manage tenants, API clients, and SMS providers.
+- View platform reports and system logs.
 
-The API must run on port 8080. Use `SMS_API_URL` to change the development proxy.
+Swagger documents the complete API surface.
 
-## API
+## Messaging
 
-Public:
+The provider is selected per request. All providers implement `ISmsProvider`, while provider-specific code remains isolated from the application core.
 
-```text
-GET  /health
-POST /api/v1/auth/token
-POST /api/v1/portal/auth/token
-POST /api/v1/admin/auth/token
-POST /api/v1/webhooks/twilio/inbound
-POST /api/v1/webhooks/twilio/status
-POST /api/v1/webhooks/bandwidth/inbound
-POST /api/v1/webhooks/bandwidth/status
-```
+- **Twilio:** signed callbacks using `X-Twilio-Signature`.
+- **Bandwidth:** OAuth 2.0 Client Credentials and authenticated callbacks.
 
-Tenant-protected:
+Immediate messages are queued through RabbitMQ/MassTransit. Scheduled messages are stored in UTC and queued when due.
 
-```text
-POST /api/v1/messages
-GET  /api/v1/messages
-GET  /api/v1/messages/{id}
-GET  /api/v1/messages/{id}/status-history
-GET  /api/v1/logs
-GET  /api/v1/overview
-GET  /api/v1/reports/sms
-GET  /api/v1/tenant/users
-POST /api/v1/tenant/users
-PUT  /api/v1/tenant/users/{id}/state
-POST /api/v1/tenant/users/{id}/reset-password
-GET  /api/v1/alerts
-GET  /api/v1/alerts/rules
-POST /api/v1/alerts/rules
-PUT  /api/v1/alerts/rules/{id}
-DELETE /api/v1/alerts/rules/{id}
-POST /api/v1/alerts/{id}/read
-POST /api/v1/alerts/read-all
-GET  /api/v1/opt-outs
-POST /api/v1/opt-outs
-POST /api/v1/opt-outs/import
-GET  /api/v1/opt-outs/export
-DELETE /api/v1/opt-outs/{id}
-```
-
-Platform-administrator-protected:
-
-```text
-GET  /api/v1/admin/administrators
-POST /api/v1/admin/administrators
-PUT  /api/v1/admin/administrators/{id}/state
-POST /api/v1/admin/administrators/{id}/reset-password
-GET  /api/v1/admin/platform-users
-POST /api/v1/admin/platform-users
-PUT  /api/v1/admin/platform-users/{id}/state
-POST /api/v1/admin/platform-users/{id}/reset-password
-GET  /api/v1/admin/reports/sms
-GET  /api/v1/admin/time-zones
-GET  /api/v1/admin/tenants
-POST /api/v1/admin/tenants
-GET  /api/v1/admin/tenants/{id}
-PUT  /api/v1/admin/tenants/{id}
-GET  /api/v1/admin/tenants/{id}/clients
-POST /api/v1/admin/tenants/{id}/clients
-PUT  /api/v1/admin/tenants/{id}/clients/{id}/state
-POST /api/v1/admin/tenants/{id}/clients/{id}/rotate-secret
-GET  /api/v1/admin/providers/catalog
-GET  /api/v1/admin/tenants/{id}/providers
-PUT  /api/v1/admin/tenants/{id}/providers/{provider}
-GET  /api/v1/admin/system-logs
-```
-
-Tenant access is always derived from the authenticated JWT. Callers cannot select a tenant through request parameters.
-
-To schedule an outbound message, send `scheduledAt` as a local date and time without a UTC offset. The API interprets it in the authenticated tenant's IANA time zone, validates daylight-saving transitions, and stores the resulting instant in UTC. Omit the field to send immediately. Scheduled messages can be created up to one year ahead.
+To schedule a message, send `scheduledAt` as a local date/time without an offset. The API converts it using the tenant IANA time zone.
 
 ```json
 {
@@ -148,25 +87,11 @@ To schedule an outbound message, send `scheduledAt` as a local date and time wit
 }
 ```
 
-## Providers
-
-All providers implement `ISmsProvider` and are selected through `ISmsProviderResolver`.
-
-- Twilio: signed callbacks using `X-Twilio-Signature`.
-- Bandwidth: OAuth 2.0 Client Credentials and Basic-authenticated callbacks.
-
-Immediate outbound messages are persisted with status `Queued`, then their RabbitMQ event is published immediately. Scheduled outbound messages are persisted with status `Scheduled` and a UTC `ScheduledAtUtc`; a background publisher queues them only when they become due. A MassTransit consumer receives the event, loads the tenant-specific provider configuration, sends the SMS, and updates its status asynchronously. Provider credentials are tenant-specific and encrypted at rest. Configure Bandwidth callbacks at:
-
-```text
-/api/v1/webhooks/bandwidth/inbound
-/api/v1/webhooks/bandwidth/status
-```
-
-Use HTTPS for real provider callbacks.
+Inbound `STOP`, `UNSUBSCRIBE`, and `CANCEL` opt the number out; `START` removes the block.
 
 ## Configuration
 
-Important environment variables:
+Main environment variables:
 
 ```text
 ConnectionStrings__SqlServer
@@ -185,44 +110,36 @@ RabbitMq__User
 RabbitMq__Password
 ```
 
-`Encryption__MasterKey` must be Base64 for exactly 32 bytes. `Sms__PublicBaseUrl` must be an HTTPS URL without credentials, query strings, or fragments.
+`Encryption__MasterKey` must be Base64 for exactly 32 bytes. Use HTTPS for real provider callbacks and outside local development.
 
 ## Database
 
-Runtime Dapper queries are stored as embedded `.sql` resources under `src/Sms.Infrastructure/Sql` and loaded through a cached query loader.
+The project uses Dapper and does not use migrations. Runtime SQL is stored under `src/Sms.Infrastructure/Sql`.
 
-The project does not use migrations. Initialize new databases with:
+Fresh databases are initialized from:
 
-- `database/schema.sql` for the application database (`SmsApi`)
-- `database/logs-schema.sql` for the observability database (`SmsApiLogs`)
-- `database/reporting-schema.sql` for the reporting database (`SmsApiReporting`)
+- `database/schema.sql` — application data
+- `database/logs-schema.sql` — logs, traces, and metrics
+- `database/reporting-schema.sql` — reporting projections
 
-The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, minute-level alert status counters, scheduled-delivery state, an inbox for SMS-send deduplication, and transactional outbox/inbox tables for alert evaluation and reporting updates. Status history inserts create alert-evaluation outbox events in the same SQL transaction; a MassTransit publisher delivers them through RabbitMQ and an idempotent consumer evaluates only the affected tenant/status/provider.
+All dates are stored in UTC. Each tenant has an IANA time zone used for display, filters, and scheduled delivery.
 
-The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics. The `SmsApiReporting` database stores tenant-level SMS overview projections and an idempotent reporting inbox. Reporting projections are updated asynchronously through RabbitMQ/MassTransit so tenant overview queries do not need to aggregate the full message history on every request.
-
-Each tenant has an isolated opt-out list. Numbers are encrypted at rest and indexed using a tenant-specific keyed fingerprint. Inbound `STOP`, `UNSUBSCRIBE`, and `CANCEL` messages block future outbound messages after webhook authentication; `START` removes the block. Tenant administrators can manage, import, and export the list in the UI. Imports accept up to 1,000 rows with `PhoneNumber` and optional `Reason` columns.
-
-All dates are stored in UTC. Each tenant has a unique code and an IANA time zone for display and date filters.
-
-Alert rules count SMS status transitions within the configured window. A once-only rule fires once and remains triggered until the rule is updated. A repeating rule can fire again after its configured interval while the threshold remains satisfied. Alert evaluation is event-driven through RabbitMQ. The outbox makes database changes durable across broker outages, and the inbox prevents duplicate alert notifications.
+Application data, logs, reporting data, opt-outs, provider credentials, alerts, and message processing are tenant-isolated.
 
 ## Security
 
-- JWT authorization separates tenant users, tenant administrators, and platform administrators.
-- Tenant isolation is enforced from authenticated claims.
-- SMS content and provider secrets use application-side AES-256-GCM encryption.
-- Passwords and client secrets use PBKDF2-SHA256 with a minimum of 600,000 iterations.
-- Webhooks validate provider credentials or signatures.
-- Customer logs are tenant-isolated.
-- Technical logs contain only error-level events.
+- Tenant ownership is derived from authenticated JWT claims.
+- JWT separates tenant users, tenant administrators, and platform administrators.
+- SMS content and provider secrets use AES-256-GCM encryption.
+- Passwords and client secrets use PBKDF2-SHA256 with at least 600,000 iterations.
+- Provider webhooks are authenticated whenever supported.
+- Technical logs store only error-level events.
 - Secrets, tokens, authorization headers, SMS bodies, and full phone numbers must not be logged.
-- Use HTTPS outside local development.
-- MFA and self-service password recovery are not implemented.
+- MFA and self-service password recovery are not yet implemented.
 
 ## Provisioning
 
-Create the first administrator outside Compose:
+Create the first platform administrator outside Compose:
 
 ```bash
 dotnet run --project tools/Sms.Provision -- --admin
@@ -230,45 +147,9 @@ dotnet run --project tools/Sms.Provision -- --admin
 
 Provide `ConnectionStrings__SqlServer`, `Admin__Username`, `Admin__Password`, and `Admin__Email` through the environment.
 
-Create a tenant through the authenticated platform-administrator API or UI. The generated client secret is returned once.
-
-## Roadmap
-
-The roadmap is ordered by priority and may evolve as operational needs and customer feedback become clearer. Completed capabilities remain documented in the sections above.
-
-### Phase 1 — Account security
-
-- [ ] Multi-factor authentication for platform and tenant administrators.
-- [ ] Secure self-service password recovery with short-lived, single-use tokens.
-- [ ] Active-session management and token revocation.
-- [ ] Configurable password and account-lockout policies.
-
-### Phase 2 — Alert delivery and operations
-
-- [ ] Deliver alerts by email and authenticated webhooks in addition to the UI.
-- [ ] Add retry policies, delivery history, and dead-letter handling for alert notifications.
-- [ ] Provide operational dashboards for RabbitMQ queues, outbox backlog, provider latency, and failure rates.
-- [ ] Add configurable data-retention and cleanup policies for messages, user activity, system logs, traces, and metrics.
-
-### Phase 3 — Messaging capabilities
-
-- [x] Schedule messages for future delivery in the tenant time zone.
-- [ ] Support bulk sends with validation, progress tracking, cancellation, and per-recipient results.
-- [ ] Add message templates with tenant-level ownership and variable validation.
-- [ ] Add tenant-configurable inbound auto-replies and routing rules.
-
-### Phase 4 — Platform extensibility
-
-- [ ] Add provider failover and configurable routing policies.
-- [ ] Add provider health and cost reporting.
-- [ ] Publish a documented extension guide and contract tests for new SMS providers.
-- [ ] Add another SMS provider to validate the extension model.
-
-Roadmap items are not release commitments. Security, tenant isolation, observability, documentation, and automated tests remain acceptance criteria for every feature.
+Tenants can then be created through the platform administration UI or API. Generated client secrets are returned once.
 
 ## Tests and CI
-
-Run locally:
 
 ```bash
 dotnet restore Sms.Api.sln
@@ -276,20 +157,51 @@ dotnet build Sms.Api.sln --configuration Release
 dotnet test Sms.Api.sln --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 ```
 
-Pushes to `main` automatically build and test the .NET solution and Angular UI and enforce at least 80% backend line coverage. SQL Server integration tests and the Docker Compose end-to-end bootstrap run only when the CI workflow is started manually with **Run workflow**. Manual runs execute backend and frontend checks first, SQL integration second, and Compose validation last.
+Pushes to `main` build and test the backend and Angular UI and require at least **80% backend line coverage**.
+
+SQL integration tests and the Docker Compose bootstrap run only from a manually started workflow.
 
 ## Architecture
 
 ![SMS API architecture](docs/images/sms-api-architecture.svg)
 
 ```text
-src/Sms.Api             HTTP, authentication, authorization
-src/Sms.Application     Use cases and contracts
-src/Sms.Domain          Domain models
-src/Sms.Infrastructure  SQL Server, encryption, providers, observability
-src/Sms.Infrastructure/Sql  Embedded runtime SQL queries grouped by responsibility
-ui                      Angular UI
-database                Canonical schemas and test seeds
-tools/Sms.Provision     Bootstrap provisioning
-tests                   Unit and SQL integration tests
+src/Sms.Api              HTTP, authentication, authorization
+src/Sms.Application      Use cases and contracts
+src/Sms.Domain           Domain models
+src/Sms.Infrastructure   SQL, providers, encryption, observability
+ui                       Angular UI
+database                 Database schemas and test seeds
+tools/Sms.Provision      Bootstrap provisioning
+tests                    Unit and integration tests
 ```
+
+## Roadmap
+
+### Account security
+
+- [ ] MFA for platform and tenant administrators.
+- [ ] Self-service password recovery.
+- [ ] Session management and token revocation.
+- [ ] Configurable password and lockout policies.
+
+### Operations
+
+- [ ] Email and webhook alert delivery.
+- [ ] Alert retry history and dead-letter handling.
+- [ ] Operational dashboards for queues, backlog, provider latency, and failures.
+- [ ] Configurable data retention.
+
+### Messaging
+
+- [x] Scheduled delivery in the tenant time zone.
+- [ ] Bulk sends with validation, progress, cancellation, and per-recipient results.
+- [ ] Message templates.
+- [ ] Inbound auto-replies and routing rules.
+
+### Extensibility
+
+- [ ] Provider failover and routing policies.
+- [ ] Provider health and cost reporting.
+- [ ] Provider extension guide and contract tests.
+- [ ] Additional provider implementation.
