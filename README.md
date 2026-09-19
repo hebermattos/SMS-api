@@ -9,7 +9,7 @@ Multi-tenant REST API for sending, receiving, scheduling, tracking, and querying
 ## Stack
 
 - ASP.NET Core / .NET 8
-- SQL Server + Dapper
+- PostgreSQL 17 + Dapper
 - Angular 21
 - JWT authentication
 - Twilio and Bandwidth
@@ -32,7 +32,7 @@ Local services:
 - API: http://localhost:8080
 - Swagger: http://localhost:8080/swagger
 - Health: http://localhost:8080/health
-- SQL Server: localhost,1434
+- PostgreSQL: localhost:5432
 - Redis: localhost:6379
 
 Local credentials:
@@ -58,7 +58,7 @@ Docker Compose defines soft memory reservations for each service:
 
 | Service | Memory reservation |
 | --- | ---: |
-| SQL Server | 2 GB |
+| PostgreSQL | 512 MB |
 | RabbitMQ | 256 MB |
 | Redis | 64 MB |
 | API | 256 MB |
@@ -118,9 +118,9 @@ Inbound `STOP`, `UNSUBSCRIBE`, and `CANCEL` opt the number out; `START` removes 
 Main environment variables:
 
 ```text
-ConnectionStrings__SqlServer
-ConnectionStrings__LogsSqlServer
-ConnectionStrings__ReportingSqlServer
+ConnectionStrings__Postgres
+ConnectionStrings__LogsPostgres
+ConnectionStrings__ReportingPostgres
 ConnectionStrings__Redis
 Cache__Enabled
 Jwt__Issuer
@@ -142,9 +142,9 @@ RabbitMq__Password
 
 `GET /health` checks the API dependencies and returns their individual status and latency.
 
-- `sql.application` — application database; failure makes the API unhealthy.
-- `sql.observability` — logs, traces, and metrics database.
-- `sql.reporting` — reporting database.
+- `postgres.application` — application database; failure makes the API unhealthy.
+- `postgres.observability` — logs, traces, and metrics database.
+- `postgres.reporting` — reporting database.
 - `redis` — Redis connectivity used by the caches; reports `Healthy` with `Cache is disabled.` when caching is disabled.
 - `rabbitmq` — RabbitMQ TCP connectivity.
 - `twilio` — Twilio API reachability.
@@ -188,7 +188,7 @@ Create the first platform administrator outside Compose:
 dotnet run --project tools/Sms.Provision -- --admin
 ```
 
-Provide `ConnectionStrings__SqlServer`, `Admin__Username`, `Admin__Password`, and `Admin__Email` through the environment.
+Provide `ConnectionStrings__Postgres`, `Admin__Username`, `Admin__Password`, and `Admin__Email` through the environment.
 
 Tenants can then be created through the platform administration UI or API. Generated client secrets are returned once.
 
@@ -202,7 +202,7 @@ dotnet test Sms.Api.sln --configuration Release --collect:"XPlat Code Coverage" 
 
 Pushes to `main` build and test the backend and Angular UI and require at least **80% backend line coverage**.
 
-SQL integration tests and the Docker Compose bootstrap run only from a manually started workflow.
+PostgreSQL integration tests and the Docker Compose bootstrap run only from a manually started workflow.
 
 ## Architecture
 

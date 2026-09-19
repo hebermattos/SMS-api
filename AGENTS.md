@@ -9,7 +9,7 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 ## Technology and structure
 
 - Use C# and .NET 8 with ASP.NET Core controllers.
-- Use SQL Server and Dapper. Do not introduce Entity Framework.
+- Use PostgreSQL and Dapper. Do not introduce Entity Framework.
 - Preserve the current dependency direction:
   - `Sms.Domain`: domain models and enums with no infrastructure dependencies.
   - `Sms.Application`: use cases and provider-independent interfaces.
@@ -43,7 +43,7 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 
 - Encrypt provider secrets and sensitive provider settings in the application with AES-256-GCM before database persistence.
 - Encrypt SMS sender, recipient, and body in the application before database persistence. Decrypt them only after a tenant-scoped query succeeds.
-- Keep the Base64 master key outside SQL Server and outside the repository. Plaintext secrets may exist only in memory while required.
+- Keep the Base64 master key outside PostgreSQL and outside the repository. Plaintext secrets may exist only in memory while required.
 - Never commit credentials, tokens, production connection strings, encryption keys, or real customer data.
 - Use fixed-time comparison for secrets and webhook signatures where applicable.
 - Do not return provider error bodies directly to API clients.
@@ -64,7 +64,7 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 ## Observability and customer-visible logs
 
 - Use `ILogger<T>` and OpenTelemetry for structured logs, traces, and metrics.
-- Store operational logs in the separate database configured by `ConnectionStrings__LogsSqlServer`; do not mix them with SMS application tables.
+- Store operational logs in the separate database configured by `ConnectionStrings__LogsPostgres`; do not mix them with SMS application tables.
 - Include safe correlation fields where available: `TenantId`, `MessageId`, `Provider`, `TraceId`, and `SpanId`.
 - Customer log access must be authenticated and filtered by the JWT tenant claim.
 - Tenant-less technical events are support-only and must not be returned by customer-facing endpoints.
@@ -92,7 +92,7 @@ dotnet build Sms.Api.sln --configuration Release --no-restore
 dotnet test Sms.Api.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 ```
 
-- When persistence behavior changes, also validate it against SQL Server; unit tests alone are not sufficient for Dapper SQL correctness.
+- When persistence behavior changes, also validate it against PostgreSQL; unit tests alone are not sufficient for Dapper SQL correctness.
 
 ## Codex IDE restrictions
 
