@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Sms.Api.Health;
+using Sms.Infrastructure.Caching;
 
 namespace Sms.Infrastructure.Tests;
 
@@ -52,7 +53,7 @@ public sealed class DependencyHealthCheckTests
     [Fact]
     public async Task RedisHealthCheck_ReturnsHealthyWhenRedisResponds()
     {
-        var check = new DependencyHealthChecks.RedisHealthCheck(new FakeDistributedCache());
+        var check = new DependencyHealthChecks.RedisHealthCheck(new FakeDistributedCache(), new CacheOptions(true));
 
         var result = await check.CheckHealthAsync(Context(check, HealthStatus.Degraded));
 
@@ -63,12 +64,25 @@ public sealed class DependencyHealthCheckTests
     [Fact]
     public async Task RedisHealthCheck_ReturnsConfiguredFailureStatusWhenRedisFails()
     {
-        var check = new DependencyHealthChecks.RedisHealthCheck(new ThrowingDistributedCache());
+        var check = new DependencyHealthChecks.RedisHealthCheck(new ThrowingDistributedCache(), new CacheOptions(true));
 
         var result = await check.CheckHealthAsync(Context(check, HealthStatus.Degraded));
 
         Assert.Equal(HealthStatus.Degraded, result.Status);
         Assert.Equal("Redis connection failed.", result.Description);
+    }
+
+    [Fact]
+    public async Task RedisHealthCheck_ReturnsHealthyWithoutAccessingRedisWhenCacheIsDisabled()
+    {
+        var check = new DependencyHealthChecks.RedisHealthCheck(
+            new ThrowingDistributedCache(),
+            new CacheOptions(false));
+
+        var result = await check.CheckHealthAsync(Context(check, HealthStatus.Degraded));
+
+        Assert.Equal(HealthStatus.Healthy, result.Status);
+        Assert.Equal("Cache is disabled.", result.Description);
     }
 
     [Fact]

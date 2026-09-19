@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Sms.Application.Common;
 using Sms.Application.Providers;
 using Sms.Infrastructure.Providers;
+using Sms.Infrastructure.Caching;
 
 namespace Sms.Infrastructure.Tests;
 
@@ -40,6 +41,21 @@ public sealed class BandwidthSmsProviderTests
     }
 
     [Fact]
+    public async Task SendAsync_DoesNotReuseOAuthTokenWhenCacheIsDisabled()
+    {
+        var tenant=Guid.NewGuid();
+        var messaging=new RecordingHandler(HttpStatusCode.Accepted, """{"id":"m1"}""");
+        var oauth=new RecordingHandler(HttpStatusCode.OK, """{"access_token":"token","expires_in":3600}""");
+        var provider=Create(tenant,messaging,oauth,Config(tenant),cacheEnabled:false);
+
+        await provider.SendAsync("", "+15550000002", "first");
+        await provider.SendAsync("", "+15550000003", "second");
+
+        Assert.Equal(2,oauth.RequestCount);
+        Assert.Equal(2,messaging.RequestCount);
+    }
+
+    [Fact]
     public async Task SendAsync_RejectsFromOverride()
     {
         var tenant=Guid.NewGuid();
@@ -56,7 +72,12 @@ public sealed class BandwidthSmsProviderTests
         await Assert.ThrowsAsync<InvalidOperationException>(()=>provider.SendAsync("","+2","x"));
     }
 
-    private static BandwidthSmsProvider Create(Guid tenant,HttpMessageHandler messaging,HttpMessageHandler oauth,TenantSmsProviderConfiguration config)
+    private static BandwidthSmsProvider Create(
+        Guid tenant,
+        HttpMessageHandler messaging,
+        HttpMessageHandler oauth,
+        TenantSmsProviderConfiguration config,
+        bool cacheEnabled = true)
     {
         var factory=new Factory(new HttpClient(oauth){BaseAddress=new Uri("https://api.bandwidth.com/")});
         return new BandwidthSmsProvider(
@@ -64,7 +85,8 @@ public sealed class BandwidthSmsProviderTests
             factory,
             new TenantContext(tenant),
             new Repo(config),
-            new TestDistributedCache());
+            new TestDistributedCache(),
+            new CacheOptions(cacheEnabled));
     }
 
     private static TenantSmsProviderConfiguration Config(Guid tenant)=>

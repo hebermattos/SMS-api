@@ -8,6 +8,7 @@ using Sms.Application.Administration;
 using Sms.Application.Auth;
 using Sms.Application.Providers;
 using Sms.Infrastructure.Persistence;
+using Sms.Infrastructure.Caching;
 
 namespace Sms.Infrastructure.Tests;
 
@@ -114,7 +115,24 @@ public sealed class TenantConfigurationCacheTests
         Assert.Contains($"tenant-config:{tenantId:N}", distributed.RemovedKeys);
     }
 
-    private static TenantConfigurationCache Create(IDistributedCache cache)
+    [Fact]
+    public async Task InvalidateAsync_DoesNotTouchDistributedCacheWhenCacheIsDisabled()
+    {
+        var tenantId = Guid.NewGuid();
+        var previous = new TenantConfigurationSnapshot(
+            new TenantSummary(tenantId, "Tenant", "UTC", true, DateTimeOffset.UtcNow),
+            [new ClientSummary(Guid.NewGuid(), "client-one", true, DateTimeOffset.UtcNow)],
+            [new TenantSmsProviderConfiguration(tenantId, "Twilio", "account", "secret", "+15550000001", true, true)]);
+
+        var distributed = new RecordingDistributedCache();
+        var cache = Create(distributed, enabled: false);
+
+        await cache.InvalidateAsync(tenantId, previous);
+
+        Assert.Empty(distributed.RemovedKeys);
+    }
+
+    private static TenantConfigurationCache Create(IDistributedCache cache, bool enabled = true)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -126,6 +144,7 @@ public sealed class TenantConfigurationCacheTests
         return new TenantConfigurationCache(
             new SqlConnectionFactory(configuration),
             cache,
+            new CacheOptions(enabled),
             NullLogger<TenantConfigurationCache>.Instance);
     }
 
