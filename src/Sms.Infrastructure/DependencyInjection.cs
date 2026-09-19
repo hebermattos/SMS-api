@@ -13,6 +13,7 @@ using Sms.Application.Tenants;
 using Sms.Infrastructure.Persistence;
 using Sms.Infrastructure.Providers;
 using Sms.Infrastructure.Security;
+using Sms.Infrastructure.Messaging;
 
 namespace Sms.Infrastructure;
 
@@ -21,6 +22,8 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<SqlConnectionFactory>();
+        services.AddSingleton<AlertEvaluationOutboxPublisher>();
+        services.AddSingleton<AlertEvaluationConsumer>();
         services.AddSingleton<LogsSqlConnectionFactory>();
         services.AddSingleton<ISecretProtector, AesGcmSecretProtector>();
         services.AddSingleton<ISmsContentProtector, AesGcmSmsContentProtector>();

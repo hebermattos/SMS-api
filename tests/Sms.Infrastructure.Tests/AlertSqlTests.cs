@@ -32,6 +32,8 @@ public sealed class AlertSqlTests
                 INSERT dbo.SmsMessageStatusHistory(Id,TenantId,MessageId,Status,CreatedAt) VALUES
                     (NEWID(),@Tenant,@Message1,4,SYSUTCDATETIME()),
                     (NEWID(),@Tenant,@Message2,4,SYSUTCDATETIME());
+                INSERT dbo.AlertStatusCounters(TenantId,Provider,Status,BucketStartUtc,MessageCount,UpdatedAtUtc)
+                VALUES (@Tenant,N'Twilio',4,DATEADD(MINUTE,DATEDIFF(MINUTE,0,CAST(SYSUTCDATETIME() AS datetime2)),0) AT TIME ZONE 'UTC',2,SYSUTCDATETIME());
                 """, new { Tenant = tenantId, Other = otherTenantId, Message1 = message1, Message2 = message2 });
 
             await repository.CreateRuleAsync(new(ruleId, tenantId, "Failures", "Twilio", SmsStatus.Failed,

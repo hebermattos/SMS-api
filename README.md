@@ -10,6 +10,7 @@ Multi-tenant REST API for sending, receiving, tracking, and querying SMS message
 - JWT authentication
 - Twilio and Bandwidth providers
 - OpenTelemetry
+- RabbitMQ for reliable alert evaluation
 - Docker Compose for local testing
 
 ## Quick start
@@ -147,7 +148,10 @@ Jwt__ExpirationMinutes
 Encryption__MasterKey
 Sms__DefaultProvider
 Sms__PublicBaseUrl
-Alerts__EvaluationSeconds
+RabbitMq__Host
+RabbitMq__Port
+RabbitMq__User
+RabbitMq__Password
 ```
 
 `Encryption__MasterKey` must be Base64 for exactly 32 bytes. `Sms__PublicBaseUrl` must be an HTTPS URL without credentials, query strings, or fragments.
@@ -159,11 +163,11 @@ The project does not use migrations. Initialize new databases with:
 - `database/schema.sql`
 - `database/logs-schema.sql`
 
-The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, and minute-level alert status counters. Alert counters are maintained transactionally with status history and are used to evaluate alert windows efficiently. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
+The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, minute-level alert status counters, and a transactional alert outbox/inbox. Status history inserts create outbox events in the same SQL transaction; a RabbitMQ publisher delivers them and an idempotent consumer evaluates only the affected tenant/status/provider. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
 
 All dates are stored in UTC. Each tenant has an IANA time zone for display and date filters.
 
-Alert rules count distinct messages entering the selected status within the configured window. Rules can trigger once per incident or repeat at a configured interval while the condition remains true. The evaluator runs every 60 seconds by default; configure `Alerts__EvaluationSeconds` between 10 and 3600 seconds.
+Alert rules count distinct messages entering the selected status within the configured window. Rules can trigger once per incident or repeat at a configured interval while the condition remains true. Alert evaluation is event-driven through RabbitMQ. The outbox makes database changes durable across broker outages, and the inbox prevents duplicate alert notifications.
 
 ## Security
 
