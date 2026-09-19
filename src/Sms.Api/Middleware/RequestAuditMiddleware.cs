@@ -22,14 +22,15 @@ public sealed class RequestAuditMiddleware(RequestDelegate next, ILogger<Request
                 var activity = UserActivityMessageFormatter.Format(
                     action?.ControllerName, action?.ActionName, context.Response.StatusCode);
                 logger.LogInformation(
-                    "{Activity}",
+                    "{Activity} {RequestMethod} {RequestPath} returned HTTP {StatusCode} in {ElapsedMilliseconds} ms for client {ClientId}, tenant {TenantId}.",
                     activity,
-                    parsedTenantId,
-                    context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
                     context.Request.Method,
                     context.Request.Path.Value,
                     context.Response.StatusCode,
-                    Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+                    Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                    context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
+                    parsedTenantId
+                    );
             }
         }
     }
