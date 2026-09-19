@@ -25,6 +25,9 @@ public static class DependencyInjection
         services.AddSingleton<SqlConnectionFactory>();
         services.AddSingleton<LogsSqlConnectionFactory>();
         services.AddSingleton<ReportingSqlConnectionFactory>();
+        services.AddScoped<ITenantSmsOverviewOutbox, TenantSmsOverviewOutbox>();
+        services.AddScoped<ITenantSmsOverviewEventPublisher, TenantSmsOverviewEventPublisher>();
+        services.AddScoped<ITenantSmsOverviewProjection, TenantSmsOverviewProjection>();
         var rabbitMq = RabbitMqAlertOptions.From(configuration);
         services.AddMassTransit(bus =>
         {
