@@ -18,7 +18,7 @@ public sealed class TenantProvisioner(SqlConnectionFactory connectionFactory) : 
             var now = DateTimeOffset.UtcNow;
             await connection.ExecuteAsync(new CommandDefinition(
                 Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantProvisioner.CreateAsync.02.sql"),
-                new { Id = tenantId, Name = name, Now = now }, transaction, cancellationToken: cancellationToken));
+                new { Id = tenantId, Name = name, Code = client.ClientId, Now = now }, transaction, cancellationToken: cancellationToken));
 
             await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantProvisioner.CreateAsync.01.sql"),
                 new

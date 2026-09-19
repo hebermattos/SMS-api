@@ -76,6 +76,9 @@ CREATE TABLE dbo.Metrics
 );
 GO
 
+CREATE INDEX IX_Metrics_Timestamp ON dbo.Metrics([Timestamp] DESC, Id DESC);
+GO
+
 CREATE INDEX IX_Metrics_Name_Timestamp ON dbo.Metrics(Name, [Timestamp] DESC, Id DESC)
     INCLUDE (MetricType, Value, [Count]);
 GO

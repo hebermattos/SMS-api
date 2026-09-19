@@ -4,7 +4,7 @@ namespace Sms.Application.Auth;
 
 public static class ClientSecretHasher
 {
-    public const int DefaultIterations = 210_000;
+    public const int DefaultIterations = 600_000;
     public const int SaltSize = 32;
     public const int HashSize = 32;
 
@@ -18,7 +18,7 @@ public static class ClientSecretHasher
 
     public static bool Verify(string secret, byte[] expectedHash, byte[] salt, int iterations)
     {
-        if (string.IsNullOrEmpty(secret) || expectedHash.Length == 0 || salt.Length == 0 || iterations < 100_000) return false;
+        if (string.IsNullOrEmpty(secret) || expectedHash.Length == 0 || salt.Length == 0 || iterations < DefaultIterations) return false;
         var actual = Rfc2898DeriveBytes.Pbkdf2(secret, salt, iterations, HashAlgorithmName.SHA256, expectedHash.Length);
         return CryptographicOperations.FixedTimeEquals(actual, expectedHash);
     }
