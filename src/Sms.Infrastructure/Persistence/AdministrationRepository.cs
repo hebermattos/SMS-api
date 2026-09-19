@@ -32,7 +32,7 @@ public sealed class AdministrationRepository(
             cancellationToken: cancellationToken)) == 1;
 
         if (updated)
-            await configurationCache.InvalidateAsync(tenantId, previous, cancellationToken: cancellationToken);
+            await configurationCache.InvalidateAsync(tenantId, previous, cancellationToken: CancellationToken.None);
 
         return updated;
     }
@@ -63,7 +63,7 @@ public sealed class AdministrationRepository(
                 },
                 cancellationToken: cancellationToken));
 
-            await configurationCache.InvalidateAsync(client.TenantId, previous, cancellationToken: cancellationToken);
+            await configurationCache.InvalidateAsync(client.TenantId, previous, cancellationToken: CancellationToken.None);
         }
         catch (SqlException exception) when (exception.Number is 2601 or 2627)
         {
@@ -81,7 +81,7 @@ public sealed class AdministrationRepository(
             cancellationToken: cancellationToken)) == 1;
 
         if (updated)
-            await configurationCache.InvalidateAsync(tenantId, previous, cancellationToken: cancellationToken);
+            await configurationCache.InvalidateAsync(tenantId, previous, cancellationToken: CancellationToken.None);
 
         return updated;
     }
@@ -96,7 +96,7 @@ public sealed class AdministrationRepository(
             cancellationToken: cancellationToken));
 
         if (clientIdValue is not null)
-            await configurationCache.InvalidateAsync(tenantId, previous, cancellationToken: cancellationToken);
+            await configurationCache.InvalidateAsync(tenantId, previous, cancellationToken: CancellationToken.None);
 
         return clientIdValue;
     }
