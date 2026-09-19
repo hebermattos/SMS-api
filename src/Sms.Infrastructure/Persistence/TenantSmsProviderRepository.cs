@@ -60,7 +60,7 @@ public sealed class TenantSmsProviderRepository(
                 configuration.TenantId,
                 previous,
                 configuration,
-                cancellationToken);
+                CancellationToken.None);
         }
         catch (SqlException exception) when (exception.Number is 2601 or 2627)
         {
