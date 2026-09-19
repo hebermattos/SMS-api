@@ -59,6 +59,11 @@ services:
           "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApiLogs -i /database/logs-schema.sql
         fi
 
+        if ! database_exists "SmsApiReporting"; then
+          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -Q "CREATE DATABASE [SmsApiReporting];"
+          "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d SmsApiReporting -i /database/reporting-schema.sql
+        fi
+
   provider-init:
     build:
       context: .
@@ -87,6 +92,7 @@ services:
       ASPNETCORE_URLS: "http://+:8080"
       ConnectionStrings__SqlServer: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
       ConnectionStrings__LogsSqlServer: "Server=sqlserver;Database=SmsApiLogs;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
+      ConnectionStrings__ReportingSqlServer: "Server=sqlserver;Database=SmsApiReporting;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
       Jwt__Key: "${JWT_KEY:-local-development-jwt-key-change-me-1234567890}"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
       Sms__PublicBaseUrl: "${SMS_PUBLIC_BASE_URL:-https://localhost:8080}"
