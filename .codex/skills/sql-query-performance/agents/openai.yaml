@@ -1,4 +1,4 @@
 interface:
   display_name: "SQL Query Performance"
-  short_description: "Measure SQL Server query performance safely"
-  default_prompt: "Analyze the performance of this project SQL query using SQL Server measurements and report evidence-backed findings."
+  short_description: "Review SQL query text for performance risks"
+  default_prompt: "Statically review this project's SQL queries and suggest safe performance improvements without executing them."
