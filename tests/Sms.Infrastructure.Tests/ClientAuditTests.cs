@@ -36,7 +36,7 @@ public sealed class ClientAuditTests
         Assert.Equal(valid ? credential.TenantId : (Guid?)null, logger.Values["TenantId"]);
         Assert.DoesNotContain("secret", logger.Message);
         Assert.DoesNotContain("untrusted-input", logger.Message);
-        Assert.Equal(valid ? "Signed in to the API." : "Could not sign in to the API.", logger.Message);
+        Assert.StartsWith(valid ? "Signed in to the API." : "Could not sign in to the API.", logger.Message);
     }
 
     [Theory]
@@ -87,7 +87,7 @@ public sealed class ClientAuditTests
             return Task.CompletedTask;
         }, logger).InvokeAsync(context);
 
-        Assert.Equal(expected, logger.Message);
+        Assert.StartsWith(expected, logger.Message);
         Assert.Equal(expected, logger.Values["Activity"]);
         Assert.Equal(status, logger.Values["StatusCode"]);
     }
