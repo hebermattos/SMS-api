@@ -13,17 +13,17 @@ var email = configuration["Admin:Email"] ?? throw new InvalidOperationException(
 if (await administrators.GetByUsernameAsync(username.Trim()) is null)
 {
     var allowInsecure = string.Equals(configuration["Admin:AllowInsecureBootstrapPassword"], "true", StringComparison.OrdinalIgnoreCase);
-    if (!allowInsecure || password.Length >= 15)
-    {
-        await new AdministratorAuthenticationService(administrators).CreateAsync(username, email, password);
-    }
-    else
+    if (allowInsecure && !string.IsNullOrWhiteSpace(password) && password.Length < 15)
     {
         var salt = RandomNumberGenerator.GetBytes(32);
         var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt,
             AdministratorAuthenticationService.PasswordIterations, HashAlgorithmName.SHA256, 32);
         await administrators.CreateAsync(new(Guid.NewGuid(), username.Trim(), email.Trim().ToLowerInvariant(),
             hash, salt, AdministratorAuthenticationService.PasswordIterations, true));
+    }
+    else
+    {
+        await new AdministratorAuthenticationService(administrators).CreateAsync(username, email, password);
     }
 }
 Console.WriteLine("Initial platform administrator is configured. Existing passwords are not overwritten.");
