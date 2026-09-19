@@ -6,7 +6,7 @@ using Sms.Application.Auth;
 
 namespace Sms.Api.Controllers;
 
-public sealed record PortalTokenRequest(string Username, string Password, string Context);
+public sealed record PortalTokenRequest(string Username, string Password, string Context, string? TenantCode = null);
 
 [ApiController]
 [Route("api/v1/portal/auth")]
@@ -29,11 +29,16 @@ public sealed class PortalAuthController(
             || request.Username.Length > 100
             || string.IsNullOrWhiteSpace(request.Password)
             || request.Password.Length > 128
-            || request.Context is not (PortalSecurity.TenantContext or PortalSecurity.PlatformContext))
+            || request.Context is not (PortalSecurity.TenantContext or PortalSecurity.PlatformContext)
+            || (request.Context == PortalSecurity.TenantContext
+                && (string.IsNullOrWhiteSpace(request.TenantCode) || request.TenantCode.Length > 100)))
             return Unauthorized();
 
+        var tenantCode = request.Context == PortalSecurity.TenantContext
+            ? request.TenantCode!.Trim()
+            : null;
         var user = await users.GetActiveByUsernameAsync(
-            request.Username.Trim(), request.Context, cancellationToken);
+            request.Username.Trim(), request.Context, tenantCode, cancellationToken);
 
         if (user is not null
             && ClientSecretHasher.Verify(
