@@ -1,5 +1,5 @@
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Sms.Application.Auth;
 
 namespace Sms.Infrastructure.Persistence;
@@ -35,7 +35,7 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
         {
             await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministratorRepository.CreateAsync.02.sql"), account, cancellationToken: cancellationToken));
         }
-        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
         {
             throw new AdministratorConflictException();
         }

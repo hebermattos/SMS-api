@@ -1,5 +1,5 @@
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Sms.Application.Administration;
 using Sms.Application.Providers;
 using Sms.Application.Security;
@@ -62,7 +62,7 @@ public sealed class TenantSmsProviderRepository(
                 configuration,
                 CancellationToken.None);
         }
-        catch (SqlException exception) when (exception.Number is 2601 or 2627)
+        catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
         {
             throw new AdministrationConflictException();
         }
