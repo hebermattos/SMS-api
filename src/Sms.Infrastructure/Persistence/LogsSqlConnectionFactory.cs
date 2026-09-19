@@ -1,3 +1,4 @@
+using Dapper;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
@@ -6,6 +7,11 @@ namespace Sms.Infrastructure.Persistence;
 public sealed class LogsSqlConnectionFactory
 {
     private readonly string _connectionString;
+
+    static LogsSqlConnectionFactory()
+    {
+        SqlMapper.AddTypeHandler(PostgresDateTimeOffsetHandler.Instance);
+    }
 
     public LogsSqlConnectionFactory(IConfiguration configuration)
     {
