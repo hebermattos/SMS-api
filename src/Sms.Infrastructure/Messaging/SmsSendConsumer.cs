@@ -103,6 +103,10 @@ public sealed class SmsSendConsumer(
             await repository.UpdateStatusAsync(item.TenantId, item.MessageId, ParseStatus(result.Status),
                 result.ProviderMessageId, DateTimeOffset.UtcNow, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             logger.LogError(exception, "SMS provider rejected queued message {MessageId}.", item.MessageId);
