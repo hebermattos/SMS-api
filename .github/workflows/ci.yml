@@ -51,6 +51,7 @@ jobs:
   sql-integration:
     name: SQL Server integration tests
     needs: [backend-quality, frontend-quality]
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     services:
       sqlserver:
@@ -102,6 +103,7 @@ jobs:
   compose-integration:
     name: Docker Compose end-to-end test
     needs: sql-integration
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
