@@ -1,22 +1,19 @@
-CREATE TABLE dbo.TenantSmsOverview
+CREATE TABLE TenantSmsOverview
 (
-    TenantId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_TenantSmsOverview PRIMARY KEY,
-    Outbound BIGINT NOT NULL CONSTRAINT DF_TenantSmsOverview_Outbound DEFAULT (0),
-    Inbound BIGINT NOT NULL CONSTRAINT DF_TenantSmsOverview_Inbound DEFAULT (0),
-    Delivered BIGINT NOT NULL CONSTRAINT DF_TenantSmsOverview_Delivered DEFAULT (0),
-    Failed BIGINT NOT NULL CONSTRAINT DF_TenantSmsOverview_Failed DEFAULT (0),
-    Pending BIGINT NOT NULL CONSTRAINT DF_TenantSmsOverview_Pending DEFAULT (0),
-    UpdatedAtUtc DATETIMEOFFSET NOT NULL
+    TenantId UUID PRIMARY KEY,
+    Outbound BIGINT NOT NULL DEFAULT 0,
+    Inbound BIGINT NOT NULL DEFAULT 0,
+    Delivered BIGINT NOT NULL DEFAULT 0,
+    Failed BIGINT NOT NULL DEFAULT 0,
+    Pending BIGINT NOT NULL DEFAULT 0,
+    UpdatedAtUtc TIMESTAMPTZ NOT NULL
 );
-GO
 
-CREATE TABLE dbo.TenantSmsOverviewInbox
+CREATE TABLE TenantSmsOverviewInbox
 (
-    EventId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_TenantSmsOverviewInbox PRIMARY KEY,
-    ProcessedAtUtc DATETIMEOFFSET NOT NULL
+    EventId UUID PRIMARY KEY,
+    ProcessedAtUtc TIMESTAMPTZ NOT NULL
 );
-GO
 
 CREATE INDEX IX_TenantSmsOverviewInbox_ProcessedAtUtc
-    ON dbo.TenantSmsOverviewInbox(ProcessedAtUtc, EventId);
-GO
+    ON TenantSmsOverviewInbox(ProcessedAtUtc, EventId);

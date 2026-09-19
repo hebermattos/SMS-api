@@ -1,84 +1,73 @@
-CREATE TABLE dbo.UserActivityLogs
+CREATE TABLE UserActivityLogs
 (
-    Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_UserActivityLogs PRIMARY KEY,
-    [Timestamp] DATETIMEOFFSET NOT NULL,
-    TenantId UNIQUEIDENTIFIER NULL,
-    Severity NVARCHAR(32) NOT NULL,
-    Category NVARCHAR(256) NOT NULL,
-    Message NVARCHAR(4000) NOT NULL,
+    Id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    "Timestamp" TIMESTAMPTZ NOT NULL,
+    TenantId UUID NULL,
+    Severity VARCHAR(32) NOT NULL,
+    Category VARCHAR(256) NOT NULL,
+    Message VARCHAR(4000) NOT NULL,
     TraceId CHAR(32) NULL,
     SpanId CHAR(16) NULL,
-    Attributes NVARCHAR(MAX) NULL,
-    CONSTRAINT CK_UserActivityLogs_AttributesJson CHECK (Attributes IS NULL OR ISJSON(Attributes) = 1)
+    Attributes TEXT NULL,
+    CHECK (Attributes IS NULL OR Attributes IS JSON)
 );
-GO
 
 CREATE INDEX IX_UserActivityLogs_Tenant_Timestamp
-    ON dbo.UserActivityLogs(TenantId, [Timestamp] DESC, Id DESC)
+    ON UserActivityLogs(TenantId, "Timestamp" DESC, Id DESC)
     INCLUDE (Severity, Category, TraceId, SpanId);
-GO
 
-CREATE TABLE dbo.SystemLogs
+CREATE TABLE SystemLogs
 (
-    Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SystemLogs PRIMARY KEY,
-    [Timestamp] DATETIMEOFFSET NOT NULL,
-    Severity NVARCHAR(32) NOT NULL,
-    Category NVARCHAR(256) NOT NULL,
-    Message NVARCHAR(4000) NOT NULL,
+    Id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    "Timestamp" TIMESTAMPTZ NOT NULL,
+    Severity VARCHAR(32) NOT NULL,
+    Category VARCHAR(256) NOT NULL,
+    Message VARCHAR(4000) NOT NULL,
     TraceId CHAR(32) NULL,
     SpanId CHAR(16) NULL,
-    Attributes NVARCHAR(MAX) NULL,
-    CONSTRAINT CK_SystemLogs_Severity CHECK (Severity IN ('Error', 'Critical')),
-    CONSTRAINT CK_SystemLogs_AttributesJson CHECK (Attributes IS NULL OR ISJSON(Attributes) = 1)
+    Attributes TEXT NULL,
+    CHECK (Severity IN ('Error', 'Critical')),
+    CHECK (Attributes IS NULL OR Attributes IS JSON)
 );
-GO
 
 CREATE INDEX IX_SystemLogs_Timestamp
-    ON dbo.SystemLogs([Timestamp] DESC, Id DESC)
+    ON SystemLogs("Timestamp" DESC, Id DESC)
     INCLUDE (Severity, Category, TraceId, SpanId);
-GO
 
-CREATE TABLE dbo.Traces
+CREATE TABLE Traces
 (
-    Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Traces PRIMARY KEY,
-    StartedAt DATETIMEOFFSET NOT NULL,
-    DurationMilliseconds FLOAT NOT NULL,
+    Id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    StartedAt TIMESTAMPTZ NOT NULL,
+    DurationMilliseconds DOUBLE PRECISION NOT NULL,
     TraceId CHAR(32) NOT NULL,
     SpanId CHAR(16) NOT NULL,
     ParentSpanId CHAR(16) NULL,
-    Name NVARCHAR(256) NOT NULL,
-    Source NVARCHAR(256) NOT NULL,
-    Kind NVARCHAR(32) NOT NULL,
-    Status NVARCHAR(32) NOT NULL,
-    Attributes NVARCHAR(MAX) NULL,
-    CONSTRAINT CK_Traces_AttributesJson CHECK (Attributes IS NULL OR ISJSON(Attributes) = 1)
+    Name VARCHAR(256) NOT NULL,
+    Source VARCHAR(256) NOT NULL,
+    Kind VARCHAR(32) NOT NULL,
+    Status VARCHAR(32) NOT NULL,
+    Attributes TEXT NULL,
+    CHECK (Attributes IS NULL OR Attributes IS JSON)
 );
-GO
 
-CREATE INDEX IX_Traces_StartedAt ON dbo.Traces(StartedAt DESC, Id DESC)
+CREATE INDEX IX_Traces_StartedAt ON Traces(StartedAt DESC, Id DESC)
     INCLUDE (TraceId, SpanId, Name, Status, DurationMilliseconds);
-GO
-CREATE INDEX IX_Traces_TraceId ON dbo.Traces(TraceId, StartedAt, Id);
-GO
+CREATE INDEX IX_Traces_TraceId ON Traces(TraceId, StartedAt, Id);
 
-CREATE TABLE dbo.Metrics
+CREATE TABLE Metrics
 (
-    Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Metrics PRIMARY KEY,
-    [Timestamp] DATETIMEOFFSET NOT NULL,
-    Name NVARCHAR(256) NOT NULL,
-    Unit NVARCHAR(64) NULL,
-    MetricType NVARCHAR(64) NOT NULL,
-    Value FLOAT NULL,
-    [Count] BIGINT NULL,
-    Attributes NVARCHAR(MAX) NULL,
-    CONSTRAINT CK_Metrics_AttributesJson CHECK (Attributes IS NULL OR ISJSON(Attributes) = 1),
-    CONSTRAINT CK_Metrics_Value CHECK (Value IS NOT NULL OR [Count] IS NOT NULL)
+    Id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    "Timestamp" TIMESTAMPTZ NOT NULL,
+    Name VARCHAR(256) NOT NULL,
+    Unit VARCHAR(64) NULL,
+    MetricType VARCHAR(64) NOT NULL,
+    Value DOUBLE PRECISION NULL,
+    "Count" BIGINT NULL,
+    Attributes TEXT NULL,
+    CHECK (Attributes IS NULL OR Attributes IS JSON),
+    CHECK (Value IS NOT NULL OR "Count" IS NOT NULL)
 );
-GO
 
-CREATE INDEX IX_Metrics_Timestamp ON dbo.Metrics([Timestamp] DESC, Id DESC);
-GO
-
-CREATE INDEX IX_Metrics_Name_Timestamp ON dbo.Metrics(Name, [Timestamp] DESC, Id DESC)
-    INCLUDE (MetricType, Value, [Count]);
-GO
+CREATE INDEX IX_Metrics_Timestamp ON Metrics("Timestamp" DESC, Id DESC);
+CREATE INDEX IX_Metrics_Name_Timestamp ON Metrics(Name, "Timestamp" DESC, Id DESC)
+    INCLUDE (MetricType, Value, "Count");
