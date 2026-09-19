@@ -79,7 +79,9 @@ Swagger documents the complete API surface.
 The provider is selected per request. All providers implement `ISmsProvider`, while provider-specific code remains isolated from the application core.
 
 - **Twilio:** signed callbacks using `X-Twilio-Signature`.
-- **Bandwidth:** OAuth 2.0 Client Credentials and authenticated callbacks. OAuth access tokens are cached in Redis until shortly before their reported expiration.\n\nTenant configuration is also cached in Redis. Tenant metadata, time zone, API-client authentication data, and SMS-provider configuration have no time-based cache expiration and are invalidated only after a persisted configuration change. Provider secrets remain encrypted while cached.
+- **Bandwidth:** OAuth 2.0 Client Credentials and authenticated callbacks. OAuth access tokens are cached in Redis until shortly before their reported expiration.
+
+Tenant configuration is also cached in Redis. Tenant metadata, time zone, API-client authentication data, and SMS-provider configuration have no time-based cache expiration and are invalidated only after a persisted configuration change. Provider secrets remain encrypted while cached.
 
 Immediate messages are queued through RabbitMQ/MassTransit. Scheduled messages are stored in UTC and queued when due.
 
@@ -105,6 +107,7 @@ ConnectionStrings__SqlServer
 ConnectionStrings__LogsSqlServer
 ConnectionStrings__ReportingSqlServer
 ConnectionStrings__Redis
+Cache__Enabled
 Jwt__Issuer
 Jwt__Audience
 Jwt__Key
@@ -118,7 +121,7 @@ RabbitMq__User
 RabbitMq__Password
 ```
 
-`Encryption__MasterKey` must be Base64 for exactly 32 bytes. Use HTTPS for real provider callbacks and outside local development. Redis should be reachable only from trusted application infrastructure.
+`Cache__Enabled` defaults to `true`. Set it to `false` to bypass all Redis-backed caching, including tenant configuration and Bandwidth OAuth tokens; when disabled, the Redis connection string is not required by the API. `Encryption__MasterKey` must be Base64 for exactly 32 bytes. Use HTTPS for real provider callbacks and outside local development. Redis should be reachable only from trusted application infrastructure.
 
 ## Health
 
@@ -127,7 +130,7 @@ RabbitMq__Password
 - `sql.application` — application database; failure makes the API unhealthy.
 - `sql.observability` — logs, traces, and metrics database.
 - `sql.reporting` — reporting database.
-- `redis` — Redis connectivity used by the Bandwidth OAuth token cache and tenant-configuration cache.
+- `redis` — Redis connectivity used by the caches; reports `Healthy` with `Cache is disabled.` when caching is disabled.
 - `rabbitmq` — RabbitMQ TCP connectivity.
 - `twilio` — Twilio API reachability.
 - `bandwidth` — Bandwidth API reachability.
