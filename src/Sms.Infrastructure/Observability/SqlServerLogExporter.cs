@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -47,10 +46,10 @@ public sealed class SqlServerLogExporter(string connectionString) : BaseExporter
                     TenantId = TryGetTenantId(attributes),
                     Severity = record.LogLevel.ToString(),
                     Category = Limit(record.CategoryName, 256),
-                    Message = Limit(record.FormattedMessage ?? record.Body?.ToString() ?? string.Empty, 4000),
+                    Message = Limit(GetStoredMessage(record, attributes), 4000),
                     TraceId = record.TraceId == default ? null : record.TraceId.ToHexString(),
                     SpanId = record.SpanId == default ? null : record.SpanId.ToHexString(),
-                    Attributes = attributes is null || attributes.Count == 0 ? null : JsonSerializer.Serialize(attributes)
+                    Attributes = LogAttributeSanitizer.Serialize(attributes)
                 };
 
                 if (IsActivity(record.CategoryName))
@@ -71,6 +70,21 @@ public sealed class SqlServerLogExporter(string connectionString) : BaseExporter
 
     internal static bool IsActivity(string? category) =>
         category is not null && ActivityCategories.Contains(category);
+
+    private static string GetStoredMessage(
+        LogRecord record,
+        IReadOnlyDictionary<string, object?>? attributes)
+    {
+        if (IsActivity(record.CategoryName))
+            return record.FormattedMessage ?? record.Body?.ToString() ?? string.Empty;
+
+        if (attributes is not null
+            && attributes.TryGetValue("{OriginalFormat}", out var template)
+            && template is string messageTemplate)
+            return messageTemplate;
+
+        return record.Body?.ToString() ?? string.Empty;
+    }
 
     private static Guid? TryGetTenantId(IReadOnlyDictionary<string, object?>? attributes)
     {
