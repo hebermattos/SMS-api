@@ -93,6 +93,6 @@ public sealed class SmsReportRepository(SqlConnectionFactory connectionFactory) 
             totals.Failed, totals.Received, tenants);
     }
 
-    private sealed record SmsReportSummaryRow(long TotalMessages, long Queued, long Sent, long Delivered, long Failed, long Received, long Outbound, long Inbound);
-    private sealed record PlatformSmsReportSummaryRow(long TotalMessages, long Queued, long Sent, long Delivered, long Failed, long Received);
+    private sealed record SmsReportSummaryRow(long TotalMessages, int Queued, int Sent, int Delivered, int Failed, int Received, int Outbound, int Inbound);
+    private sealed record PlatformSmsReportSummaryRow(long TotalMessages, int Queued, int Sent, int Delivered, int Failed, int Received);
 }
