@@ -8,7 +8,7 @@ namespace Sms.Infrastructure.Messaging;
 
 public sealed class AlertEvaluationOutboxPublisher(
     SqlConnectionFactory connectionFactory,
-    IPublishEndpoint publishEndpoint,
+    IBus bus,
     ILogger<AlertEvaluationOutboxPublisher> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,7 +36,7 @@ public sealed class AlertEvaluationOutboxPublisher(
 
         foreach (var row in rows)
         {
-            await publishEndpoint.Publish(new AlertEvaluationEvent(
+            await bus.Publish(new AlertEvaluationEvent(
                 row.EventId, row.TenantId, row.Provider, row.Status, row.OccurredAtUtc), cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(
                 Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationOutboxPublisher.PublishBatchAsync.02.sql"),
