@@ -137,7 +137,7 @@ All providers implement `ISmsProvider` and are selected through `ISmsProviderRes
 - Twilio: signed callbacks using `X-Twilio-Signature`.
 - Bandwidth: OAuth 2.0 Client Credentials and Basic-authenticated callbacks.
 
-Outbound messages are persisted with status `Queued` and published through a transactional SQL outbox. A MassTransit consumer receives the RabbitMQ event, loads the tenant-specific provider configuration, sends the SMS, and updates its status asynchronously. Provider credentials are tenant-specific and encrypted at rest. Configure Bandwidth callbacks at:
+Outbound messages are persisted with status `Queued`, then their RabbitMQ event is published immediately. A MassTransit consumer receives the event, loads the tenant-specific provider configuration, sends the SMS, and updates its status asynchronously. Provider credentials are tenant-specific and encrypted at rest. Configure Bandwidth callbacks at:
 
 ```text
 /api/v1/webhooks/bandwidth/inbound
@@ -177,7 +177,7 @@ The project does not use migrations. Initialize new databases with:
 - `database/schema.sql`
 - `database/logs-schema.sql`
 
-The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, minute-level alert status counters, and transactional outbox/inbox tables for SMS sending and alert evaluation. Status history inserts create outbox events in the same SQL transaction; a MassTransit publisher delivers them through RabbitMQ and an idempotent consumer evaluates only the affected tenant/status/provider. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
+The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, minute-level alert status counters, an inbox for SMS-send deduplication, and transactional outbox/inbox tables for alert evaluation. Status history inserts create alert-evaluation outbox events in the same SQL transaction; a MassTransit publisher delivers them through RabbitMQ and an idempotent consumer evaluates only the affected tenant/status/provider. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
 
 All dates are stored in UTC. Each tenant has a unique code and an IANA time zone for display and date filters.
 
