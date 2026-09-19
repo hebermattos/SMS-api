@@ -16,19 +16,19 @@ export interface ProviderConfig {
   hasApiSecret: boolean; settings: Record<string, string | null>; configuredSecrets: string[];
 }
 export interface AvailableProvider { name: string; fromNumber: string; isDefault: boolean; }
-export interface Overview { name: string; outbound: number; inbound: number; delivered: number; failed: number; pending: number; providers: AvailableProvider[]; }
+export interface Overview { name: string; timeZoneId: string; outbound: number; inbound: number; delivered: number; failed: number; pending: number; providers: AvailableProvider[]; }
 export interface Message {
   id: string; from: string; to: string; body: string; provider: string; providerMessageId: string | null;
-  direction: number; status: number; createdAt: string; updatedAt: string | null;
+  direction: number; status: number; createdAt: string; scheduledAt: string | null; updatedAt: string | null;
 }
 export interface StatusHistory { id: string; messageId: string; status: number; createdAt: string; }
 export interface LogEntry { id: number; timestamp: string; severity: string; category: string; message: string; traceId: string | null; spanId: string | null; }
-export interface SendResult { id: string; provider: string; status: string; }
+export interface SendResult { id: string; provider: string; status: string; scheduledAt: string | null; }
 export interface BlockedNumber { id: string; phoneNumber: string; source: string; reason: string | null; createdAt: string; updatedAt: string | null; }
 export interface SmsReportProviderSummary { provider: string; totalMessages: number; delivered: number; failed: number; }
-export interface SmsReportSummary { totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; outbound: number; inbound: number; byProvider: SmsReportProviderSummary[]; }
-export interface PlatformSmsReportTenantSummary { tenantId: string; tenantName: string; totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; }
-export interface PlatformSmsReportSummary { totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; byTenant: PlatformSmsReportTenantSummary[]; }
+export interface SmsReportSummary { totalMessages: number; scheduled: number; queued: number; sent: number; delivered: number; failed: number; received: number; outbound: number; inbound: number; byProvider: SmsReportProviderSummary[]; }
+export interface PlatformSmsReportTenantSummary { tenantId: string; tenantName: string; totalMessages: number; scheduled: number; queued: number; sent: number; delivered: number; failed: number; received: number; }
+export interface PlatformSmsReportSummary { totalMessages: number; scheduled: number; queued: number; sent: number; delivered: number; failed: number; received: number; byTenant: PlatformSmsReportTenantSummary[]; }
 
 export type AlertRepeatMode = 1 | 2;
 export interface AlertRule {

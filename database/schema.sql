@@ -90,14 +90,23 @@ CREATE TABLE dbo.SmsMessages
     Direction INT NOT NULL,
     Status INT NOT NULL,
     CreatedAt DATETIMEOFFSET NOT NULL,
+    ScheduledAtUtc DATETIMEOFFSET NULL,
     UpdatedAt DATETIMEOFFSET NULL,
     CONSTRAINT FK_SmsMessages_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
     CONSTRAINT UQ_SmsMessages_Tenant_Id UNIQUE (TenantId, Id),
     CONSTRAINT CK_SmsMessages_Direction CHECK (Direction IN (1, 2)),
-    CONSTRAINT CK_SmsMessages_Status CHECK (Status BETWEEN 1 AND 5)
+    CONSTRAINT CK_SmsMessages_Status CHECK (Status BETWEEN 1 AND 6),
+    CONSTRAINT CK_SmsMessages_Schedule CHECK
+    (
+        (Status = 6 AND Direction = 1 AND ScheduledAtUtc IS NOT NULL)
+        OR Status <> 6
+    )
 );
 GO
 CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON dbo.SmsMessages(TenantId, CreatedAt DESC, Id DESC);
+GO
+CREATE INDEX IX_SmsMessages_Scheduled ON dbo.SmsMessages(ScheduledAtUtc, Id)
+    INCLUDE (TenantId) WHERE Status = 6;
 GO
 CREATE UNIQUE INDEX UX_SmsMessages_Tenant_Provider_Message ON dbo.SmsMessages(TenantId, Provider, ProviderMessageId) WHERE ProviderMessageId IS NOT NULL;
 GO
@@ -315,7 +324,8 @@ BEGIN
     INSERT dbo.AlertEvaluationOutbox(Id, TenantId, Provider, Status, OccurredAtUtc, CreatedAtUtc)
     SELECT NEWID(), i.TenantId, m.Provider, i.Status, i.CreatedAt, SYSUTCDATETIME()
     FROM inserted i
-    INNER JOIN dbo.SmsMessages m ON m.TenantId = i.TenantId AND m.Id = i.MessageId;
+    INNER JOIN dbo.SmsMessages m ON m.TenantId = i.TenantId AND m.Id = i.MessageId
+    WHERE i.Status BETWEEN 1 AND 5;
 END;
 GO
 
@@ -370,7 +380,7 @@ BEGIN
         SUM(CASE WHEN Direction = 2 THEN CONVERT(BIGINT, 1) ELSE 0 END),
         SUM(CASE WHEN Direction = 1 AND Status = 3 THEN CONVERT(BIGINT, 1) ELSE 0 END),
         SUM(CASE WHEN Direction = 1 AND Status = 4 THEN CONVERT(BIGINT, 1) ELSE 0 END),
-        SUM(CASE WHEN Direction = 1 AND Status IN (1, 2) THEN CONVERT(BIGINT, 1) ELSE 0 END),
+        SUM(CASE WHEN Direction = 1 AND Status IN (1, 2, 6) THEN CONVERT(BIGINT, 1) ELSE 0 END),
         SYSUTCDATETIME()
     FROM inserted
     GROUP BY TenantId;
@@ -393,7 +403,7 @@ BEGIN
         SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 2 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 2 THEN 1 ELSE 0 END),
         SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status = 3 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status = 3 THEN 1 ELSE 0 END),
         SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status = 4 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status = 4 THEN 1 ELSE 0 END),
-        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status IN (1, 2) THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status IN (1, 2) THEN 1 ELSE 0 END),
+        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status IN (1, 2, 6) THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status IN (1, 2, 6) THEN 1 ELSE 0 END),
         SYSUTCDATETIME()
     FROM inserted i
     INNER JOIN deleted d ON d.Id = i.Id

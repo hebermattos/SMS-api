@@ -338,6 +338,7 @@ public sealed class BandwidthWebhooksControllerTests
         public Task<IReadOnlyList<SmsMessage>> GetHistoryAsync(Guid t, int s, int n, CancellationToken c = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<SmsStatusHistory>> GetStatusHistoryAsync(Guid t, Guid i, CancellationToken c = default) => throw new NotSupportedException();
         public Task InsertAsync(SmsMessage m, CancellationToken c = default) => throw new NotSupportedException();
+        public Task<bool> TryQueueScheduledAsync(Guid t, Guid i, DateTimeOffset u, CancellationToken c = default) => throw new NotSupportedException();
         public Task UpdateStatusAsync(Guid t, Guid i, SmsStatus s, string? p, DateTimeOffset u, CancellationToken c = default) => throw new NotSupportedException();
     }
 }

@@ -8,9 +8,9 @@ SET XACT_ABORT ON;
                 WHERE TenantId = @TenantId AND Provider = @Provider AND ProviderMessageId = @ProviderMessageId
             )
             BEGIN
-                INSERT INTO dbo.SmsMessages (Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, UpdatedAt)
+                INSERT INTO dbo.SmsMessages (Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, ScheduledAtUtc, UpdatedAt)
                 OUTPUT INSERTED.Id, INSERTED.Provider INTO @InsertedMessages
-                VALUES (@Id, @TenantId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @Status, @CreatedAt, @UpdatedAt);
+                VALUES (@Id, @TenantId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @Status, @CreatedAt, @ScheduledAtUtc, @UpdatedAt);
             END
 
             INSERT INTO dbo.SmsMessageStatusHistory (Id, TenantId, MessageId, Status, CreatedAt)

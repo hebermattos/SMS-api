@@ -1,5 +1,6 @@
 SELECT
                 COUNT_BIG(1) AS TotalMessages,
+                COALESCE(SUM(CASE WHEN Status = 6 THEN 1 ELSE 0 END), 0) AS Scheduled,
                 COALESCE(SUM(CASE WHEN Status = 1 THEN 1 ELSE 0 END), 0) AS Queued,
                 COALESCE(SUM(CASE WHEN Status = 2 THEN 1 ELSE 0 END), 0) AS Sent,
                 COALESCE(SUM(CASE WHEN Status = 3 THEN 1 ELSE 0 END), 0) AS Delivered,

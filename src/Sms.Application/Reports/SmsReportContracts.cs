@@ -11,6 +11,7 @@ public sealed record SmsReportFilter(
 
 public sealed record SmsReportSummary(
     long TotalMessages,
+    long Scheduled,
     long Queued,
     long Sent,
     long Delivered,
@@ -28,6 +29,7 @@ public sealed record SmsReportProviderSummary(
 
 public sealed record PlatformSmsReportSummary(
     long TotalMessages,
+    long Scheduled,
     long Queued,
     long Sent,
     long Delivered,
@@ -39,6 +41,7 @@ public sealed record PlatformSmsReportTenantSummary(
     Guid TenantId,
     string TenantName,
     long TotalMessages,
+    long Scheduled,
     long Queued,
     long Sent,
     long Delivered,

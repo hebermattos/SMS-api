@@ -1,7 +1,9 @@
 namespace Sms.Application.Messages;
 
-public sealed record SendSmsRequest(string To, string Body, string? From = null, string? Provider = null);
-public sealed record SendSmsResult(Guid Id, string Provider, string? ProviderMessageId, string Status);
+public sealed record SendSmsRequest(string To, string Body, string? From = null, string? Provider = null,
+    DateTime? ScheduledAt = null);
+public sealed record SendSmsResult(Guid Id, string Provider, string? ProviderMessageId, string Status,
+    DateTimeOffset? ScheduledAt = null);
 
 public interface ISmsProvider
 {

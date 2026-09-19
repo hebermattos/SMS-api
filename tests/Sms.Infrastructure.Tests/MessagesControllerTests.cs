@@ -64,12 +64,13 @@ public sealed class MessagesControllerTests
     private static MessagesController Create(Guid tenantId, Repository repo)
     {
         var context=new TenantContext(tenantId);
-        var service=new SendSmsService(context,repo,new Resolver(),new Publisher(),new(new TestOptOutRepository()));
+        var service=new SendSmsService(context,repo,new Resolver(),new Publisher(),new(new TestOptOutRepository()),new TimeZones(),TimeProvider.System);
         return new MessagesController(context,repo,service);
     }
     private sealed record TenantContext(Guid TenantId):ITenantContext;
     private sealed class Resolver:ISmsProviderResolver { public ISmsProvider Resolve(string? provider=null)=>throw new NotSupportedException(); }
     private sealed class Publisher:ISmsSendEventPublisher { public Task PublishAsync(Guid tenantId,Guid messageId,CancellationToken cancellationToken=default)=>Task.CompletedTask; }
+    private sealed class TimeZones:ITenantTimeZoneProvider { public Task<TimeZoneInfo> GetAsync(Guid tenantId,CancellationToken cancellationToken=default)=>Task.FromResult(TimeZoneInfo.Utc); }
     private sealed class Repository(SmsMessage? message):ISmsMessageRepository
     {
         public Guid LastTenant{get;private set;} public Guid? LastMessageId{get;private set;} public int LastTake{get;private set;}
@@ -78,6 +79,7 @@ public sealed class MessagesControllerTests
         public Task<IReadOnlyList<SmsStatusHistory>> GetStatusHistoryAsync(Guid tenantId,Guid messageId,CancellationToken cancellationToken=default){LastTenant=tenantId;LastMessageId=messageId;return Task.FromResult<IReadOnlyList<SmsStatusHistory>>([]);}
         public Task InsertAsync(SmsMessage m,CancellationToken c=default)=>Task.CompletedTask;
         public Task InsertInboundIfNotExistsAsync(SmsMessage m,CancellationToken c=default)=>Task.CompletedTask;
+        public Task<bool> TryQueueScheduledAsync(Guid t,Guid i,DateTimeOffset u,CancellationToken c=default)=>Task.FromResult(false);
         public Task UpdateStatusAsync(Guid t,Guid i,SmsStatus s,string? p,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
         public Task UpdateStatusByProviderMessageIdAsync(Guid t,string p,string id,SmsStatus s,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
     }

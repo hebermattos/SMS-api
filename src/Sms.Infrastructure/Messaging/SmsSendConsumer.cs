@@ -3,6 +3,7 @@ using MassTransit;
 using Microsoft.Extensions.Logging;
 using Sms.Application.Common;
 using Sms.Application.Messages;
+using Sms.Application.OptOut;
 using Sms.Domain.Messages;
 using Sms.Infrastructure.Persistence;
 
@@ -12,6 +13,7 @@ public sealed class SmsSendConsumer(
     IWorkerTenantContext tenantContext,
     ISmsMessageRepository repository,
     ISmsProviderResolver providerResolver,
+    OptOutService optOut,
     SqlConnectionFactory connectionFactory,
     ILogger<SmsSendConsumer> logger) : IConsumer<SmsSendEvent>
 {
@@ -27,6 +29,13 @@ public sealed class SmsSendConsumer(
         tenantContext.SetTenant(item.TenantId);
         var message = await repository.GetByIdAsync(item.TenantId, item.MessageId, context.CancellationToken)
             ?? throw new InvalidOperationException("Queued SMS message was not found.");
+        if (item.EventId == item.MessageId)
+        {
+            var now = DateTimeOffset.UtcNow;
+            if (!await repository.TryQueueScheduledAsync(item.TenantId, item.MessageId, now, context.CancellationToken))
+                return;
+            message.Status = SmsStatus.Queued;
+        }
         if (message.Status != SmsStatus.Queued)
         {
             await MarkProcessedAsync(item.EventId, context.CancellationToken);
@@ -35,6 +44,7 @@ public sealed class SmsSendConsumer(
 
         try
         {
+            await optOut.EnsureCanSendAsync(item.TenantId, message.To, context.CancellationToken);
             var provider = providerResolver.Resolve(message.Provider);
             var result = await provider.SendAsync(message.From, message.To, message.Body, context.CancellationToken);
             await repository.UpdateStatusAsync(item.TenantId, item.MessageId, ParseStatus(result.Status),
