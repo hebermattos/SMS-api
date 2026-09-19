@@ -50,7 +50,7 @@ public sealed class SmsSendOutboxPublisher(
 
         foreach (var row in rows)
         {
-            await publishEndpoint.Publish(row, context => context.MessageId = row.EventId, cancellationToken);
+            await publishEndpoint.Publish(row, cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition("""
                 UPDATE dbo.SmsSendOutbox
                 SET PublishedAtUtc=SYSUTCDATETIME(), LockId=NULL, LockedUntilUtc=NULL
