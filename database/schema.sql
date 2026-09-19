@@ -277,3 +277,42 @@ BEGIN
     INNER JOIN dbo.SmsMessages m ON m.TenantId = i.TenantId AND m.Id = i.MessageId;
 END;
 GO
+
+
+CREATE TABLE dbo.SmsSendOutbox
+(
+    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_SmsSendOutbox PRIMARY KEY,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    MessageId UNIQUEIDENTIFIER NOT NULL,
+    CreatedAtUtc DATETIMEOFFSET NOT NULL,
+    PublishedAtUtc DATETIMEOFFSET NULL,
+    AttemptCount INT NOT NULL CONSTRAINT DF_SmsSendOutbox_AttemptCount DEFAULT (0),
+    LastAttemptAtUtc DATETIMEOFFSET NULL,
+    CONSTRAINT FK_SmsSendOutbox_Message FOREIGN KEY (TenantId, MessageId)
+        REFERENCES dbo.SmsMessages(TenantId, Id) ON DELETE CASCADE
+);
+GO
+CREATE INDEX IX_SmsSendOutbox_Pending ON dbo.SmsSendOutbox(CreatedAtUtc, Id)
+    INCLUDE (TenantId, MessageId)
+    WHERE PublishedAtUtc IS NULL;
+GO
+
+CREATE TABLE dbo.SmsSendInbox
+(
+    EventId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_SmsSendInbox PRIMARY KEY,
+    ProcessedAtUtc DATETIMEOFFSET NOT NULL
+);
+GO
+
+CREATE TRIGGER dbo.TR_SmsMessages_SmsSendOutbox
+ON dbo.SmsMessages
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT dbo.SmsSendOutbox(Id, TenantId, MessageId, CreatedAtUtc)
+    SELECT NEWID(), TenantId, Id, SYSUTCDATETIME()
+    FROM inserted
+    WHERE Direction = 1 AND Status = 1;
+END;
+GO
