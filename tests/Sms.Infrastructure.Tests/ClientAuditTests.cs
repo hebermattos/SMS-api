@@ -36,6 +36,7 @@ public sealed class ClientAuditTests
         Assert.Equal(valid ? credential.TenantId : (Guid?)null, logger.Values["TenantId"]);
         Assert.DoesNotContain("secret", logger.Message);
         Assert.DoesNotContain("untrusted-input", logger.Message);
+        Assert.StartsWith(valid ? "Signed in to the API." : "Could not sign in to the API.", logger.Message);
     }
 
     [Theory]
@@ -53,6 +54,42 @@ public sealed class ClientAuditTests
         Assert.Equal("client-1", logger.Values["ClientId"]);
         Assert.Equal(tenant, logger.Values["TenantId"]);
         Assert.DoesNotContain("forged-client", logger.Message);
+    }
+
+
+    [Theory]
+    [InlineData("Messages", "Send", 202, "Sent an SMS message.")]
+    [InlineData("Messages", "GetById", 200, "Viewed an SMS message.")]
+    [InlineData("Messages", "GetStatusHistory", 200, "Viewed SMS delivery history.")]
+    [InlineData("Messages", "GetHistory", 200, "Viewed SMS history.")]
+    [InlineData("Logs", "Get", 200, "Viewed activity logs.")]
+    [InlineData("Overview", "Get", 200, "Viewed the account overview.")]
+    [InlineData("Reports", "Sms", 200, "Viewed the SMS report.")]
+    [InlineData("TenantUsers", "List", 200, "Viewed tenant users.")]
+    [InlineData("TenantUsers", "Create", 201, "Created a tenant user.")]
+    [InlineData("TenantUsers", "SetState", 204, "Updated a tenant user's status.")]
+    [InlineData("TenantUsers", "ResetPassword", 204, "Reset a tenant user's password.")]
+    [InlineData("Messages", "Send", 400, "Could not send an SMS message.")]
+    public async Task HttpAuditUsesHumanReadableActivity(
+        string controller, string action, int status, string expected)
+    {
+        var context = new DefaultHttpContext();
+        var tenant = Guid.NewGuid();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity([
+            new Claim("tenant_id", tenant.ToString()), new Claim("sub", "client-1")], "test"));
+        context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(
+            new ControllerActionDescriptor { ControllerName = controller, ActionName = action }), "activity"));
+        var logger = new Recorder<RequestAuditMiddleware>();
+
+        await new RequestAuditMiddleware(c =>
+        {
+            c.Response.StatusCode = status;
+            return Task.CompletedTask;
+        }, logger).InvokeAsync(context);
+
+        Assert.StartsWith(expected, logger.Message);
+        Assert.Equal(expected, logger.Values["Activity"]);
+        Assert.Equal(status, logger.Values["StatusCode"]);
     }
 
     [Theory]

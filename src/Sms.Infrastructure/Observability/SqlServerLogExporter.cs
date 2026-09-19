@@ -76,7 +76,14 @@ public sealed class SqlServerLogExporter(string connectionString) : BaseExporter
         IReadOnlyDictionary<string, object?>? attributes)
     {
         if (IsActivity(record.CategoryName))
+        {
+            if (attributes is not null
+                && attributes.TryGetValue("Activity", out var activity)
+                && activity is string description)
+                return description;
+
             return record.FormattedMessage ?? record.Body?.ToString() ?? string.Empty;
+        }
 
         if (attributes is not null
             && attributes.TryGetValue("{OriginalFormat}", out var template)

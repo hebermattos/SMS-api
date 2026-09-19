@@ -23,10 +23,11 @@ public sealed class ClientLoginAuditMiddleware(RequestDelegate next, ILogger<Cli
             var status = failed ? 500 : context.Response.StatusCode;
             var identity = context.Items[IdentityKey] as ClientLoginIdentity;
             var succeeded = status >= 200 && status < 300 && identity is not null;
+            var activity = succeeded ? "Signed in to the API." : "Could not sign in to the API.";
             logger.Log(status >= 500 ? LogLevel.Error : succeeded ? LogLevel.Information : LogLevel.Warning,
-                "Client login {Outcome} for {ClientId}, tenant {TenantId}, HTTP {StatusCode}",
-                succeeded ? "Succeeded" : "Failed", succeeded ? identity!.ClientId : null,
-                succeeded ? identity!.TenantId : (Guid?)null, status);
+                "{Activity} HTTP {StatusCode} for client {ClientId}, tenant {TenantId}. Outcome: {Outcome}.",
+                activity, status, succeeded ? identity!.ClientId : null,
+                succeeded ? identity!.TenantId : (Guid?)null, succeeded ? "Succeeded" : "Failed");
         }
     }
 }

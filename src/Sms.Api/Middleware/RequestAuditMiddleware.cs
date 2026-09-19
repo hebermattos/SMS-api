@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc.Controllers;
 
 namespace Sms.Api.Middleware;
 
@@ -8,6 +9,7 @@ public sealed class RequestAuditMiddleware(RequestDelegate next, ILogger<Request
     public async Task InvokeAsync(HttpContext context)
     {
         var started = Stopwatch.GetTimestamp();
+        var action = context.GetEndpoint()?.Metadata.GetMetadata<ControllerActionDescriptor>();
         try
         {
             await next(context);
@@ -17,14 +19,18 @@ public sealed class RequestAuditMiddleware(RequestDelegate next, ILogger<Request
             var tenantId = context.User.FindFirstValue("tenant_id");
             if (context.User.Identity?.IsAuthenticated == true && Guid.TryParse(tenantId, out var parsedTenantId))
             {
+                var activity = UserActivityMessageFormatter.Format(
+                    action?.ControllerName, action?.ActionName, context.Response.StatusCode);
                 logger.LogInformation(
-                    "HTTP request completed for tenant {TenantId}, client {ClientId}: {RequestMethod} {RequestPath} returned {StatusCode} in {ElapsedMilliseconds} ms",
-                    parsedTenantId,
-                    context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
+                    "{Activity} {RequestMethod} {RequestPath} returned HTTP {StatusCode} in {ElapsedMilliseconds} ms for client {ClientId}, tenant {TenantId}.",
+                    activity,
                     context.Request.Method,
                     context.Request.Path.Value,
                     context.Response.StatusCode,
-                    Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+                    Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                    context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
+                    parsedTenantId
+                    );
             }
         }
     }
