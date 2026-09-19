@@ -75,7 +75,7 @@ public sealed class DependencyHealthCheckTests
     public async Task TwilioHealthCheck_TreatsNonServerHttpResponseAsReachable()
     {
         var check = new DependencyHealthChecks.TwilioHealthCheck(
-            Factory(HttpStatusCode.Unauthorized));
+            CreateFactory(HttpStatusCode.Unauthorized));
 
         var result = await check.CheckHealthAsync(Context(check, HealthStatus.Degraded));
 
@@ -87,7 +87,7 @@ public sealed class DependencyHealthCheckTests
     public async Task TwilioHealthCheck_ReturnsDegradedForServerFailure()
     {
         var check = new DependencyHealthChecks.TwilioHealthCheck(
-            Factory(HttpStatusCode.ServiceUnavailable));
+            CreateFactory(HttpStatusCode.ServiceUnavailable));
 
         var result = await check.CheckHealthAsync(Context(check, HealthStatus.Degraded));
 
@@ -111,7 +111,7 @@ public sealed class DependencyHealthCheckTests
     public async Task BandwidthHealthCheck_ReturnsHealthyWhenEndpointResponds()
     {
         var check = new DependencyHealthChecks.BandwidthHealthCheck(
-            Factory(HttpStatusCode.NotFound));
+            CreateFactory(HttpStatusCode.NotFound));
 
         var result = await check.CheckHealthAsync(Context(check, HealthStatus.Degraded));
 
@@ -215,7 +215,7 @@ public sealed class DependencyHealthCheckTests
             Array.Empty<string>())
     };
 
-    private static Factory Factory(HttpStatusCode statusCode) =>
+    private static Factory CreateFactory(HttpStatusCode statusCode) =>
         new(new HttpClient(new Handler(statusCode))
         {
             BaseAddress = new Uri("https://example.test/")
