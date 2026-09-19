@@ -67,7 +67,7 @@ Docker Compose defines soft memory reservations for each service:
 | Provider initialization | 128 MB |
 | Webhook tests | 256 MB |
 
-These values are resource reservations, not hard memory limits. Docker may allow a container to use more memory when the host has capacity.
+These values are resource reservations, not hard memory limits. Docker may allow a container to use more memory when the host has capacity. The UI starts independently from the API; its Nginx proxy resolves the API dynamically, so the UI container can remain available while backend dependencies are still starting. API requests return a gateway error until the API becomes reachable.
 
 ## Features
 

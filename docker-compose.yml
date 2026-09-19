@@ -139,9 +139,6 @@ services:
     build:
       context: .
       dockerfile: ui/Dockerfile
-    depends_on:
-      api:
-        condition: service_started
     ports: ["4200:80"]
 
 volumes:
