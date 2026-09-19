@@ -1,1 +1,2 @@
-DELETE FROM dbo.SmsOptOuts WHERE TenantId = @TenantId AND Id = @Id;
+DELETE FROM SmsOptOuts
+WHERE TenantId=@TenantId AND Id=@Id;
