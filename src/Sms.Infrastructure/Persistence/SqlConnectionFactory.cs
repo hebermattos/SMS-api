@@ -1,5 +1,5 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 using System.Data;
 
 namespace Sms.Infrastructure.Persistence;
@@ -10,10 +10,11 @@ public sealed class SqlConnectionFactory
 
     public SqlConnectionFactory(IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("SqlServer")
-            ?? throw new InvalidOperationException("Connection string 'SqlServer' is not configured.");
+        _connectionString = configuration.GetConnectionString("Postgres")
+            ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
     }
 
-    public SqlConnection CreateSqlConnection() => new(_connectionString);
-    public IDbConnection CreateConnection() => CreateSqlConnection();
+    public NpgsqlConnection CreateNpgsqlConnection() => new(_connectionString);
+    public NpgsqlConnection CreateSqlConnection() => CreateNpgsqlConnection();
+    public IDbConnection CreateConnection() => CreateNpgsqlConnection();
 }

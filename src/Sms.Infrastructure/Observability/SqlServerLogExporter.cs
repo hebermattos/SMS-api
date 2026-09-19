@@ -1,12 +1,12 @@
 using Dapper;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 
 namespace Sms.Infrastructure.Observability;
 
-public sealed class SqlServerLogExporter(string connectionString) : BaseExporter<LogRecord>
+public sealed class PostgresLogExporter(string connectionString) : BaseExporter<LogRecord>
 {
     private static readonly HashSet<string> ActivityCategories =
     [
@@ -16,14 +16,13 @@ public sealed class SqlServerLogExporter(string connectionString) : BaseExporter
     ];
 
     private static readonly string InsertActivitySql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerLogExporter.SqlServerLogExporter.01.sql");
-
     private static readonly string InsertSystemSql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerLogExporter.SqlServerLogExporter.02.sql");
 
     public override ExportResult Export(in Batch<LogRecord> batch)
     {
         try
         {
-            using var connection = new SqlConnection(connectionString);
+            using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
 
