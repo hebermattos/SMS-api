@@ -1,8 +1,13 @@
-SELECT Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations,
-                   Context, Role, IsActive
-            FROM dbo.PortalUsers
-            WHERE Username = @Username
-              AND Context = @Context
-              AND IsActive = 1
-              AND (Context = 'platform' OR EXISTS
-                  (SELECT 1 FROM dbo.Tenants t WHERE t.Id = TenantId AND t.IsActive = 1));
+SELECT u.Id, u.TenantId, u.Username, u.Email, u.PasswordHash, u.PasswordSalt, u.PasswordIterations,
+       u.Context, u.Role, u.IsActive
+FROM dbo.PortalUsers u
+LEFT JOIN dbo.Tenants t ON t.Id = u.TenantId
+WHERE u.Username = @Username
+  AND u.Context = @Context
+  AND u.IsActive = 1
+  AND
+  (
+      (@Context = 'platform' AND u.TenantId IS NULL)
+      OR
+      (@Context = 'tenant' AND t.Code = @TenantCode AND t.IsActive = 1)
+  );
