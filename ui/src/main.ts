@@ -42,5 +42,5 @@ bootstrapApplication(AppComponent, { providers: [
   provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }))
 ]}).catch(() => {
   const root = document.querySelector('sms-root');
-  if (root) root.textContent = 'The console could not be opened. Reload the page.';
+  if (root) root.textContent = 'The UI could not be opened. Reload the page.';
 });
