@@ -288,6 +288,8 @@ CREATE TABLE dbo.SmsSendOutbox
     PublishedAtUtc DATETIMEOFFSET NULL,
     AttemptCount INT NOT NULL CONSTRAINT DF_SmsSendOutbox_AttemptCount DEFAULT (0),
     LastAttemptAtUtc DATETIMEOFFSET NULL,
+    LockId UNIQUEIDENTIFIER NULL,
+    LockedUntilUtc DATETIMEOFFSET NULL,
     CONSTRAINT FK_SmsSendOutbox_Message FOREIGN KEY (TenantId, MessageId)
         REFERENCES dbo.SmsMessages(TenantId, Id) ON DELETE CASCADE
 );
