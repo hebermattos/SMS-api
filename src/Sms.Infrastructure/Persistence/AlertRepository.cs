@@ -92,12 +92,11 @@ public sealed class AlertRepository(SqlConnectionFactory connectionFactory) : IA
                     THEN 1 ELSE 0 END
             FROM dbo.AlertRules r WITH (UPDLOCK, HOLDLOCK)
             CROSS APPLY (
-                SELECT COUNT(DISTINCT h.MessageId) AS MatchCount
-                FROM dbo.SmsMessageStatusHistory h
-                INNER JOIN dbo.SmsMessages m ON m.TenantId=h.TenantId AND m.Id=h.MessageId
-                WHERE h.TenantId=r.TenantId AND h.Status=r.Status
-                  AND h.CreatedAt>=DATEADD(MINUTE,-r.WindowMinutes,@Now)
-                  AND (r.Provider IS NULL OR m.Provider=r.Provider)
+                SELECT COALESCE(SUM(c.MessageCount), 0) AS MatchCount
+                FROM dbo.AlertStatusCounters c
+                WHERE c.TenantId=r.TenantId AND c.Status=r.Status
+                  AND c.BucketStartUtc>=DATEADD(MINUTE,-r.WindowMinutes,@Now)
+                  AND (r.Provider IS NULL OR c.Provider=r.Provider)
             ) counts
             WHERE r.IsActive=1;
 
