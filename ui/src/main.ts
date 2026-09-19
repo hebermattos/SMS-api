@@ -21,6 +21,7 @@ const routes: Routes = [
   {
     path: 'app', component: ShellComponent, canActivate: [roleGuard], data: { role: 'tenant' }, children: [
       { path: '', pathMatch: 'full', loadComponent: () => import('./app/pages/overview.component').then(m => m.OverviewComponent) },
+      { path: 'users', loadComponent: () => import('./app/pages/tenant-users.component').then(m => m.TenantUsersComponent) },
       { path: 'send', loadComponent: () => import('./app/pages/send.component').then(m => m.SendComponent) },
       { path: 'messages', loadComponent: () => import('./app/pages/messages.component').then(m => m.MessagesComponent) },
       { path: 'messages/:id', loadComponent: () => import('./app/pages/message-detail.component').then(m => m.MessageDetailComponent) },
