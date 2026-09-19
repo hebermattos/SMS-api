@@ -11,7 +11,7 @@ internal static class TenantConfigurationCacheTestFactory
     public static TenantConfigurationCache Create(SqlConnectionFactory connectionFactory) =>
         new(connectionFactory, new TestDistributedCache(), new CacheOptions(true), NullLogger<TenantConfigurationCache>.Instance);
 
-    private sealed class TestDistributedCache : IDistributedCache
+    internal sealed class TestDistributedCache : IDistributedCache
     {
         private readonly ConcurrentDictionary<string, byte[]> _values = new(StringComparer.Ordinal);
 
