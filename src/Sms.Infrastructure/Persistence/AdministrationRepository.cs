@@ -8,15 +8,22 @@ using Sms.Application.Security;
 namespace Sms.Infrastructure.Persistence;
 
 public sealed class AdministrationRepository(
-    SqlConnectionFactory factory,
-    ISecretProtector protector,
+    SqlConnectionFactory connectionFactory,
+    ISecretProtector secretProtector,
     TenantConfigurationCache configurationCache) : IAdministrationRepository
 {
     public async Task<IReadOnlyList<TenantSummary>> ListTenantsAsync(int skip, int take, CancellationToken cancellationToken)
     {
         // This cross-tenant metadata query is exposed only by the PlatformAdmin policy.
-        using var connection = factory.CreateConnection();
-        return (await connection.QueryAsync<TenantSummary>(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministrationRepository.ListTenantsAsync.01.sql"), new { Skip = skip, Take = take }, cancellationToken: cancellationToken))).AsList();
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministrationRepository.ListTenantsAsync.01.sql");
+        using var connection = connectionFactory.CreateConnection();
+
+        var tenants = await connection.QueryAsync<TenantSummary>(new CommandDefinition(
+            sql,
+            new { Skip = skip, Take = take },
+            cancellationToken: cancellationToken));
+
+        return tenants.AsList();
     }
 
     public async Task<TenantSummary?> GetTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
@@ -25,7 +32,7 @@ public sealed class AdministrationRepository(
     public async Task<bool> UpdateTenantAsync(Guid tenantId, string name, string timeZoneId, bool isActive, CancellationToken cancellationToken)
     {
         var previous = await configurationCache.GetAsync(tenantId, cancellationToken);
-        using var connection = factory.CreateConnection();
+        using var connection = connectionFactory.CreateConnection();
         var updated = await connection.ExecuteAsync(new CommandDefinition(
             Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministrationRepository.UpdateTenantAsync.08.sql"),
             new { TenantId = tenantId, Name = name, TimeZoneId = timeZoneId, IsActive = isActive },
@@ -46,7 +53,7 @@ public sealed class AdministrationRepository(
     public async Task CreateClientAsync(CreateApiClient client, CancellationToken cancellationToken)
     {
         var previous = await configurationCache.GetAsync(client.TenantId, cancellationToken);
-        using var connection = factory.CreateConnection();
+        using var connection = connectionFactory.CreateConnection();
         try
         {
             await connection.ExecuteAsync(new CommandDefinition(
@@ -74,7 +81,7 @@ public sealed class AdministrationRepository(
     public async Task<bool> SetClientActiveAsync(Guid tenantId, Guid clientId, bool isActive, CancellationToken cancellationToken)
     {
         var previous = await configurationCache.GetAsync(tenantId, cancellationToken);
-        using var connection = factory.CreateConnection();
+        using var connection = connectionFactory.CreateConnection();
         var updated = await connection.ExecuteAsync(new CommandDefinition(
             Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministrationRepository.SetClientActiveAsync.04.sql"),
             new { TenantId = tenantId, ClientId = clientId, IsActive = isActive, Now = DateTimeOffset.UtcNow },
@@ -89,27 +96,30 @@ public sealed class AdministrationRepository(
     public async Task<string?> RotateClientSecretAsync(Guid tenantId, Guid clientId, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken)
     {
         var previous = await configurationCache.GetAsync(tenantId, cancellationToken);
-        using var connection = factory.CreateConnection();
-        var clientIdValue = await connection.QuerySingleOrDefaultAsync<string>(new CommandDefinition(
+        using var connection = connectionFactory.CreateConnection();
+        var clientIdentifier = await connection.QuerySingleOrDefaultAsync<string>(new CommandDefinition(
             Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministrationRepository.RotateClientSecretAsync.05.sql"),
             new { TenantId = tenantId, ClientId = clientId, Hash = hash, Salt = salt, Iterations = iterations, Now = DateTimeOffset.UtcNow },
             cancellationToken: cancellationToken));
 
-        if (clientIdValue is not null)
+        if (clientIdentifier is not null)
             await configurationCache.InvalidateAsync(tenantId, previous, cancellationToken: CancellationToken.None);
 
-        return clientIdValue;
+        return clientIdentifier;
     }
 
     public async Task<IReadOnlyList<TenantSmsProviderConfiguration>> ListProvidersAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var snapshot = await configurationCache.GetAsync(tenantId, cancellationToken);
-        if (snapshot is null) return Array.Empty<TenantSmsProviderConfiguration>();
+        if (snapshot is null)
+            return Array.Empty<TenantSmsProviderConfiguration>();
 
-        return snapshot.Providers.Select(value => value with
+        return snapshot.Providers.Select(configuration => configuration with
         {
-            ApiSecret = protector.Unprotect(value.ApiSecret),
-            Settings = string.IsNullOrWhiteSpace(value.Settings) ? null : protector.Unprotect(value.Settings)
+            ApiSecret = secretProtector.Unprotect(configuration.ApiSecret),
+            Settings = string.IsNullOrWhiteSpace(configuration.Settings)
+                ? null
+                : secretProtector.Unprotect(configuration.Settings)
         }).ToArray();
     }
 }
