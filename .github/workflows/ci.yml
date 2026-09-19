@@ -9,7 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  build-test:
+  backend-quality:
+    name: Backend build and unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +44,9 @@ jobs:
           path: TestResults/**/coverage.cobertura.xml
           if-no-files-found: error
 
-  bandwidth-sql:
+  sql-integration:
+    name: SQL Server integration tests
+    needs: [backend-quality, frontend-quality]
     runs-on: ubuntu-latest
     services:
       sqlserver:
@@ -72,7 +75,8 @@ jobs:
       - name: Verify webhook and administration persistence against SQL Server
         run: dotnet test Sms.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests|FullyQualifiedName~AlertSqlTests|FullyQualifiedName~ExampleProviderSeedSqlTests|FullyQualifiedName~AdministratorSqlTests'
 
-  console:
+  frontend-quality:
+    name: Frontend build and unit tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -84,11 +88,16 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: ui/package-lock.json
-      - run: npm ci --no-audit --no-fund
-      - run: npm run build
-      - run: npm test
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build frontend
+        run: npm run build
+      - name: Run frontend unit tests
+        run: npm test
 
-  compose-bootstrap:
+  compose-integration:
+    name: Docker Compose end-to-end test
+    needs: sql-integration
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
