@@ -46,6 +46,7 @@ docker compose up --build
 ```
 
 Docker is for local testing only. The Compose fallback credentials must never be used outside local development.
+The local API exposes HTTP only; HTTPS redirection remains enabled outside Development.
 
 ## UI
 
