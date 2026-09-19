@@ -8,7 +8,7 @@ namespace Sms.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/messages")]
-public sealed class MessagesController(ITenantContext tenantContext, ISmsMessageRepository repository, SendSmsService sendSmsService, ITenantTimeZoneProvider? timeZones = null) : ControllerBase
+public sealed class MessagesController(ITenantContext tenantContext, ISmsMessageRepository repository, SendSmsService sendSmsService, ITenantTimeZoneProvider timeZones) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Send([FromBody] SendSmsRequest request, CancellationToken cancellationToken)
@@ -47,8 +47,8 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
             .Select(item => ToResponse(item, zone)));
     }
 
-    private async Task<TimeZoneInfo> Zone(CancellationToken cancellationToken) =>
-        timeZones is null ? TimeZoneInfo.Utc : await timeZones.GetAsync(tenantContext.TenantId, cancellationToken);
+    private Task<TimeZoneInfo> Zone(CancellationToken cancellationToken) =>
+        timeZones.GetAsync(tenantContext.TenantId, cancellationToken);
 
     private static object ToResponse(Sms.Domain.Messages.SmsMessage message, TimeZoneInfo zone) => new
     {
