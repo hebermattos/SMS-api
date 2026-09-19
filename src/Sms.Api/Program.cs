@@ -1,8 +1,10 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Sms.Api.Filters;
+using Sms.Api.Health;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry;
@@ -75,6 +77,7 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddDependencyHealthChecks(builder.Configuration);
 builder.Services.AddHostedService<Sms.Infrastructure.Messaging.AlertEvaluationOutboxPublisher>();
 builder.Services.AddHostedService<Sms.Infrastructure.Messaging.ScheduledSmsPublisher>();
 
@@ -93,7 +96,10 @@ app.UseMiddleware<RequestAuditMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 app.MapSwaggerRoot();
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = HealthResponseWriter.WriteAsync
+});
 app.Run();
 
 public partial class Program;
