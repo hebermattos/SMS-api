@@ -131,6 +131,12 @@ public sealed class AdministrationServiceTests
         Assert.Null(twilio.MergeAndValidate(null, new Dictionary<string, string?>()));
         Assert.Empty(twilio.Describe("anything").Item1);
         Assert.Throws<ArgumentException>(() => twilio.MergeAndValidate(null, new Dictionary<string, string?> { ["unexpected"] = "value" }));
+        var mock = new MockSettingsPolicy();
+        Assert.Equal("Mock", mock.Definition.Name);
+        Assert.Empty(mock.Describe(null).Item1);
+        Assert.Empty(mock.Describe(null).Item2);
+        Assert.Throws<ArgumentException>(() => mock.MergeAndValidate(null, new Dictionary<string, string?> { ["unexpected"] = "value" }));
+        Assert.Null(mock.MergeAndValidate("existing", new Dictionary<string, string?>()));
         var bandwidth = new BandwidthSettingsPolicy();
         Assert.Throws<ArgumentException>(() => bandwidth.MergeAndValidate(null, new Dictionary<string, string?>()));
         Assert.Throws<ArgumentException>(() => bandwidth.Describe("invalid"));
