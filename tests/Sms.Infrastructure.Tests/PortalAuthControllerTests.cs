@@ -22,7 +22,7 @@ public sealed class PortalAuthControllerTests
     {
         var user = Account("tenant", "user");
         var controller = Controller(new Users(user), new AdminRepository());
-        var result = await controller.Token(new(" portal ", Password, "tenant"), CancellationToken.None);
+        var result = await controller.Token(new(" portal ", Password, "tenant", " tenant-code "), CancellationToken.None);
 
         var response = Assert.IsType<OkObjectResult>(result);
         Assert.NotNull(response.Value);
@@ -70,8 +70,13 @@ public sealed class PortalAuthControllerTests
 
     private sealed class Users(PortalUserAccount? account) : IPortalUserRepository
     {
-        public Task<PortalUserAccount?> GetActiveByUsernameAsync(string username, string context, CancellationToken cancellationToken = default) =>
-            Task.FromResult(account is not null && account.Context == context ? account : null);
+        public Task<PortalUserAccount?> GetActiveByUsernameAsync(
+            string username, string context, string? tenantCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult(account is not null
+                && account.Context == context
+                && (context != "tenant" || tenantCode == "tenant-code")
+                    ? account
+                    : null);
         public Task<PortalUserAccount?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
             Task.FromResult<PortalUserAccount?>(null);
     }
