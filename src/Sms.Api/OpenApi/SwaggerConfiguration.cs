@@ -47,4 +47,15 @@ public static class SwaggerConfiguration
         }
         return app;
     }
+
+    public static WebApplication MapSwaggerRoot(this WebApplication app)
+    {
+        if (app.Environment.IsDevelopment())
+        {
+            app.MapGet("/", () => Results.Redirect("/swagger"))
+                .ExcludeFromDescription();
+        }
+
+        return app;
+    }
 }
