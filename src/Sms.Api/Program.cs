@@ -78,7 +78,10 @@ builder.Services.AddHostedService<Sms.Infrastructure.Messaging.AlertEvaluationOu
 
 var app = builder.Build();
 app.UseSwaggerDocumentation();
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseRouting();
 app.UseMiddleware<ClientLoginAuditMiddleware>();
 app.UseMiddleware<PlatformAuditMiddleware>();
