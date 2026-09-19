@@ -7,9 +7,10 @@ using Sms.Application.Providers;
 namespace Sms.Application.Administration;
 
 public sealed class AdministrationService(IAdministrationRepository repository,
-    ITenantSmsProviderRepository providers, IEnumerable<IProviderSettingsPolicy> policies)
+    ITenantSmsProviderRepository providers, IEnumerable<IProviderSettingsPolicy> policies, IProviderCatalogCache providerCatalogCache)
 {
-    public IReadOnlyList<ProviderDefinition> ProviderCatalog => policies.Select(x => x.Definition).ToArray();
+    public Task<IReadOnlyList<ProviderDefinition>> GetProviderCatalogAsync(CancellationToken cancellationToken = default) =>
+        providerCatalogCache.GetAsync(cancellationToken);
 
     public Task<IReadOnlyList<TenantSummary>> ListTenantsAsync(int skip, int take, CancellationToken cancellationToken)
     {
