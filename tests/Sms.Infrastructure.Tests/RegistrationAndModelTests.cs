@@ -9,6 +9,7 @@ using Sms.Application.Tenants;
 using Sms.Domain.Tenants;
 using Sms.Infrastructure;
 using Sms.Infrastructure.Providers;
+using Sms.Infrastructure.Caching;
 using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Tests;
@@ -57,6 +58,31 @@ public sealed class RegistrationAndModelTests
         Assert.Contains(services, x => x.ServiceType == typeof(Sms.Infrastructure.Persistence.ReportingSqlConnectionFactory));
         Assert.Contains(services, x => x.ServiceType == typeof(Sms.Infrastructure.Messaging.ITenantSmsOverviewOutbox) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(services, x => x.ServiceType == typeof(Sms.Infrastructure.Messaging.ITenantSmsOverviewEventPublisher) && x.Lifetime == ServiceLifetime.Singleton);
+    }
+
+    [Fact]
+    public void AddInfrastructure_DoesNotRequireRedisConnectionWhenCacheIsDisabled()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Cache:Enabled"] = "false",
+            ["Encryption:MasterKey"] = Convert.ToBase64String(new byte[32])
+        }).Build();
+        var services = new ServiceCollection();
+
+        services.AddInfrastructure(configuration);
+
+        using var provider = services.BuildServiceProvider();
+        Assert.False(provider.GetRequiredService<CacheOptions>().Enabled);
+        Assert.NotNull(provider.GetRequiredService<IDistributedCache>());
+    }
+
+    [Fact]
+    public void CacheOptions_DefaultsToEnabled()
+    {
+        var options = CacheOptions.From(new ConfigurationBuilder().Build());
+
+        Assert.True(options.Enabled);
     }
 
     [Fact]
