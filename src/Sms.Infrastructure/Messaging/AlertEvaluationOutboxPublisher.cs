@@ -32,19 +32,14 @@ public sealed class AlertEvaluationOutboxPublisher(
     private async Task PublishBatchAsync(CancellationToken cancellationToken)
     {
         using var connection = connectionFactory.CreateConnection();
-        var rows = await connection.QueryAsync<OutboxRow>(new CommandDefinition("""
-            SELECT TOP (100) Id AS EventId, TenantId, Provider, Status, OccurredAtUtc
-            FROM dbo.AlertEvaluationOutbox WITH (READPAST, UPDLOCK, ROWLOCK)
-            WHERE PublishedAtUtc IS NULL
-            ORDER BY CreatedAtUtc, Id;
-            """, cancellationToken: cancellationToken));
+        var rows = await connection.QueryAsync<OutboxRow>(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationOutboxPublisher.PublishBatchAsync.01.sql"), cancellationToken: cancellationToken));
 
         foreach (var row in rows)
         {
             await publishEndpoint.Publish(new AlertEvaluationEvent(
                 row.EventId, row.TenantId, row.Provider, row.Status, row.OccurredAtUtc), cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(
-                "UPDATE dbo.AlertEvaluationOutbox SET PublishedAtUtc=SYSUTCDATETIME(), AttemptCount=AttemptCount+1, LastAttemptAtUtc=SYSUTCDATETIME() WHERE Id=@Id AND PublishedAtUtc IS NULL;",
+                Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationOutboxPublisher.PublishBatchAsync.02.sql"),
                 new { Id = row.EventId }, cancellationToken: cancellationToken));
         }
     }

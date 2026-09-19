@@ -9,7 +9,7 @@ public sealed class TenantTimeZoneProvider(SqlConnectionFactory connectionFactor
     {
         using var connection = connectionFactory.CreateConnection();
         var id = await connection.QuerySingleOrDefaultAsync<string>(new CommandDefinition(
-            "SELECT TimeZoneId FROM dbo.Tenants WHERE Id=@TenantId AND IsActive=1;",
+            Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantTimeZoneProvider.GetAsync.01.sql"),
             new { TenantId = tenantId }, cancellationToken: cancellationToken));
         if (id is null) throw new KeyNotFoundException();
         return TimeZoneInfo.FindSystemTimeZoneById(id);

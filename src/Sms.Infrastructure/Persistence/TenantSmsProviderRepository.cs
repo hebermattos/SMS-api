@@ -8,25 +8,23 @@ namespace Sms.Infrastructure.Persistence;
 
 public sealed class TenantSmsProviderRepository(SqlConnectionFactory connectionFactory, ISecretProtector secretProtector) : ITenantSmsProviderRepository
 {
-    private const string Columns = "TenantId, Provider, AccountId, ApiSecret, FromNumber, IsDefault, IsActive, Settings";
-
     public async Task<TenantSmsProviderConfiguration?> GetAsync(Guid tenantId, string provider, CancellationToken cancellationToken = default)
     {
-        var sql = $"SELECT {Columns} FROM dbo.TenantSmsProviders WHERE TenantId=@TenantId AND Provider=@Provider AND IsActive=1;";
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantSmsProviderRepository.GetAsync.02.sql");
         using var connection=connectionFactory.CreateConnection();
         return Decrypt(await connection.QuerySingleOrDefaultAsync<TenantSmsProviderConfiguration>(new CommandDefinition(sql,new {TenantId=tenantId,Provider=provider},cancellationToken:cancellationToken)));
     }
 
     public async Task<TenantSmsProviderConfiguration?> GetDefaultAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
-        var sql=$"SELECT {Columns} FROM dbo.TenantSmsProviders WHERE TenantId=@TenantId AND IsDefault=1 AND IsActive=1;";
+        var sql=Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantSmsProviderRepository.GetDefaultAsync.03.sql");
         using var connection=connectionFactory.CreateConnection();
         return Decrypt(await connection.QuerySingleOrDefaultAsync<TenantSmsProviderConfiguration>(new CommandDefinition(sql,new {TenantId=tenantId},cancellationToken:cancellationToken)));
     }
 
     public async Task<TenantSmsProviderConfiguration?> GetByAccountAndNumberAsync(string provider, string accountId, string number, CancellationToken cancellationToken = default)
     {
-        var sql = $"SELECT {Columns} FROM dbo.TenantSmsProviders WHERE Provider=@Provider AND AccountId=@AccountId AND FromNumber=@FromNumber AND IsActive=1;";
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantSmsProviderRepository.GetByAccountAndNumberAsync.04.sql");
         using var connection = connectionFactory.CreateConnection();
         return Decrypt(await connection.QuerySingleOrDefaultAsync<TenantSmsProviderConfiguration>(new CommandDefinition(
             sql,
@@ -36,22 +34,7 @@ public sealed class TenantSmsProviderRepository(SqlConnectionFactory connectionF
 
     public async Task UpsertAsync(TenantSmsProviderConfiguration configuration,CancellationToken cancellationToken=default)
     {
-        const string sql = """
-            SET XACT_ABORT ON;
-            BEGIN TRANSACTION;
-            -- Serialize configuration writes for this tenant, including default-provider changes.
-            SELECT Id FROM dbo.Tenants WITH (UPDLOCK, HOLDLOCK) WHERE Id=@TenantId;
-            IF @IsDefault=1 AND @IsActive=1
-                UPDATE dbo.TenantSmsProviders SET IsDefault=0, UpdatedAt=@Now
-                WHERE TenantId=@TenantId AND Provider<>@Provider AND IsDefault=1;
-            UPDATE dbo.TenantSmsProviders
-            SET AccountId=@AccountId,ApiSecret=@ApiSecret,FromNumber=@FromNumber,IsDefault=@IsDefault,IsActive=@IsActive,Settings=@Settings,UpdatedAt=@Now
-            WHERE TenantId=@TenantId AND Provider=@Provider;
-            IF @@ROWCOUNT=0
-                INSERT dbo.TenantSmsProviders(Id,TenantId,Provider,AccountId,ApiSecret,FromNumber,IsDefault,IsActive,Settings,CreatedAt)
-                VALUES(@Id,@TenantId,@Provider,@AccountId,@ApiSecret,@FromNumber,@IsDefault,@IsActive,@Settings,@Now);
-            COMMIT TRANSACTION;
-            """;
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantSmsProviderRepository.UpsertAsync.01.sql");
         using var connection=connectionFactory.CreateConnection();
         try
         {

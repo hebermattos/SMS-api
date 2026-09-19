@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using Sms.Application.Auth;
 using Microsoft.Extensions.Configuration;
 using Sms.Infrastructure.Persistence;
+using Sms.Infrastructure.Sql;
 
 if (args is ["--admin"])
 {
@@ -41,12 +42,10 @@ await connection.OpenAsync();
 await using var transaction = await connection.BeginTransactionAsync();
 try
 {
-    await connection.ExecuteAsync("INSERT INTO dbo.Tenants (Id, Name, IsActive, CreatedAt) VALUES (@Id,@Name,1,@Now);",
+    await connection.ExecuteAsync(SqlQuery.Load("Provision/CreateTenant.sql"),
         new { Id = tenantId, Name = tenantName, Now = DateTimeOffset.UtcNow }, transaction);
-    await connection.ExecuteAsync("""
-        INSERT INTO dbo.ApiClients (Id,TenantId,ClientId,SecretHash,SecretSalt,SecretIterations,IsActive,CreatedAt)
-        VALUES (@Id,@TenantId,@ClientId,@SecretHash,@SecretSalt,@SecretIterations,1,@Now);
-        """, new { Id = Guid.NewGuid(), TenantId = tenantId, ClientId = clientId, SecretHash = hashed.Hash, SecretSalt = hashed.Salt, SecretIterations = hashed.Iterations, Now = DateTimeOffset.UtcNow }, transaction);
+    await connection.ExecuteAsync(SqlQuery.Load("Provision/CreateApiClient.sql"),
+        new { Id = Guid.NewGuid(), TenantId = tenantId, ClientId = clientId, SecretHash = hashed.Hash, SecretSalt = hashed.Salt, SecretIterations = hashed.Iterations, Now = DateTimeOffset.UtcNow }, transaction);
     await transaction.CommitAsync();
 }
 catch

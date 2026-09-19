@@ -10,7 +10,7 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
     {
         using var connection = connections.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<AdministratorAccount>(new CommandDefinition(
-            "SELECT Id,Username,Email,PasswordHash,PasswordSalt,PasswordIterations,IsActive FROM dbo.PlatformAdministrators WHERE Username=@Username;",
+            Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministratorRepository.GetByUsernameAsync.04.sql"),
             new { Username = username }, cancellationToken: cancellationToken));
     }
 
@@ -18,16 +18,14 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
     {
         using var connection = connections.CreateConnection();
         return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
-            "SELECT CAST(CASE WHEN EXISTS(SELECT 1 FROM dbo.PlatformAdministrators WHERE Id=@Id AND IsActive=1) THEN 1 ELSE 0 END AS BIT);",
+            Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministratorRepository.IsActiveAsync.05.sql"),
             new { Id = id }, cancellationToken: cancellationToken));
     }
 
     public async Task<IReadOnlyList<AdministratorSummary>> ListAsync(CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return (await connection.QueryAsync<AdministratorSummary>(new CommandDefinition("""
-            SELECT Id,Username,Email,IsActive,CreatedAt FROM dbo.PlatformAdministrators ORDER BY Username;
-            """, cancellationToken: cancellationToken))).AsList();
+        return (await connection.QueryAsync<AdministratorSummary>(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministratorRepository.ListAsync.01.sql"), cancellationToken: cancellationToken))).AsList();
     }
 
     public async Task CreateAsync(AdministratorAccount account, CancellationToken cancellationToken = default)
@@ -35,10 +33,7 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
         using var connection = connections.CreateConnection();
         try
         {
-            await connection.ExecuteAsync(new CommandDefinition("""
-                INSERT dbo.PlatformAdministrators(Id,Username,Email,PasswordHash,PasswordSalt,PasswordIterations,IsActive,CreatedAt)
-                VALUES(@Id,@Username,@Email,@PasswordHash,@PasswordSalt,@PasswordIterations,@IsActive,SYSDATETIMEOFFSET());
-                """, account, cancellationToken: cancellationToken));
+            await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministratorRepository.CreateAsync.02.sql"), account, cancellationToken: cancellationToken));
         }
         catch (SqlException exception) when (exception.Number is 2601 or 2627)
         {
@@ -52,18 +47,18 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
         await connection.OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction(System.Data.IsolationLevel.Serializable);
         var currentState = await connection.QuerySingleOrDefaultAsync<bool?>(new CommandDefinition(
-            "SELECT IsActive FROM dbo.PlatformAdministrators WITH (UPDLOCK, HOLDLOCK) WHERE Id=@Id;",
+            Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministratorRepository.SetActiveAsync.06.sql"),
             new { Id = id }, transaction, cancellationToken: cancellationToken));
         if (currentState is null) { transaction.Rollback(); return AdministratorStateResult.NotFound; }
         if (!isActive && currentState.Value)
         {
             var activeCount = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
-                "SELECT COUNT(*) FROM dbo.PlatformAdministrators WITH (UPDLOCK, HOLDLOCK) WHERE IsActive=1;",
+                Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministratorRepository.SetActiveAsync.07.sql"),
                 transaction: transaction, cancellationToken: cancellationToken));
             if (activeCount <= 1) { transaction.Rollback(); return AdministratorStateResult.LastActive; }
         }
         await connection.ExecuteAsync(new CommandDefinition(
-            "UPDATE dbo.PlatformAdministrators SET IsActive=@IsActive WHERE Id=@Id;",
+            Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministratorRepository.SetActiveAsync.08.sql"),
             new { Id = id, IsActive = isActive }, transaction, cancellationToken: cancellationToken));
         transaction.Commit();
         return AdministratorStateResult.Updated;
@@ -72,8 +67,6 @@ public sealed class AdministratorRepository(SqlConnectionFactory connections) : 
     public async Task<bool> ResetPasswordAsync(Guid id, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return await connection.ExecuteAsync(new CommandDefinition("""
-            UPDATE dbo.PlatformAdministrators SET PasswordHash=@Hash,PasswordSalt=@Salt,PasswordIterations=@Iterations WHERE Id=@Id;
-            """, new { Id = id, Hash = hash, Salt = salt, Iterations = iterations }, cancellationToken: cancellationToken)) == 1;
+        return await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AdministratorRepository.ResetPasswordAsync.03.sql"), new { Id = id, Hash = hash, Salt = salt, Iterations = iterations }, cancellationToken: cancellationToken)) == 1;
     }
 }
