@@ -179,7 +179,7 @@ The project does not use migrations. Initialize new databases with:
 
 The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, minute-level alert status counters, and transactional outbox/inbox tables for SMS sending and alert evaluation. Status history inserts create outbox events in the same SQL transaction; a MassTransit publisher delivers them through RabbitMQ and an idempotent consumer evaluates only the affected tenant/status/provider. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
 
-All dates are stored in UTC. Each tenant has an IANA time zone for display and date filters.
+All dates are stored in UTC. Each tenant has a unique code and an IANA time zone for display and date filters.
 
 Alert rules count SMS status transitions within the configured window. A once-only rule fires once and remains triggered until the rule is updated. A repeating rule can fire again after its configured interval while the threshold remains satisfied. Alert evaluation is event-driven through RabbitMQ. The outbox makes database changes durable across broker outages, and the inbox prevents duplicate alert notifications.
 
@@ -188,7 +188,7 @@ Alert rules count SMS status transitions within the configured window. A once-on
 - JWT authorization separates tenant users, tenant administrators, and platform administrators.
 - Tenant isolation is enforced from authenticated claims.
 - SMS content and provider secrets use application-side AES-256-GCM encryption.
-- Passwords and client secrets use PBKDF2-SHA256.
+- Passwords and client secrets use PBKDF2-SHA256 with a minimum of 600,000 iterations.
 - Webhooks validate provider credentials or signatures.
 - Customer logs are tenant-isolated.
 - Technical logs contain only error-level events.
