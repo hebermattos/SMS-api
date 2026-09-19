@@ -308,3 +308,75 @@ GO
 CREATE INDEX IX_SmsSendInbox_ProcessedAtUtc
     ON dbo.SmsSendInbox(ProcessedAtUtc, EventId);
 GO
+
+CREATE TABLE dbo.TenantSmsOverviewOutbox
+(
+    SequenceNumber BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_TenantSmsOverviewOutbox PRIMARY KEY,
+    EventId UNIQUEIDENTIFIER NOT NULL CONSTRAINT UQ_TenantSmsOverviewOutbox_EventId UNIQUE,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
+    OutboundDelta BIGINT NOT NULL,
+    InboundDelta BIGINT NOT NULL,
+    DeliveredDelta BIGINT NOT NULL,
+    FailedDelta BIGINT NOT NULL,
+    PendingDelta BIGINT NOT NULL,
+    OccurredAtUtc DATETIMEOFFSET NOT NULL,
+    PublishedAtUtc DATETIMEOFFSET NULL,
+    AttemptCount INT NOT NULL CONSTRAINT DF_TenantSmsOverviewOutbox_AttemptCount DEFAULT (0),
+    LastAttemptAtUtc DATETIMEOFFSET NULL,
+    CONSTRAINT FK_TenantSmsOverviewOutbox_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id) ON DELETE CASCADE
+);
+GO
+
+CREATE INDEX IX_TenantSmsOverviewOutbox_Pending
+    ON dbo.TenantSmsOverviewOutbox(SequenceNumber)
+    INCLUDE (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+    WHERE PublishedAtUtc IS NULL;
+GO
+
+CREATE TRIGGER dbo.TR_SmsMessages_TenantSmsOverview_Insert
+ON dbo.SmsMessages
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT dbo.TenantSmsOverviewOutbox
+        (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+    SELECT
+        NEWID(),
+        TenantId,
+        SUM(CASE WHEN Direction = 1 THEN CONVERT(BIGINT, 1) ELSE 0 END),
+        SUM(CASE WHEN Direction = 2 THEN CONVERT(BIGINT, 1) ELSE 0 END),
+        SUM(CASE WHEN Direction = 1 AND Status = 3 THEN CONVERT(BIGINT, 1) ELSE 0 END),
+        SUM(CASE WHEN Direction = 1 AND Status = 4 THEN CONVERT(BIGINT, 1) ELSE 0 END),
+        SUM(CASE WHEN Direction = 1 AND Status IN (1, 2) THEN CONVERT(BIGINT, 1) ELSE 0 END),
+        SYSUTCDATETIME()
+    FROM inserted
+    GROUP BY TenantId;
+END;
+GO
+
+CREATE TRIGGER dbo.TR_SmsMessages_TenantSmsOverview_Update
+ON dbo.SmsMessages
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT dbo.TenantSmsOverviewOutbox
+        (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+    SELECT
+        NEWID(),
+        i.TenantId,
+        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 THEN 1 ELSE 0 END),
+        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 2 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 2 THEN 1 ELSE 0 END),
+        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status = 3 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status = 3 THEN 1 ELSE 0 END),
+        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status = 4 THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status = 4 THEN 1 ELSE 0 END),
+        SUM(CONVERT(BIGINT, CASE WHEN i.Direction = 1 AND i.Status IN (1, 2) THEN 1 ELSE 0 END) - CASE WHEN d.Direction = 1 AND d.Status IN (1, 2) THEN 1 ELSE 0 END),
+        SYSUTCDATETIME()
+    FROM inserted i
+    INNER JOIN deleted d ON d.Id = i.Id
+    WHERE i.Direction <> d.Direction OR i.Status <> d.Status
+    GROUP BY i.TenantId;
+END;
+GO
