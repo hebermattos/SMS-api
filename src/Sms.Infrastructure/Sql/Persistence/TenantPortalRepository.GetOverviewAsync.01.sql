@@ -1,3 +1,8 @@
-SELECT Name, TimeZoneId FROM dbo.Tenants WHERE Id=@TenantId AND IsActive=1;
-SELECT Provider AS Name, FromNumber, IsDefault FROM dbo.TenantSmsProviders
-WHERE TenantId=@TenantId AND IsActive=1 ORDER BY IsDefault DESC, Provider;
+SELECT Name, TimeZoneId
+FROM Tenants
+WHERE Id=@TenantId AND IsActive;
+
+SELECT Provider AS Name, FromNumber, IsDefault
+FROM TenantSmsProviders
+WHERE TenantId=@TenantId AND IsActive
+ORDER BY IsDefault DESC, Provider;

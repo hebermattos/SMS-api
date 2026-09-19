@@ -1,14 +1,38 @@
-SET XACT_ABORT ON;
-            BEGIN TRANSACTION;
-            -- Serialize configuration writes for this tenant, including default-provider changes.
-            SELECT Id FROM dbo.Tenants WITH (UPDLOCK, HOLDLOCK) WHERE Id=@TenantId;
-            IF @IsDefault=1 AND @IsActive=1
-                UPDATE dbo.TenantSmsProviders SET IsDefault=0, UpdatedAt=@Now
-                WHERE TenantId=@TenantId AND Provider<>@Provider AND IsDefault=1;
-            UPDATE dbo.TenantSmsProviders
-            SET AccountId=@AccountId,ApiSecret=@ApiSecret,FromNumber=@FromNumber,IsDefault=@IsDefault,IsActive=@IsActive,Settings=@Settings,UpdatedAt=@Now
-            WHERE TenantId=@TenantId AND Provider=@Provider;
-            IF @@ROWCOUNT=0
-                INSERT dbo.TenantSmsProviders(Id,TenantId,Provider,AccountId,ApiSecret,FromNumber,IsDefault,IsActive,Settings,CreatedAt)
-                VALUES(@Id,@TenantId,@Provider,@AccountId,@ApiSecret,@FromNumber,@IsDefault,@IsActive,@Settings,@Now);
-            COMMIT TRANSACTION;
+WITH tenant_lock AS
+(
+    SELECT Id
+    FROM Tenants
+    WHERE Id=@TenantId
+    FOR UPDATE
+),
+cleared_defaults AS
+(
+    UPDATE TenantSmsProviders
+    SET IsDefault=FALSE, UpdatedAt=@Now
+    WHERE TenantId=@TenantId
+      AND Provider<>@Provider
+      AND IsDefault
+      AND @IsDefault
+      AND @IsActive
+      AND EXISTS (SELECT 1 FROM tenant_lock)
+    RETURNING 1
+),
+barrier AS
+(
+    SELECT COUNT(*) FROM cleared_defaults
+)
+INSERT INTO TenantSmsProviders
+    (Id, TenantId, Provider, AccountId, ApiSecret, FromNumber, IsDefault, IsActive, Settings, CreatedAt)
+SELECT
+    @Id, @TenantId, @Provider, @AccountId, @ApiSecret, @FromNumber, @IsDefault, @IsActive, @Settings, @Now
+FROM tenant_lock
+CROSS JOIN barrier
+ON CONFLICT (TenantId, Provider)
+DO UPDATE SET
+    AccountId=EXCLUDED.AccountId,
+    ApiSecret=EXCLUDED.ApiSecret,
+    FromNumber=EXCLUDED.FromNumber,
+    IsDefault=EXCLUDED.IsDefault,
+    IsActive=EXCLUDED.IsActive,
+    Settings=EXCLUDED.Settings,
+    UpdatedAt=@Now;
