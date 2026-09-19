@@ -28,7 +28,7 @@ public sealed class TwilioWebhooksControllerTests
     [Fact]
     public async Task Inbound_RejectsMissingRequiredMessageFields()
     {
-        var controller=Create(Guid.NewGuid(),new MessageRepository(),Form(("AccountSid","AC1"),("From","+1"),("To","+2")));
+        var controller=Create(Guid.NewGuid(),new MessageRepository(),Form(("AccountSid","AC1"),("From","+15551234567"),("To","+15557654321")));
         Assert.IsType<BadRequestResult>(await controller.Inbound(default));
     }
 
@@ -48,7 +48,7 @@ public sealed class TwilioWebhooksControllerTests
     public async Task Status_MapsProviderStatus(string value,SmsStatus expected)
     {
         var messages=new MessageRepository();
-        var controller=Create(Guid.NewGuid(),messages,Form(("AccountSid","AC1"),("MessageSid","SM1"),("MessageStatus",value),("From","+2")));
+        var controller=Create(Guid.NewGuid(),messages,Form(("AccountSid","AC1"),("MessageSid","SM1"),("MessageStatus",value),("From","+15557654321")));
         Assert.IsType<NoContentResult>(await controller.Status(default));
         Assert.Equal(expected,messages.Status);
     }
@@ -56,14 +56,14 @@ public sealed class TwilioWebhooksControllerTests
     [Fact]
     public async Task Status_RejectsMissingMessageSid()
     {
-        var controller=Create(Guid.NewGuid(),new MessageRepository(),Form(("AccountSid","AC1"),("MessageStatus","sent"),("From","+2")));
+        var controller=Create(Guid.NewGuid(),new MessageRepository(),Form(("AccountSid","AC1"),("MessageStatus","sent"),("From","+15557654321")));
         Assert.IsType<BadRequestResult>(await controller.Status(default));
     }
 
     [Fact]
     public async Task Status_ForbidsUnknownAccount()
     {
-        var form=Form(("AccountSid","AC1"),("MessageSid","SM1"),("From","+2"));
+        var form=Form(("AccountSid","AC1"),("MessageSid","SM1"),("From","+15557654321"));
         var controller=Create(Guid.NewGuid(),new MessageRepository(),form,configurationExists:false);
         Assert.IsType<ForbidResult>(await controller.Status(default));
     }
