@@ -69,6 +69,13 @@ public sealed class ClientAuditTests
     [InlineData("TenantUsers", "Create", 201, "Created a tenant user.")]
     [InlineData("TenantUsers", "SetState", 204, "Updated a tenant user's status.")]
     [InlineData("TenantUsers", "ResetPassword", 204, "Reset a tenant user's password.")]
+    [InlineData("Alerts", "Rules", 200, "Viewed alert rules.")]
+    [InlineData("Alerts", "CreateRule", 201, "Created an alert rule.")]
+    [InlineData("Alerts", "UpdateRule", 204, "Updated an alert rule.")]
+    [InlineData("Alerts", "DeleteRule", 204, "Deleted an alert rule.")]
+    [InlineData("Alerts", "List", 200, "Viewed alerts.")]
+    [InlineData("Alerts", "MarkRead", 204, "Marked an alert as read.")]
+    [InlineData("Alerts", "MarkAllRead", 204, "Marked all alerts as read.")]
     [InlineData("Messages", "Send", 400, "Could not send an SMS message.")]
     public async Task HttpAuditUsesHumanReadableActivity(
         string controller, string action, int status, string expected)
