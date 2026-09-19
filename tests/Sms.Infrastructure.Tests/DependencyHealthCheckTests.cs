@@ -195,7 +195,7 @@ public sealed class DependencyHealthCheckTests
         Assert.Equal("Healthy", redis.GetProperty("status").GetString());
         Assert.Equal("Redis responded.", redis.GetProperty("description").GetString());
         Assert.Equal(2, redis.GetProperty("tags").GetArrayLength());
-        Assert.DoesNotContain("exception", json.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("exception", json.RootElement.GetRawText().ToLowerInvariant());
     }
 
     private static IConfiguration Configuration() =>
