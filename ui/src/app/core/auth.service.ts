@@ -43,8 +43,8 @@ export class AuthService implements OnDestroy {
       .pipe(tap(value => this.accept(value.access_token, username, 'platform')));
   }
 
-  loginPortal(username: string, password: string, context: PortalContext) {
-    return this.http.post<TokenResponse>('/api/v1/portal/auth/token', { username, password, context })
+  loginPortal(username: string, password: string, context: PortalContext, tenantCode?: string) {
+    return this.http.post<TokenResponse>('/api/v1/portal/auth/token', { username, password, context, tenantCode })
       .pipe(tap(value => this.accept(value.access_token, username, context)));
   }
 
