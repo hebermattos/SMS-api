@@ -64,7 +64,7 @@ public sealed class MessagesControllerTests
     private static MessagesController Create(Guid tenantId, Repository repo)
     {
         var context=new TenantContext(tenantId);
-        var service=new SendSmsService(context,repo,new Resolver(),new Publisher());
+        var service=new SendSmsService(context,repo,new Resolver(),new Publisher(),new(new TestOptOutRepository()));
         return new MessagesController(context,repo,service);
     }
     private sealed record TenantContext(Guid TenantId):ITenantContext;

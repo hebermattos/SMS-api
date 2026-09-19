@@ -21,7 +21,12 @@ internal static class UserActivityMessageFormatter
         [("Alerts", "DeleteRule")] = ("Deleted an alert rule.", "Could not delete the alert rule."),
         [("Alerts", "List")] = ("Viewed alerts.", "Could not view alerts."),
         [("Alerts", "MarkRead")] = ("Marked an alert as read.", "Could not mark the alert as read."),
-        [("Alerts", "MarkAllRead")] = ("Marked all alerts as read.", "Could not mark all alerts as read.")
+        [("Alerts", "MarkAllRead")] = ("Marked all alerts as read.", "Could not mark all alerts as read."),
+        [("OptOuts", "List")] = ("Viewed the SMS opt-out list.", "Could not view the SMS opt-out list."),
+        [("OptOuts", "Add")] = ("Blocked a number from receiving SMS messages.", "Could not block the number."),
+        [("OptOuts", "Import")] = ("Imported SMS opt-outs.", "Could not import SMS opt-outs."),
+        [("OptOuts", "Export")] = ("Exported the SMS opt-out list.", "Could not export the SMS opt-out list."),
+        [("OptOuts", "Remove")] = ("Removed a number from the SMS opt-out list.", "Could not remove the number from the SMS opt-out list.")
     };
 
     internal static string Format(string? controller, string? action, int statusCode)

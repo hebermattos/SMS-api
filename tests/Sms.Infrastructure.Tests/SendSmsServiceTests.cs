@@ -13,7 +13,7 @@ public sealed class SendSmsServiceTests
         var repository = new FakeRepository();
         var provider = new FakeProvider("Twilio");
         var publisher = new FakePublisher();
-        var service = new SendSmsService(new FakeTenantContext(tenantId), repository, new FakeResolver(provider), publisher);
+        var service = new SendSmsService(new FakeTenantContext(tenantId), repository, new FakeResolver(provider), publisher, new(new TestOptOutRepository()));
 
         var result = await service.SendAsync(new SendSmsRequest(" +15551234567 ", "hello"));
 
@@ -36,7 +36,7 @@ public sealed class SendSmsServiceTests
     public async Task SendAsync_RejectsInvalidRequest(string to, string body)
     {
         var service = new SendSmsService(
-            new FakeTenantContext(Guid.NewGuid()), new FakeRepository(), new FakeResolver(new FakeProvider("Twilio")), new FakePublisher());
+            new FakeTenantContext(Guid.NewGuid()), new FakeRepository(), new FakeResolver(new FakeProvider("Twilio")), new FakePublisher(), new(new TestOptOutRepository()));
         await Assert.ThrowsAsync<ArgumentException>(() => service.SendAsync(new SendSmsRequest(to, body)));
     }
 

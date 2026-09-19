@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Sms.Application.Administration;
 using Sms.Application.Auth;
+using Sms.Application.OptOut;
 
 namespace Sms.Api.Filters;
 
@@ -16,6 +17,7 @@ public sealed class PortalExceptionFilter : IExceptionFilter
             LastActiveAdministratorException => (409, "The last active administrator cannot be deactivated."),
             AdministratorConflictException => (409, "An administrator with this username already exists."),
             AdministrationConflictException => (409, "A record with these identifiers already exists."),
+            BlockedRecipientException exception => (409, exception.Message),
             _ => (0, string.Empty)
         };
         if (response.Item1 == 0) return;

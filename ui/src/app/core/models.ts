@@ -24,6 +24,7 @@ export interface Message {
 export interface StatusHistory { id: string; messageId: string; status: number; createdAt: string; }
 export interface LogEntry { id: number; timestamp: string; severity: string; category: string; message: string; traceId: string | null; spanId: string | null; }
 export interface SendResult { id: string; provider: string; status: string; }
+export interface BlockedNumber { id: string; phoneNumber: string; source: string; reason: string | null; createdAt: string; updatedAt: string | null; }
 export interface SmsReportProviderSummary { provider: string; totalMessages: number; delivered: number; failed: number; }
 export interface SmsReportSummary { totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; outbound: number; inbound: number; byProvider: SmsReportProviderSummary[]; }
 export interface PlatformSmsReportTenantSummary { tenantId: string; tenantName: string; totalMessages: number; queued: number; sent: number; delivered: number; failed: number; received: number; }

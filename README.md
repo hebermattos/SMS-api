@@ -53,7 +53,7 @@ The local API exposes HTTP only; HTTPS redirection remains enabled outside Devel
 The Angular UI provides:
 
 - Platform administration: administrators, tenants, API clients, and providers.
-- Tenant operations: send SMS, history, status history, reports, configurable alert rules, in-UI alerts, and tenant logs.
+- Tenant operations: send SMS, history, status history, reports, configurable alert rules, in-UI alerts, opt-out management, and tenant logs.
 
 For frontend development:
 
@@ -101,6 +101,11 @@ PUT  /api/v1/alerts/rules/{id}
 DELETE /api/v1/alerts/rules/{id}
 POST /api/v1/alerts/{id}/read
 POST /api/v1/alerts/read-all
+GET  /api/v1/opt-outs
+POST /api/v1/opt-outs
+POST /api/v1/opt-outs/import
+GET  /api/v1/opt-outs/export
+DELETE /api/v1/opt-outs/{id}
 ```
 
 Platform-administrator-protected:
@@ -180,6 +185,8 @@ The project does not use migrations. Initialize new databases with:
 - `database/logs-schema.sql`
 
 The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, minute-level alert status counters, an inbox for SMS-send deduplication, and transactional outbox/inbox tables for alert evaluation. Status history inserts create alert-evaluation outbox events in the same SQL transaction; a MassTransit publisher delivers them through RabbitMQ and an idempotent consumer evaluates only the affected tenant/status/provider. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
+
+Each tenant has an isolated opt-out list. Numbers are encrypted at rest and indexed using a tenant-specific keyed fingerprint. Inbound `STOP`, `UNSUBSCRIBE`, and `CANCEL` messages block future outbound messages after webhook authentication; `START` removes the block. Tenant administrators can manage, import, and export the list in the UI. Imports accept up to 1,000 rows with `PhoneNumber` and optional `Reason` columns.
 
 All dates are stored in UTC. Each tenant has a unique code and an IANA time zone for display and date filters.
 

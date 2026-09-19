@@ -38,7 +38,7 @@ public sealed class BandwidthWebhookSqlTests
         var providers = new TenantSmsProviderRepository(factory, new AesGcmSecretProtector(configuration));
         var contentProtector = new AesGcmSmsContentProtector(configuration);
         var messages = new SmsMessageRepository(factory, contentProtector);
-        var service = new ReceiveSmsWebhookService(messages);
+        var service = new ReceiveSmsWebhookService(messages, new(new TestOptOutRepository()));
         var parser = new BandwidthWebhookParser(providers);
         var tenant = Guid.NewGuid();
         var otherTenant = Guid.NewGuid();

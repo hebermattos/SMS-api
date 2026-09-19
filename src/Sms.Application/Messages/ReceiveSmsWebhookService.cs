@@ -1,8 +1,9 @@
 using Sms.Domain.Messages;
+using Sms.Application.OptOut;
 
 namespace Sms.Application.Messages;
 
-public sealed class ReceiveSmsWebhookService(ISmsMessageRepository messages)
+public sealed class ReceiveSmsWebhookService(ISmsMessageRepository messages, OptOutService optOut)
 {
     public async Task<SmsWebhookResult> ReceiveAsync(ISmsWebhookParser parser, string authorization,
         Stream body, SmsDirection direction, CancellationToken cancellationToken = default)
@@ -15,6 +16,7 @@ public sealed class ReceiveSmsWebhookService(ISmsMessageRepository messages)
         {
             if (item.Direction == SmsDirection.Inbound)
             {
+                await optOut.ProcessInboundAsync(item.TenantId, item.From, item.Body, item.Time, cancellationToken);
                 await messages.InsertInboundIfNotExistsAsync(new SmsMessage
                 {
                     Id = Guid.NewGuid(), TenantId = item.TenantId, Provider = item.Provider,
