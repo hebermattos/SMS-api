@@ -1,3 +1,3 @@
-INSERT dbo.SmsSendInbox(EventId, ProcessedAtUtc)
-            SELECT @EventId, SYSUTCDATETIME()
-            WHERE NOT EXISTS (SELECT 1 FROM dbo.SmsSendInbox WHERE EventId=@EventId);
+INSERT INTO SmsSendInbox(EventId, ProcessedAtUtc)
+VALUES(@EventId, CURRENT_TIMESTAMP)
+ON CONFLICT (EventId) DO NOTHING;

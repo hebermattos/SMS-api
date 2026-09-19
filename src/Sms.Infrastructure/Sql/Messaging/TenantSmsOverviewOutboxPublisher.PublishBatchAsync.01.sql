@@ -1,4 +1,4 @@
-SELECT TOP (100)
+SELECT
     EventId,
     TenantId,
     OutboundDelta,
@@ -7,6 +7,7 @@ SELECT TOP (100)
     FailedDelta,
     PendingDelta,
     OccurredAtUtc
-FROM dbo.TenantSmsOverviewOutbox WITH (READPAST, UPDLOCK, ROWLOCK)
+FROM TenantSmsOverviewOutbox
 WHERE PublishedAtUtc IS NULL
-ORDER BY SequenceNumber;
+ORDER BY SequenceNumber
+LIMIT 100;

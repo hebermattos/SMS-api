@@ -1,4 +1,4 @@
-INSERT INTO dbo.SystemLogs
-            ([Timestamp], Severity, Category, Message, TraceId, SpanId, Attributes)
-        VALUES
-            (@Timestamp, @Severity, @Category, @Message, @TraceId, @SpanId, @Attributes);
+INSERT INTO SystemLogs
+    ("Timestamp", Severity, Category, Message, TraceId, SpanId, Attributes)
+VALUES
+    (@Timestamp, @Severity, @Category, @Message, @TraceId, @SpanId, @Attributes);

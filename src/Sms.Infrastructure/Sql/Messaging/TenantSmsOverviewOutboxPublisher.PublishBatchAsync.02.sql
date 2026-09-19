@@ -1,5 +1,5 @@
-UPDATE dbo.TenantSmsOverviewOutbox
-SET PublishedAtUtc = SYSUTCDATETIME(),
-    AttemptCount = AttemptCount + 1,
-    LastAttemptAtUtc = SYSUTCDATETIME()
-WHERE EventId = @EventId AND PublishedAtUtc IS NULL;
+UPDATE TenantSmsOverviewOutbox
+SET PublishedAtUtc=CURRENT_TIMESTAMP,
+    AttemptCount=AttemptCount+1,
+    LastAttemptAtUtc=CURRENT_TIMESTAMP
+WHERE EventId=@EventId AND PublishedAtUtc IS NULL;
