@@ -1,4 +1,5 @@
 using MassTransit;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sms.Application.Auth;
@@ -16,6 +17,7 @@ using Sms.Infrastructure.Providers;
 using Sms.Infrastructure.Security;
 using Sms.Infrastructure.Messaging;
 using Sms.Application.OptOut;
+using Sms.Infrastructure.Caching;
 
 namespace Sms.Infrastructure;
 
@@ -23,15 +25,25 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var redisConnectionString = configuration.GetConnectionString("Redis");
-        if (string.IsNullOrWhiteSpace(redisConnectionString))
-            throw new InvalidOperationException("Connection string 'Redis' is not configured.");
+        var cacheOptions = CacheOptions.From(configuration);
+        services.AddSingleton(cacheOptions);
 
-        services.AddStackExchangeRedisCache(options =>
+        if (cacheOptions.Enabled)
         {
-            options.Configuration = redisConnectionString;
-            options.InstanceName = "sms-api:";
-        });
+            var redisConnectionString = configuration.GetConnectionString("Redis");
+            if (string.IsNullOrWhiteSpace(redisConnectionString))
+                throw new InvalidOperationException("Connection string 'Redis' is not configured when cache is enabled.");
+
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnectionString;
+                options.InstanceName = "sms-api:";
+            });
+        }
+        else
+        {
+            services.AddSingleton<IDistributedCache, DisabledDistributedCache>();
+        }
 
         services.AddSingleton<SqlConnectionFactory>();
         services.AddSingleton<LogsSqlConnectionFactory>();
