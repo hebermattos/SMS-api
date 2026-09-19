@@ -27,6 +27,7 @@ Local services:
 - UI: http://localhost:4200
 - API: http://localhost:8080
 - Swagger: http://localhost:8080/swagger
+- Health: http://localhost:8080/health
 - SQL Server: localhost,1434
 - Redis: localhost:6379
 
@@ -114,6 +115,22 @@ RabbitMq__Password
 ```
 
 `Encryption__MasterKey` must be Base64 for exactly 32 bytes. Use HTTPS for real provider callbacks and outside local development. Redis should be reachable only from trusted application infrastructure.
+
+## Health
+
+`GET /health` checks the API dependencies and returns their individual status and latency.
+
+- `sql.application` — application database; failure makes the API unhealthy.
+- `sql.observability` — logs, traces, and metrics database.
+- `sql.reporting` — reporting database.
+- `redis` — Redis connectivity used by the Bandwidth OAuth token cache.
+- `rabbitmq` — RabbitMQ TCP connectivity.
+- `twilio` — Twilio API reachability.
+- `bandwidth` — Bandwidth API reachability.
+
+The endpoint returns HTTP `503` when a critical internal dependency is unhealthy. Reporting, observability, Redis, and external provider failures are reported as `Degraded` without taking the API out of rotation.
+
+Provider checks validate network/API reachability only. They do not validate tenant-specific credentials and do not expose connection strings, credentials, tokens, or exception details.
 
 ## Database
 
