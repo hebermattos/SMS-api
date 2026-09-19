@@ -114,6 +114,7 @@ jobs:
           SQL
       - name: Verify administrator password login and tenant separation over HTTP
         run: |
+          docker compose up -d --wait rabbitmq
           docker compose up -d --build --no-deps api
           python3 - <<'PY'
           import json, time, urllib.request, urllib.error
