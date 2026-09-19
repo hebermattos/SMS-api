@@ -48,6 +48,16 @@ public sealed class RegistrationAndModelTests
     }
 
     [Fact]
+    public async Task MockProvider_ReturnsFlowTestResult()
+    {
+        var provider = new MockSmsProvider();
+        var result = await provider.SendAsync("+15550000000", "+15550000001", "test");
+
+        Assert.StartsWith("mock-", result.ProviderMessageId);
+        Assert.Contains(result.Status, new[] { "queued", "sent", "delivered", "failed" });
+    }
+
+    [Fact]
     public void TenantAndProviderConfiguration_ExposeConfiguredValues()
     {
         var tenantId = Guid.NewGuid();
