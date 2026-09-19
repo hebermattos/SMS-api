@@ -159,7 +159,7 @@ The project does not use migrations. Initialize new databases with:
 - `database/schema.sql`
 - `database/logs-schema.sql`
 
-The application database stores tenants, users, clients, providers, messages, status history, alert rules, and triggered alerts. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
+The application database stores tenants, users, clients, providers, messages, status history, alert rules, triggered alerts, and minute-level alert status counters. Alert counters are maintained transactionally with status history and are used to evaluate alert windows efficiently. The separate `SmsApiLogs` database stores user activity, system logs, traces, and metrics.
 
 All dates are stored in UTC. Each tenant has an IANA time zone for display and date filters.
 
