@@ -70,6 +70,7 @@ services:
       Admin__Username: "${ADMIN_USERNAME:-platform}"
       Admin__Password: "${ADMIN_PASSWORD:-platform}"
       Admin__Email: "${ADMIN_EMAIL:-platform@example.com}"
+      Admin__AllowInsecureBootstrapPassword: "true"
       ConnectionStrings__SqlServer: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
 
