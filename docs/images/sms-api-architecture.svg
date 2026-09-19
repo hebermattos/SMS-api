@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1000" viewBox="0 0 1400 1000">
+  <defs>
+    <style>
+      .title{font:700 34px Arial,sans-serif;fill:#10224d}
+      .sub{font:18px Arial,sans-serif;fill:#4b5f87}
+      .h{font:700 20px Arial,sans-serif;fill:#163765}
+      .t{font:700 17px Arial,sans-serif;fill:#17264d}
+      .s{font:14px Arial,sans-serif;fill:#53627d}
+      .mini{font:12px Arial,sans-serif;fill:#53627d}
+      .flow{font:700 14px Arial,sans-serif;fill:#2453a6}
+      .box{rx:12;ry:12;stroke-width:2}
+      .line{stroke:#2166d1;stroke-width:3;fill:none;marker-end:url(#arrow)}
+      .dash{stroke:#2166d1;stroke-width:2.5;fill:none;stroke-dasharray:8 7;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2166d1"/>
+    </marker>
+  </defs>
+
+  <rect width="1400" height="1000" fill="#ffffff"/>
+  <text x="700" y="48" text-anchor="middle" class="title">SMS API Architecture</text>
+  <text x="700" y="78" text-anchor="middle" class="sub">Multi-tenant SMS platform with REST API, Angular UI, SQL Server, Dapper, RabbitMQ, and OpenTelemetry</text>
+
+  <rect x="25" y="105" width="1050" height="175" fill="#eef8ff" stroke="#8fc7f8" class="box"/>
+  <text x="45" y="135" class="h">Clients / Users</text>
+  <rect x="50" y="155" width="190" height="85" fill="#f7fbff" stroke="#76a9e8" class="box"/>
+  <text x="145" y="185" text-anchor="middle" class="t">Platform Administrators</text>
+  <text x="145" y="210" text-anchor="middle" class="s">Manage tenants and platform</text>
+
+  <rect x="270" y="155" width="210" height="85" fill="#f6fffb" stroke="#67bca9" class="box"/>
+  <text x="375" y="185" text-anchor="middle" class="t">Tenant Users / Admins</text>
+  <text x="375" y="210" text-anchor="middle" class="s">Manage tenant data and SMS</text>
+
+  <rect x="520" y="145" width="245" height="105" fill="#fff1f5" stroke="#ef6a8d" class="box"/>
+  <text x="642" y="182" text-anchor="middle" class="t">Angular Admin UI</text>
+  <text x="642" y="207" text-anchor="middle" class="s">Web administration portal</text>
+
+  <rect x="820" y="155" width="220" height="85" fill="#f5f1ff" stroke="#8c72df" class="box"/>
+  <text x="930" y="185" text-anchor="middle" class="t">API Clients</text>
+  <text x="930" y="210" text-anchor="middle" class="s">External integrations</text>
+
+  <path d="M240 197 H520" class="line"/>
+  <path d="M480 197 H520" class="line"/>
+  <text x="370" y="266" class="flow">1 Authenticate</text>
+  <text x="610" y="266" class="flow">2 Send or schedule SMS</text>
+
+  <rect x="25" y="305" width="1050" height="150" fill="#eff7ff" stroke="#8cbff3" class="box"/>
+  <text x="45" y="335" class="h">Application Entry Layer</text>
+  <rect x="220" y="345" width="740" height="85" fill="#eaf3ff" stroke="#2e6ed2" class="box"/>
+  <text x="590" y="377" text-anchor="middle" class="t">ASP.NET Core REST API (.NET 8)</text>
+  <text x="590" y="407" text-anchor="middle" class="s">JWT Authentication  •  Authorization + Tenant Isolation  •  Swagger / Health  •  Rate Limiting</text>
+  <path d="M642 250 V345" class="line"/>
+  <path d="M930 240 V345" class="line"/>
+
+  <rect x="25" y="480" width="1050" height="180" fill="#effcf2" stroke="#82c996" class="box"/>
+  <text x="45" y="510" class="h">Internal Architecture</text>
+  <rect x="55" y="535" width="205" height="85" fill="#edf6ff" stroke="#5798df" class="box"/>
+  <text x="157" y="567" text-anchor="middle" class="t">Sms.Api</text>
+  <text x="157" y="592" text-anchor="middle" class="s">Controllers / Middleware</text>
+
+  <rect x="300" y="535" width="205" height="85" fill="#fff7e6" stroke="#e7a23a" class="box"/>
+  <text x="402" y="567" text-anchor="middle" class="t">Sms.Application</text>
+  <text x="402" y="592" text-anchor="middle" class="s">Use Cases / Contracts</text>
+
+  <rect x="545" y="535" width="180" height="85" fill="#f6f1ff" stroke="#9273d6" class="box"/>
+  <text x="635" y="567" text-anchor="middle" class="t">Sms.Domain</text>
+  <text x="635" y="592" text-anchor="middle" class="s">Core Models</text>
+
+  <rect x="765" y="525" width="275" height="105" fill="#edfbff" stroke="#57a9c4" class="box"/>
+  <text x="902" y="557" text-anchor="middle" class="t">Sms.Infrastructure</text>
+  <text x="902" y="582" text-anchor="middle" class="s">Dapper, Providers, Security, Messaging</text>
+  <text x="902" y="608" text-anchor="middle" class="mini">Embedded .sql resources</text>
+
+  <path d="M260 577 H300" class="line"/>
+  <path d="M505 577 H545" class="line"/>
+  <path d="M725 577 H765" class="line"/>
+  <path d="M590 430 V535" class="line"/>
+
+  <rect x="25" y="685" width="1050" height="150" fill="#fff1f6" stroke="#ed8cac" class="box"/>
+  <text x="45" y="715" class="h">Messaging / Background Processing</text>
+  <rect x="325" y="715" width="455" height="55" fill="#ffe9ef" stroke="#e36688" class="box"/>
+  <text x="552" y="749" text-anchor="middle" class="t">RabbitMQ + MassTransit</text>
+  <path d="M902 630 V715" class="line"/>
+  <text x="800" y="692" class="flow">3 Publish async event</text>
+
+  <rect x="65" y="785" width="170" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
+  <text x="150" y="809" text-anchor="middle" class="mini">SmsSendConsumer</text>
+  <rect x="255" y="785" width="185" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
+  <text x="347" y="809" text-anchor="middle" class="mini">AlertEvaluationConsumer</text>
+  <rect x="460" y="785" width="210" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
+  <text x="565" y="809" text-anchor="middle" class="mini">TenantSmsOverviewConsumer</text>
+  <rect x="690" y="785" width="175" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
+  <text x="777" y="809" text-anchor="middle" class="mini">ScheduledSmsPublisher</text>
+  <rect x="885" y="785" width="165" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
+  <text x="967" y="809" text-anchor="middle" class="mini">Outbox Publishers</text>
+
+  <rect x="25" y="860" width="1050" height="115" fill="#f7f3ff" stroke="#aa91df" class="box"/>
+  <text x="45" y="890" class="h">Data Storage Layer — SQL Server</text>
+  <rect x="175" y="905" width="245" height="55" fill="#eef5ff" stroke="#5c8fd5" class="box"/>
+  <text x="297" y="931" text-anchor="middle" class="t">SmsApi</text>
+  <text x="297" y="950" text-anchor="middle" class="mini">Tenants, users, messages, providers, alerts</text>
+  <rect x="445" y="905" width="230" height="55" fill="#f5efff" stroke="#8f74cf" class="box"/>
+  <text x="560" y="931" text-anchor="middle" class="t">SmsApiLogs</text>
+  <text x="560" y="950" text-anchor="middle" class="mini">Activity, errors, traces, metrics</text>
+  <rect x="700" y="905" width="265" height="55" fill="#effcf6" stroke="#5fae83" class="box"/>
+  <text x="832" y="931" text-anchor="middle" class="t">SmsApiReporting</text>
+  <text x="832" y="950" text-anchor="middle" class="mini">TenantSmsOverview, Reporting Inbox</text>
+  <path d="M565 823 V905" class="dash"/>
+
+  <rect x="1100" y="105" width="275" height="250" fill="#fbfdff" stroke="#a5bdd8" class="box"/>
+  <text x="1120" y="135" class="h">Security &amp; Observability</text>
+  <text x="1125" y="175" class="t">AES-256-GCM</text>
+  <text x="1125" y="198" class="s">SMS content + provider secrets</text>
+  <text x="1125" y="235" class="t">PBKDF2-SHA256</text>
+  <text x="1125" y="258" class="s">Passwords + client secrets</text>
+  <text x="1125" y="295" class="t">OpenTelemetry</text>
+  <text x="1125" y="318" class="s">Logs, traces, metrics</text>
+  <text x="1125" y="345" class="t">UTC + tenant time zones</text>
+
+  <rect x="1100" y="390" width="275" height="220" fill="#f1fff4" stroke="#84c999" class="box"/>
+  <text x="1120" y="420" class="h">External SMS Providers</text>
+  <rect x="1130" y="450" width="215" height="55" fill="#fff2f5" stroke="#eb6b89" class="box"/>
+  <text x="1237" y="484" text-anchor="middle" class="t">Twilio</text>
+  <rect x="1130" y="525" width="215" height="55" fill="#eef9ff" stroke="#57a7db" class="box"/>
+  <text x="1237" y="559" text-anchor="middle" class="t">Bandwidth</text>
+  <text x="1237" y="600" text-anchor="middle" class="mini">Provider logic behind ISmsProvider</text>
+
+  <path d="M960 385 H1130 V477" class="line"/>
+  <text x="1020" y="370" class="flow">4 Provider delivery</text>
+  <path d="M1130 552 H1060 V410 H960" class="dash"/>
+  <text x="1085" y="635" class="flow">5 Webhooks / delivery status</text>
+
+  <rect x="1100" y="645" width="275" height="290" fill="#fbfdff" stroke="#a5bdd8" class="box"/>
+  <text x="1120" y="675" class="h">Main Flows</text>
+  <text x="1125" y="715" class="t">1  Authenticate</text>
+  <text x="1125" y="750" class="t">2  Send or schedule SMS</text>
+  <text x="1125" y="785" class="t">3  Publish async event</text>
+  <text x="1125" y="820" class="t">4  Provider delivery</text>
+  <text x="1125" y="855" class="t">5  Webhook/status update</text>
+  <text x="1125" y="890" class="t">6  Logs, reports, alerts</text>
+
+  <text x="700" y="992" text-anchor="middle" class="flow">Scalable • Secure • Multi-tenant • Event-driven • Observable</text>
+</svg>
