@@ -24,7 +24,16 @@ services:
 
   postgres:
     image: postgres:17-alpine
-    mem_reservation: 512m
+    mem_reservation: 128m
+    mem_limit: 256m
+    command:
+      - postgres
+      - -c
+      - shared_buffers=32MB
+      - -c
+      - work_mem=1MB
+      - -c
+      - maintenance_work_mem=16MB
     environment:
       POSTGRES_USER: "${POSTGRES_USER:-sms}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
