@@ -23,6 +23,16 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var redisConnectionString = configuration.GetConnectionString("Redis");
+        if (string.IsNullOrWhiteSpace(redisConnectionString))
+            throw new InvalidOperationException("Connection string 'Redis' is not configured.");
+
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = redisConnectionString;
+            options.InstanceName = "sms-api:";
+        });
+
         services.AddSingleton<SqlConnectionFactory>();
         services.AddSingleton<LogsSqlConnectionFactory>();
         services.AddSingleton<ReportingSqlConnectionFactory>();

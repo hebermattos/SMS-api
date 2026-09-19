@@ -11,6 +11,15 @@ services:
       timeout: 5s
       retries: 20
 
+  redis:
+    image: redis:7.4-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
@@ -43,7 +52,7 @@ services:
         database_exists() {
           local database="$$1"
           local result
-          result="$$("$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -h -1 -W -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID(N'$$database') IS NULL THEN 0 ELSE 1 END;")"
+          result="$$( "$$sqlcmd" -I -b -C -S tcp:sqlserver,1433 -U sa -d master -h -1 -W -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID(N'$$database') IS NULL THEN 0 ELSE 1 END;" )"
           result="$$(printf '%s' "$$result" | tr -d '[:space:]')"
           [ "$$result" = "1" ]
         }
@@ -88,12 +97,15 @@ services:
         condition: service_completed_successfully
       rabbitmq:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
       ConnectionStrings__SqlServer: "Server=sqlserver;Database=SmsApi;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
       ConnectionStrings__LogsSqlServer: "Server=sqlserver;Database=SmsApiLogs;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
       ConnectionStrings__ReportingSqlServer: "Server=sqlserver;Database=SmsApiReporting;User Id=sa;Password=${SQL_SA_PASSWORD:-SmsApi_Local_2026!};TrustServerCertificate=True"
+      ConnectionStrings__Redis: "redis:6379"
       Jwt__Key: "${JWT_KEY:-local-development-jwt-key-change-me-1234567890}"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
       Sms__PublicBaseUrl: "${SMS_PUBLIC_BASE_URL:-https://localhost:8080}"

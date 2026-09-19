@@ -10,6 +10,7 @@ Multi-tenant REST API for sending, receiving, scheduling, tracking, and querying
 - JWT authentication
 - Twilio and Bandwidth
 - RabbitMQ + MassTransit
+- Redis
 - OpenTelemetry
 - Docker Compose for local testing
 
@@ -27,6 +28,7 @@ Local services:
 - API: http://localhost:8080
 - Swagger: http://localhost:8080/swagger
 - SQL Server: localhost,1434
+- Redis: localhost:6379
 
 Local credentials:
 
@@ -72,7 +74,7 @@ Swagger documents the complete API surface.
 The provider is selected per request. All providers implement `ISmsProvider`, while provider-specific code remains isolated from the application core.
 
 - **Twilio:** signed callbacks using `X-Twilio-Signature`.
-- **Bandwidth:** OAuth 2.0 Client Credentials and authenticated callbacks.
+- **Bandwidth:** OAuth 2.0 Client Credentials and authenticated callbacks. OAuth access tokens are cached in Redis until shortly before their reported expiration.
 
 Immediate messages are queued through RabbitMQ/MassTransit. Scheduled messages are stored in UTC and queued when due.
 
@@ -97,6 +99,7 @@ Main environment variables:
 ConnectionStrings__SqlServer
 ConnectionStrings__LogsSqlServer
 ConnectionStrings__ReportingSqlServer
+ConnectionStrings__Redis
 Jwt__Issuer
 Jwt__Audience
 Jwt__Key
@@ -110,7 +113,7 @@ RabbitMq__User
 RabbitMq__Password
 ```
 
-`Encryption__MasterKey` must be Base64 for exactly 32 bytes. Use HTTPS for real provider callbacks and outside local development.
+`Encryption__MasterKey` must be Base64 for exactly 32 bytes. Use HTTPS for real provider callbacks and outside local development. Redis should be reachable only from trusted application infrastructure.
 
 ## Database
 
