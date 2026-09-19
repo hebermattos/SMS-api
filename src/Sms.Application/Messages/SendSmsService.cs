@@ -6,7 +6,8 @@ namespace Sms.Application.Messages;
 public sealed class SendSmsService(
     ITenantContext tenantContext,
     ISmsMessageRepository repository,
-    ISmsProviderResolver providerResolver)
+    ISmsProviderResolver providerResolver,
+    ISmsSendEventPublisher eventPublisher)
 {
     public async Task<SendSmsResult> SendAsync(SendSmsRequest request, CancellationToken cancellationToken = default)
     {
@@ -28,6 +29,7 @@ public sealed class SendSmsService(
         };
 
         await repository.InsertAsync(message, cancellationToken);
+        await eventPublisher.PublishAsync(message.TenantId, message.Id, cancellationToken);
         return new SendSmsResult(message.Id, provider.Name, null, SmsStatus.Queued.ToString());
     }
 }

@@ -64,11 +64,12 @@ public sealed class MessagesControllerTests
     private static MessagesController Create(Guid tenantId, Repository repo)
     {
         var context=new TenantContext(tenantId);
-        var service=new SendSmsService(context,repo,new Resolver());
+        var service=new SendSmsService(context,repo,new Resolver(),new Publisher());
         return new MessagesController(context,repo,service);
     }
     private sealed record TenantContext(Guid TenantId):ITenantContext;
     private sealed class Resolver:ISmsProviderResolver { public ISmsProvider Resolve(string? provider=null)=>throw new NotSupportedException(); }
+    private sealed class Publisher:ISmsSendEventPublisher { public Task PublishAsync(Guid tenantId,Guid messageId,CancellationToken cancellationToken=default)=>Task.CompletedTask; }
     private sealed class Repository(SmsMessage? message):ISmsMessageRepository
     {
         public Guid LastTenant{get;private set;} public Guid? LastMessageId{get;private set;} public int LastTake{get;private set;}

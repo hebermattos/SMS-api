@@ -73,7 +73,6 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHostedService<Sms.Infrastructure.Messaging.AlertEvaluationOutboxPublisher>();
-builder.Services.AddHostedService<Sms.Infrastructure.Messaging.SmsSendOutboxPublisher>();
 
 var app = builder.Build();
 app.UseHttpsRedirection();
