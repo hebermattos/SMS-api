@@ -2,8 +2,8 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management
     environment:
-      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-guest}"
-      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:-guest}"
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-sms}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:-sms}"
     ports: ["5672:5672", "15672:15672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
