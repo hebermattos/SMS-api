@@ -137,7 +137,7 @@ public sealed class TenantConfigurationCacheTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:SqlServer"] = "Server=invalid;Database=invalid;User Id=invalid;Password=invalid"
+                ["ConnectionStrings:Postgres"] = "Host=invalid;Database=invalid;Username=invalid;Password=invalid"
             })
             .Build();
 
