@@ -11,12 +11,7 @@ public sealed class PortalUserManagementRepository(SqlConnectionFactory connecti
         CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return (await connection.QueryAsync<PortalUserSummary>(new CommandDefinition("""
-            SELECT Id, TenantId, Username, Email, Context, Role, IsActive, CreatedAt
-            FROM dbo.PortalUsers
-            WHERE Context = 'platform'
-            ORDER BY Username;
-            """, cancellationToken: cancellationToken))).AsList();
+        return (await connection.QueryAsync<PortalUserSummary>(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/PortalUserManagementRepository.ListPlatformUsersAsync.01.sql"), cancellationToken: cancellationToken))).AsList();
     }
 
     public async Task<Guid> CreatePlatformUserAsync(
@@ -26,14 +21,7 @@ public sealed class PortalUserManagementRepository(SqlConnectionFactory connecti
         using var connection = connections.CreateConnection();
         try
         {
-            await connection.ExecuteAsync(new CommandDefinition("""
-                INSERT dbo.PortalUsers
-                    (Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations,
-                     Context, Role, IsActive, CreatedAt)
-                VALUES
-                    (@Id, NULL, @Username, @Email, @PasswordHash, @PasswordSalt, @PasswordIterations,
-                     'platform', @Role, 1, SYSDATETIMEOFFSET());
-                """, user, cancellationToken: cancellationToken));
+            await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/PortalUserManagementRepository.CreatePlatformUserAsync.02.sql"), user, cancellationToken: cancellationToken));
             return user.Id;
         }
         catch (SqlException exception) when (exception.Number is 2601 or 2627)
@@ -48,11 +36,7 @@ public sealed class PortalUserManagementRepository(SqlConnectionFactory connecti
         CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return await connection.ExecuteAsync(new CommandDefinition("""
-            UPDATE dbo.PortalUsers
-            SET IsActive = @IsActive, UpdatedAt = SYSDATETIMEOFFSET()
-            WHERE Id = @Id AND Context = 'platform';
-            """, new { Id = id, IsActive = isActive },
+        return await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/PortalUserManagementRepository.SetActiveAsync.03.sql"), new { Id = id, IsActive = isActive },
             cancellationToken: cancellationToken)) == 1;
     }
 
@@ -64,12 +48,7 @@ public sealed class PortalUserManagementRepository(SqlConnectionFactory connecti
         CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return await connection.ExecuteAsync(new CommandDefinition("""
-            UPDATE dbo.PortalUsers
-            SET PasswordHash = @Hash, PasswordSalt = @Salt,
-                PasswordIterations = @Iterations, UpdatedAt = SYSDATETIMEOFFSET()
-            WHERE Id = @Id AND Context = 'platform';
-            """, new { Id = id, Hash = hash, Salt = salt, Iterations = iterations },
+        return await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/PortalUserManagementRepository.ResetPasswordAsync.04.sql"), new { Id = id, Hash = hash, Salt = salt, Iterations = iterations },
             cancellationToken: cancellationToken)) == 1;
     }
 }

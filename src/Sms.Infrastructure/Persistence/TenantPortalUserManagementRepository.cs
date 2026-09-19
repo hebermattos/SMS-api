@@ -11,12 +11,7 @@ public sealed class TenantPortalUserManagementRepository(SqlConnectionFactory co
         Guid tenantId, CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return (await connection.QueryAsync<PortalUserSummary>(new CommandDefinition("""
-            SELECT Id, TenantId, Username, Email, Context, Role, IsActive, CreatedAt
-            FROM dbo.PortalUsers
-            WHERE TenantId = @TenantId AND Context = 'tenant'
-            ORDER BY Username;
-            """, new { TenantId = tenantId },
+        return (await connection.QueryAsync<PortalUserSummary>(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantPortalUserManagementRepository.ListAsync.01.sql"), new { TenantId = tenantId },
             cancellationToken: cancellationToken))).AsList();
     }
 
@@ -26,14 +21,7 @@ public sealed class TenantPortalUserManagementRepository(SqlConnectionFactory co
         using var connection = connections.CreateConnection();
         try
         {
-            await connection.ExecuteAsync(new CommandDefinition("""
-                INSERT dbo.PortalUsers
-                    (Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations,
-                     Context, Role, IsActive, CreatedAt)
-                VALUES
-                    (@Id, @TenantId, @Username, @Email, @PasswordHash, @PasswordSalt, @PasswordIterations,
-                     'tenant', @Role, 1, SYSDATETIMEOFFSET());
-                """, user, cancellationToken: cancellationToken));
+            await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantPortalUserManagementRepository.CreateAsync.02.sql"), user, cancellationToken: cancellationToken));
             return user.Id;
         }
         catch (SqlException exception) when (exception.Number is 2601 or 2627)
@@ -47,11 +35,7 @@ public sealed class TenantPortalUserManagementRepository(SqlConnectionFactory co
         CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return await connection.ExecuteAsync(new CommandDefinition("""
-            UPDATE dbo.PortalUsers
-            SET IsActive = @IsActive, UpdatedAt = SYSDATETIMEOFFSET()
-            WHERE TenantId = @TenantId AND Id = @Id AND Context = 'tenant';
-            """, new { TenantId = tenantId, Id = id, IsActive = isActive },
+        return await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantPortalUserManagementRepository.SetActiveAsync.03.sql"), new { TenantId = tenantId, Id = id, IsActive = isActive },
             cancellationToken: cancellationToken)) == 1;
     }
 
@@ -60,12 +44,7 @@ public sealed class TenantPortalUserManagementRepository(SqlConnectionFactory co
         CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return await connection.ExecuteAsync(new CommandDefinition("""
-            UPDATE dbo.PortalUsers
-            SET PasswordHash = @Hash, PasswordSalt = @Salt,
-                PasswordIterations = @Iterations, UpdatedAt = SYSDATETIMEOFFSET()
-            WHERE TenantId = @TenantId AND Id = @Id AND Context = 'tenant';
-            """, new { TenantId = tenantId, Id = id, Hash = hash, Salt = salt, Iterations = iterations },
+        return await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantPortalUserManagementRepository.ResetPasswordAsync.04.sql"), new { TenantId = tenantId, Id = id, Hash = hash, Salt = salt, Iterations = iterations },
             cancellationToken: cancellationToken)) == 1;
     }
 }

@@ -10,16 +10,7 @@ public sealed class PortalUserRepository(SqlConnectionFactory connections) : IPo
         string context,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
-            SELECT Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations,
-                   Context, Role, IsActive
-            FROM dbo.PortalUsers
-            WHERE Username = @Username
-              AND Context = @Context
-              AND IsActive = 1
-              AND (Context = 'platform' OR EXISTS
-                  (SELECT 1 FROM dbo.Tenants t WHERE t.Id = TenantId AND t.IsActive = 1));
-            """;
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/PortalUserRepository.GetActiveByUsernameAsync.01.sql");
 
         using var connection = connections.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<PortalUserAccount>(
@@ -31,15 +22,7 @@ public sealed class PortalUserRepository(SqlConnectionFactory connections) : IPo
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
-            SELECT Id, TenantId, Username, PasswordHash, PasswordSalt, PasswordIterations,
-                   Context, Role, IsActive
-            FROM dbo.PortalUsers
-            WHERE Id = @Id
-              AND IsActive = 1
-              AND (Context = 'platform' OR EXISTS
-                  (SELECT 1 FROM dbo.Tenants t WHERE t.Id = TenantId AND t.IsActive = 1));
-            """;
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/PortalUserRepository.GetActiveByIdAsync.02.sql");
 
         using var connection = connections.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<PortalUserAccount>(

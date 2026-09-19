@@ -15,19 +15,9 @@ public sealed class SqlServerLogExporter(string connectionString) : BaseExporter
         "Sms.Api.Middleware.RequestAuditMiddleware"
     ];
 
-    private const string InsertActivitySql = """
-        INSERT INTO dbo.UserActivityLogs
-            ([Timestamp], TenantId, Severity, Category, Message, TraceId, SpanId, Attributes)
-        VALUES
-            (@Timestamp, @TenantId, @Severity, @Category, @Message, @TraceId, @SpanId, @Attributes);
-        """;
+    private static readonly string InsertActivitySql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerLogExporter.SqlServerLogExporter.01.sql");
 
-    private const string InsertSystemSql = """
-        INSERT INTO dbo.SystemLogs
-            ([Timestamp], Severity, Category, Message, TraceId, SpanId, Attributes)
-        VALUES
-            (@Timestamp, @Severity, @Category, @Message, @TraceId, @SpanId, @Attributes);
-        """;
+    private static readonly string InsertSystemSql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerLogExporter.SqlServerLogExporter.02.sql");
 
     public override ExportResult Export(in Batch<LogRecord> batch)
     {

@@ -7,12 +7,7 @@ namespace Sms.Infrastructure.Observability;
 
 public sealed class SqlServerTraceExporter(string connectionString) : BaseExporter<Activity>
 {
-    private const string InsertSql = """
-        INSERT INTO dbo.Traces
-            (StartedAt, DurationMilliseconds, TraceId, SpanId, ParentSpanId, Name, Source, Kind, Status, Attributes)
-        VALUES
-            (@StartedAt, @DurationMilliseconds, @TraceId, @SpanId, @ParentSpanId, @Name, @Source, @Kind, @Status, @Attributes);
-        """;
+    private static readonly string InsertSql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerTraceExporter.SqlServerTraceExporter.01.sql");
 
     public override ExportResult Export(in Batch<Activity> batch)
     {

@@ -9,18 +9,7 @@ public sealed class TenantPortalRepository(SqlConnectionFactory factory) : ITena
     public async Task<TenantOverview?> GetOverviewAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         using var connection = factory.CreateConnection();
-        using var results = await connection.QueryMultipleAsync(new CommandDefinition("""
-            SELECT Name FROM dbo.Tenants WHERE Id=@TenantId AND IsActive=1;
-            SELECT
-                COUNT_BIG(CASE WHEN Direction=@Outbound THEN 1 END) AS Outbound,
-                COUNT_BIG(CASE WHEN Direction=@Inbound THEN 1 END) AS Inbound,
-                COUNT_BIG(CASE WHEN Direction=@Outbound AND Status=@Delivered THEN 1 END) AS Delivered,
-                COUNT_BIG(CASE WHEN Direction=@Outbound AND Status=@Failed THEN 1 END) AS Failed,
-                COUNT_BIG(CASE WHEN Direction=@Outbound AND Status IN (@Queued, @Sent) THEN 1 END) AS Pending
-            FROM dbo.SmsMessages WHERE TenantId=@TenantId;
-            SELECT Provider AS Name, FromNumber, IsDefault FROM dbo.TenantSmsProviders
-            WHERE TenantId=@TenantId AND IsActive=1 ORDER BY IsDefault DESC, Provider;
-            """, new { TenantId = tenantId, Outbound = SmsDirection.Outbound, Inbound = SmsDirection.Inbound,
+        using var results = await connection.QueryMultipleAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantPortalRepository.GetOverviewAsync.01.sql"), new { TenantId = tenantId, Outbound = SmsDirection.Outbound, Inbound = SmsDirection.Inbound,
                 Delivered = SmsStatus.Delivered, Failed = SmsStatus.Failed, Queued = SmsStatus.Queued, Sent = SmsStatus.Sent }, cancellationToken: cancellationToken));
         var name = await results.ReadSingleOrDefaultAsync<string>();
         var counts = await results.ReadSingleAsync<Counts>();

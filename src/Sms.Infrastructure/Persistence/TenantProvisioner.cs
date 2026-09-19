@@ -17,15 +17,10 @@ public sealed class TenantProvisioner(SqlConnectionFactory connectionFactory) : 
         {
             var now = DateTimeOffset.UtcNow;
             await connection.ExecuteAsync(new CommandDefinition(
-                "INSERT INTO dbo.Tenants (Id, Name, TimeZoneId, IsActive, CreatedAt) VALUES (@Id, @Name, 'UTC', 1, @Now);",
+                Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantProvisioner.CreateAsync.02.sql"),
                 new { Id = tenantId, Name = name, Now = now }, transaction, cancellationToken: cancellationToken));
 
-            await connection.ExecuteAsync(new CommandDefinition("""
-                INSERT INTO dbo.ApiClients
-                    (Id, TenantId, ClientId, SecretHash, SecretSalt, SecretIterations, IsActive, CreatedAt)
-                VALUES
-                    (@Id, @TenantId, @ClientId, @SecretHash, @SecretSalt, @SecretIterations, 1, @Now);
-                """,
+            await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantProvisioner.CreateAsync.01.sql"),
                 new
                 {
                     Id = Guid.NewGuid(), client.TenantId, client.ClientId, client.SecretHash,

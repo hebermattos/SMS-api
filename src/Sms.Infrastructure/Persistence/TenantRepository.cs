@@ -7,10 +7,7 @@ public sealed class TenantRepository(SqlConnectionFactory connectionFactory) : I
 {
     public async Task CreateAsync(Guid id, string name, CancellationToken cancellationToken = default)
     {
-        const string sql = """
-            INSERT INTO dbo.Tenants (Id, Name, TimeZoneId, IsActive, CreatedAt)
-            VALUES (@Id, @Name, 'UTC', 1, @CreatedAt);
-            """;
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantRepository.CreateAsync.01.sql");
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id, Name = name, CreatedAt = DateTimeOffset.UtcNow }, cancellationToken: cancellationToken));
     }

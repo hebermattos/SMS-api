@@ -7,12 +7,7 @@ namespace Sms.Infrastructure.Observability;
 
 public sealed class SqlServerMetricExporter(string connectionString) : BaseExporter<Metric>
 {
-    private const string InsertSql = """
-        INSERT INTO dbo.Metrics
-            ([Timestamp], Name, Unit, MetricType, Value, [Count], Attributes)
-        VALUES
-            (@Timestamp, @Name, @Unit, @MetricType, @Value, @Count, @Attributes);
-        """;
+    private static readonly string InsertSql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerMetricExporter.SqlServerMetricExporter.01.sql");
 
     public override ExportResult Export(in Batch<Metric> batch)
     {

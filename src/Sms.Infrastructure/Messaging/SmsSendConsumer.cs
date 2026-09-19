@@ -20,7 +20,7 @@ public sealed class SmsSendConsumer(
         var item = context.Message;
         using var connection = connectionFactory.CreateConnection();
         var processed = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
-            "SELECT COUNT(1) FROM dbo.SmsSendInbox WHERE EventId=@EventId;",
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsSendConsumer.Consume.02.sql"),
             new { item.EventId }, cancellationToken: context.CancellationToken));
         if (processed != 0) return;
 
@@ -57,11 +57,7 @@ public sealed class SmsSendConsumer(
     private async Task MarkProcessedAsync(Guid eventId, CancellationToken cancellationToken)
     {
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition("""
-            INSERT dbo.SmsSendInbox(EventId, ProcessedAtUtc)
-            SELECT @EventId, SYSUTCDATETIME()
-            WHERE NOT EXISTS (SELECT 1 FROM dbo.SmsSendInbox WHERE EventId=@EventId);
-            """, new { EventId = eventId }, cancellationToken: cancellationToken));
+        await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsSendConsumer.MarkProcessedAsync.01.sql"), new { EventId = eventId }, cancellationToken: cancellationToken));
     }
 
     private static SmsStatus ParseStatus(string status) => status.ToLowerInvariant() switch
