@@ -217,6 +217,40 @@ Provide `ConnectionStrings__SqlServer`, `Admin__Username`, `Admin__Password`, an
 
 Create a tenant through the authenticated platform-administrator API or UI. The generated client secret is returned once.
 
+## Roadmap
+
+The roadmap is ordered by priority and may evolve as operational needs and customer feedback become clearer. Completed capabilities remain documented in the sections above.
+
+### Phase 1 — Account security
+
+- [ ] Multi-factor authentication for platform and tenant administrators.
+- [ ] Secure self-service password recovery with short-lived, single-use tokens.
+- [ ] Active-session management and token revocation.
+- [ ] Configurable password and account-lockout policies.
+
+### Phase 2 — Alert delivery and operations
+
+- [ ] Deliver alerts by email and authenticated webhooks in addition to the UI.
+- [ ] Add retry policies, delivery history, and dead-letter handling for alert notifications.
+- [ ] Provide operational dashboards for RabbitMQ queues, outbox backlog, provider latency, and failure rates.
+- [ ] Add configurable data-retention and cleanup policies for messages, user activity, system logs, traces, and metrics.
+
+### Phase 3 — Messaging capabilities
+
+- [ ] Schedule messages for future delivery in the tenant time zone.
+- [ ] Support bulk sends with validation, progress tracking, cancellation, and per-recipient results.
+- [ ] Add message templates with tenant-level ownership and variable validation.
+- [ ] Add tenant-configurable inbound auto-replies and routing rules.
+
+### Phase 4 — Platform extensibility
+
+- [ ] Add provider failover and configurable routing policies.
+- [ ] Add provider health and cost reporting.
+- [ ] Publish a documented extension guide and contract tests for new SMS providers.
+- [ ] Add another SMS provider to validate the extension model.
+
+Roadmap items are not release commitments. Security, tenant isolation, observability, documentation, and automated tests remain acceptance criteria for every feature.
+
 ## Tests and CI
 
 Run locally:
