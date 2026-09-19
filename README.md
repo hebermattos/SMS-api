@@ -58,7 +58,7 @@ Docker Compose defines soft memory reservations for each service:
 
 | Service | Memory reservation |
 | --- | ---: |
-| PostgreSQL | 512 MB |
+| PostgreSQL | 128 MB reserved / 256 MB limit |
 | RabbitMQ | 256 MB |
 | Redis | 64 MB |
 | API | 256 MB |
