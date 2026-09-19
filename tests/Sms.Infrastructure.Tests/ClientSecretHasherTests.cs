@@ -32,9 +32,9 @@ public sealed class ClientSecretHasherTests
     [Fact]
     public void Verify_RejectsInvalidInputs()
     {
-        Assert.False(ClientSecretHasher.Verify("", [1], [1], 210000));
-        Assert.False(ClientSecretHasher.Verify("x", [], [1], 210000));
-        Assert.False(ClientSecretHasher.Verify("x", [1], [], 210000));
-        Assert.False(ClientSecretHasher.Verify("x", [1], [1], 99999));
+        Assert.False(ClientSecretHasher.Verify("", [1], [1], 600000));
+        Assert.False(ClientSecretHasher.Verify("x", [], [1], 600000));
+        Assert.False(ClientSecretHasher.Verify("x", [1], [], 600000));
+        Assert.False(ClientSecretHasher.Verify("x", [1], [1], 599999));
     }
 }
