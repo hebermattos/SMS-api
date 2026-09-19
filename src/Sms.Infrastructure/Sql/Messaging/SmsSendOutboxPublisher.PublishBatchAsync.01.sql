@@ -1,6 +1,6 @@
 WITH pending AS
             (
-                SELECT TOP (100) *
+                SELECT TOP (100) Id, TenantId, MessageId, PublishedAtUtc, AttemptCount, LastAttemptAtUtc, LockId, LockedUntilUtc
                 FROM dbo.SmsSendOutbox WITH (READPAST, UPDLOCK, ROWLOCK)
                 WHERE PublishedAtUtc IS NULL
                   AND (LockedUntilUtc IS NULL OR LockedUntilUtc < SYSUTCDATETIME())
