@@ -105,8 +105,8 @@ jobs:
           IF OBJECT_ID(N'SmsApiLogs.dbo.SystemLogs', N'U') IS NULL THROW 50000, 'System log schema is missing.', 1;
           IF OBJECT_ID(N'SmsApiLogs.dbo.Traces', N'U') IS NULL THROW 50000, 'Trace schema is missing.', 1;
           IF OBJECT_ID(N'SmsApiLogs.dbo.Metrics', N'U') IS NULL THROW 50000, 'Metric schema is missing.', 1;
-          IF NOT EXISTS (SELECT 1 FROM SmsApi.dbo.PlatformAdministrators WHERE Username=N'admin' AND IsActive=1 AND DATALENGTH(PasswordHash)=32 AND DATALENGTH(PasswordSalt)=32 AND PasswordIterations=600000) THROW 50000, 'Initial administrator is missing or password hashing is invalid.', 1;
-          IF NOT EXISTS (SELECT 1 FROM SmsApi.dbo.ApiClients c JOIN SmsApi.dbo.Tenants t ON t.Id = c.TenantId WHERE c.ClientId = N'example-client' AND c.IsActive = 1 AND t.IsActive = 1) THROW 50000, 'Example tenant/client is missing.', 1;
+          IF NOT EXISTS (SELECT 1 FROM SmsApi.dbo.PlatformAdministrators WHERE Username=N'platform' AND IsActive=1 AND DATALENGTH(PasswordHash)=32 AND DATALENGTH(PasswordSalt)=32 AND PasswordIterations=600000) THROW 50000, 'Initial administrator is missing or password hashing is invalid.', 1;
+          IF NOT EXISTS (SELECT 1 FROM SmsApi.dbo.ApiClients c JOIN SmsApi.dbo.Tenants t ON t.Id = c.TenantId WHERE c.ClientId = N'client' AND c.IsActive = 1 AND t.IsActive = 1) THROW 50000, 'Example tenant/client is missing.', 1;
           IF (SELECT COUNT(*) FROM SmsApi.dbo.TenantSmsProviders WHERE TenantId='11111111-1111-4111-8111-111111111111' AND Provider IN ('Twilio','Bandwidth') AND IsActive=1) <> 2 THROW 50000, 'Example providers are missing.', 1;
           IF (SELECT COUNT(*) FROM SmsApi.dbo.TenantSmsProviders WHERE TenantId='11111111-1111-4111-8111-111111111111' AND IsDefault=1) <> 1 THROW 50000, 'Expected one default provider.', 1;
           IF EXISTS (SELECT 1 FROM SmsApi.dbo.TenantSmsProviders WHERE ApiSecret LIKE 'fake-%' OR Settings LIKE '%webhookPassword%') THROW 50000, 'Provider secrets must be encrypted.', 1;
@@ -133,10 +133,10 @@ jobs:
               time.sleep(2)
           else: raise RuntimeError('API did not become healthy')
           assert request('/api/v1/admin/auth/token', {'key': 'local-admin-key-change-me'})[0] == 400
-          assert request('/api/v1/admin/auth/token', {'username': 'admin'})[0] == 400
-          assert request('/api/v1/admin/auth/token', {'username': 'admin', 'password': 'x' * 129})[0] == 400
-          assert request('/api/v1/admin/auth/token', {'username': 'admin', 'password': 'wrong'})[0] == 401
-          status, body = request('/api/v1/admin/auth/token', {'username': 'ADMIN', 'password': 'Admin_Local_2026!'})
+          assert request('/api/v1/admin/auth/token', {'username': 'platform'})[0] == 400
+          assert request('/api/v1/admin/auth/token', {'username': 'platform', 'password': 'x' * 129})[0] == 400
+          assert request('/api/v1/admin/auth/token', {'username': 'platform', 'password': 'wrong'})[0] == 401
+          status, body = request('/api/v1/admin/auth/token', {'username': 'PLATFORM', 'password': 'platform'})
           assert status == 200, 'Administrator login failed'
           token = json.loads(body)['access_token']
           assert request('/api/v1/admin/tenants', token=token)[0] == 200
@@ -145,7 +145,7 @@ jobs:
           PY
       - name: Show initialization logs
         if: failure()
-        run: docker compose logs sqlserver db-init provider-init api
+        run: docker compose logs sqlserver db-init provider-init rabbitmq api
       - name: Clean up
         if: always()
         run: docker compose down --remove-orphans --volumes
