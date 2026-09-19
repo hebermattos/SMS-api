@@ -88,4 +88,56 @@ public sealed class AdministrationSqlTests
                 """, new { Tenant = tenant, Other = other });
         }
     }
+    [SqlServerFact]
+    public async Task Schema_RejectsInvalidTenantRelationships()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("SMS_TEST_SQLSERVER");
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        var tenant = Guid.NewGuid();
+        var otherTenant = Guid.NewGuid();
+        var missingTenant = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+
+        try
+        {
+            await connection.ExecuteAsync("""
+                INSERT dbo.Tenants(Id, Name, IsActive, CreatedAt)
+                VALUES (@Tenant, N'Integrity tenant', 1, SYSDATETIMEOFFSET()),
+                       (@OtherTenant, N'Other integrity tenant', 1, SYSDATETIMEOFFSET());
+
+                INSERT dbo.SmsMessages
+                    (Id, TenantId, [From], [To], Body, Provider, ProviderMessageId, Direction, Status, CreatedAt)
+                VALUES
+                    (@MessageId, @Tenant, N'encrypted-from', N'encrypted-to', N'encrypted-body',
+                     N'Mock', NULL, 1, 1, SYSDATETIMEOFFSET());
+                """, new { Tenant = tenant, OtherTenant = otherTenant, MessageId = messageId });
+
+            var invalidUser = await Assert.ThrowsAsync<SqlException>(() => connection.ExecuteAsync("""
+                INSERT dbo.PortalUsers
+                    (Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive, CreatedAt)
+                VALUES
+                    (NEWID(), @MissingTenant, N'invalid-user', N'invalid@example.com',
+                     0x00, 0x00, 600000, N'tenant', N'user', 1, SYSDATETIMEOFFSET());
+                """, new { MissingTenant = missingTenant }));
+            Assert.Equal(547, invalidUser.Number);
+
+            var crossTenantHistory = await Assert.ThrowsAsync<SqlException>(() => connection.ExecuteAsync("""
+                INSERT dbo.SmsMessageStatusHistory(Id, TenantId, MessageId, Status, CreatedAt)
+                VALUES (NEWID(), @OtherTenant, @MessageId, 1, SYSDATETIMEOFFSET());
+                """, new { OtherTenant = otherTenant, MessageId = messageId }));
+            Assert.Equal(547, crossTenantHistory.Number);
+        }
+        finally
+        {
+            await connection.ExecuteAsync("""
+                DELETE dbo.SmsMessageStatusHistory WHERE MessageId=@MessageId;
+                DELETE dbo.SmsMessages WHERE Id=@MessageId;
+                DELETE dbo.PortalUsers WHERE TenantId IN (@Tenant, @OtherTenant);
+                DELETE dbo.Tenants WHERE Id IN (@Tenant, @OtherTenant);
+                """, new { Tenant = tenant, OtherTenant = otherTenant, MessageId = messageId });
+        }
+    }
+
 }
