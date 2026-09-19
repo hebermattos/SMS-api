@@ -26,10 +26,11 @@ public sealed class AdministrationSqlTests
         var factory = new SqlConnectionFactory(configuration);
         var reportingFactory = new ReportingSqlConnectionFactory(configuration);
         var protector = new AesGcmSecretProtector(configuration);
-        var repository = new AdministrationRepository(factory, protector);
-        var providers = new TenantSmsProviderRepository(factory, protector);
+        var configurationCache = TenantConfigurationCacheTestFactory.Create(factory);
+        var repository = new AdministrationRepository(factory, protector, configurationCache);
+        var providers = new TenantSmsProviderRepository(factory, protector, configurationCache);
         var service = new AdministrationService(repository, providers, [new TwilioSettingsPolicy(), new BandwidthSettingsPolicy()]);
-        var credentials = new ApiClientRepository(factory);
+        var credentials = new ApiClientRepository(factory, configurationCache);
         var tenant = Guid.NewGuid(); var other = Guid.NewGuid(); var account = Guid.NewGuid().ToString("N");
         using var connection = new SqlConnection(configuration.GetConnectionString("SqlServer"));
         using var reportingConnection = new SqlConnection(configuration.GetConnectionString("ReportingSqlServer"));
@@ -85,11 +86,11 @@ public sealed class AdministrationSqlTests
                 VALUES (@Tenant, 12, 3, 8, 1, 3, SYSUTCDATETIME());
                 """, new { Tenant = tenant });
 
-            var overview = await new TenantPortalRepository(factory, reportingFactory).GetOverviewAsync(tenant, default);
+            var overview = await new TenantPortalRepository(reportingFactory, configurationCache).GetOverviewAsync(tenant, default);
             Assert.Equal("Renamed", overview!.Name); Assert.Equal(12, overview.Outbound); Assert.Equal(3, overview.Inbound);
             Assert.Equal(8, overview.Delivered); Assert.Equal(1, overview.Failed); Assert.Equal(3, overview.Pending);
             Assert.Equal(2, overview.Providers.Count);
-            Assert.Null(await new TenantPortalRepository(factory, reportingFactory).GetOverviewAsync(Guid.NewGuid(), default));
+            Assert.Null(await new TenantPortalRepository(reportingFactory, configurationCache).GetOverviewAsync(Guid.NewGuid(), default));
         }
         finally
         {
