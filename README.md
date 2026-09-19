@@ -32,6 +32,7 @@ Local credentials:
 ```text
 Client:    client / client
 Platform:  platform / platform
+RabbitMQ:  sms / sms
 ```
 
 Override local administrator settings with `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `ADMIN_EMAIL`.
