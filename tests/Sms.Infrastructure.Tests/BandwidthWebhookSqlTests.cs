@@ -13,6 +13,7 @@ using Sms.Infrastructure.Security;
 
 namespace Sms.Infrastructure.Tests;
 
+[Collection(SqlServerTestCollection.Name)]
 public sealed class SqlServerFactAttribute : FactAttribute
 {
     public SqlServerFactAttribute()
