@@ -51,7 +51,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
             UPDATE dbo.AlertStatusCounters WITH (UPDLOCK, SERIALIZABLE)
             SET MessageCount = MessageCount + 1, UpdatedAtUtc = @CreatedAt
             WHERE TenantId = @TenantId AND Provider = @Provider AND Status = @Status AND BucketStartUtc = @BucketStartUtc;
-            IF @@ROWCOUNT = 0
+            IF NOT EXISTS (SELECT 1 FROM dbo.AlertStatusCounters WHERE TenantId=@TenantId AND Provider=@Provider AND Status=@Status AND BucketStartUtc=@BucketStartUtc)
                 INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
                 VALUES (@TenantId, @Provider, @Status, @BucketStartUtc, 1, @CreatedAt);
 
@@ -88,10 +88,11 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
             FROM dbo.AlertStatusCounters c
             INNER JOIN @InsertedMessages i ON i.Provider = c.Provider
             WHERE c.TenantId = @TenantId AND c.Status = @Status AND c.BucketStartUtc = @BucketStartUtc;
-            IF EXISTS (SELECT 1 FROM @InsertedMessages) AND @@ROWCOUNT = 0
-                INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
-                SELECT @TenantId, Provider, @Status, @BucketStartUtc, COUNT(*), @CreatedAt
-                FROM @InsertedMessages GROUP BY Provider;
+            INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
+            SELECT @TenantId, i.Provider, @Status, @BucketStartUtc, COUNT(*), @CreatedAt
+            FROM @InsertedMessages i
+            WHERE NOT EXISTS (SELECT 1 FROM dbo.AlertStatusCounters c WHERE c.TenantId=@TenantId AND c.Provider=i.Provider AND c.Status=@Status AND c.BucketStartUtc=@BucketStartUtc)
+            GROUP BY i.Provider;
 
             COMMIT TRANSACTION;
             """;
@@ -124,10 +125,10 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
             INNER JOIN (SELECT Provider, COUNT(*) AS Amount FROM @ChangedMessages WHERE PreviousStatus <> @Status GROUP BY Provider) x
               ON x.Provider = c.Provider
             WHERE c.TenantId = @TenantId AND c.Status = @Status AND c.BucketStartUtc = @BucketStartUtc;
-            IF @@ROWCOUNT = 0
-                INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
-                SELECT @TenantId, Provider, @Status, @BucketStartUtc, COUNT(*), @UpdatedAt
-                FROM @ChangedMessages WHERE PreviousStatus <> @Status GROUP BY Provider;
+            INSERT dbo.AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc, MessageCount, UpdatedAtUtc)
+            SELECT @TenantId, x.Provider, @Status, @BucketStartUtc, x.Amount, @UpdatedAt
+            FROM (SELECT Provider, COUNT(*) AS Amount FROM @ChangedMessages WHERE PreviousStatus <> @Status GROUP BY Provider) x
+            WHERE NOT EXISTS (SELECT 1 FROM dbo.AlertStatusCounters c WHERE c.TenantId=@TenantId AND c.Provider=x.Provider AND c.Status=@Status AND c.BucketStartUtc=@BucketStartUtc);
 
             COMMIT TRANSACTION;
             """;
@@ -141,11 +142,11 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
             SET XACT_ABORT ON;
             BEGIN TRANSACTION;
 
-            DECLARE @ChangedMessages TABLE (Id UNIQUEIDENTIFIER, PreviousStatus INT);
+            DECLARE @ChangedMessages TABLE (Id UNIQUEIDENTIFIER, PreviousStatus INT, Provider NVARCHAR(50));
 
             UPDATE dbo.SmsMessages
             SET Status = @Status, UpdatedAt = @UpdatedAt
-            OUTPUT INSERTED.Id, DELETED.Status INTO @ChangedMessages
+            OUTPUT INSERTED.Id, DELETED.Status, INSERTED.Provider INTO @ChangedMessages
             WHERE TenantId = @TenantId AND Provider = @Provider AND ProviderMessageId = @ProviderMessageId
               AND (
                     Status = @Queued
