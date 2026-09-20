@@ -56,7 +56,7 @@ CREATE UNIQUE INDEX UX_PortalUsers_PlatformUsername
 CREATE UNIQUE INDEX UX_PortalUsers_TenantUsername
     ON PortalUsers(TenantId, Username) WHERE Context = 'tenant';
 CREATE INDEX IX_PortalUsers_TenantId ON PortalUsers(TenantId) WHERE TenantId IS NOT NULL;
-CREATE UNIQUE INDEX UX_PortalUsers_TenantId_Id ON PortalUsers(TenantId, Id) WHERE TenantId IS NOT NULL;
+CREATE UNIQUE INDEX UX_PortalUsers_TenantId_Id ON PortalUsers(TenantId, Id);
 
 CREATE TABLE TenantRateLimits
 (
@@ -92,6 +92,7 @@ CREATE TABLE SmsMessages
 (
     Id UUID PRIMARY KEY,
     TenantId UUID NOT NULL REFERENCES Tenants(Id),
+    UserId UUID NULL,
     "From" VARCHAR(256) NOT NULL,
     "To" VARCHAR(256) NOT NULL,
     Body TEXT NOT NULL,
@@ -103,7 +104,9 @@ CREATE TABLE SmsMessages
     ScheduledAtUtc TIMESTAMPTZ NULL,
     UpdatedAt TIMESTAMPTZ NULL,
     UNIQUE (TenantId, Id),
+    FOREIGN KEY (TenantId, UserId) REFERENCES PortalUsers(TenantId, Id),
     CHECK (Direction IN (1, 2)),
+    CHECK (UserId IS NULL OR Direction = 1),
     CHECK (Status BETWEEN 1 AND 6),
     CHECK
     (

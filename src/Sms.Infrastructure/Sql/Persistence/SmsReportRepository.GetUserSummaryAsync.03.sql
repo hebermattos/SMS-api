@@ -1,6 +1,7 @@
 SELECT
     r.UserId,
     u.Username,
+    r.ReportDate,
     r.TotalMessages,
     r.Delivered,
     r.Failed,

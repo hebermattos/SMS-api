@@ -52,6 +52,7 @@ public sealed record PlatformSmsReportTenantSummary(
 public sealed record UserSmsReportSummary(
     Guid UserId,
     string Username,
+    DateOnly ReportDate,
     long TotalMessages,
     long Delivered,
     long Failed,
