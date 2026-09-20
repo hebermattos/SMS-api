@@ -24,6 +24,8 @@ public sealed class RecentFeatureCoverageTests
         Assert.Throws<InvalidOperationException>(() => new SmsRetryOptions { MaxAttempts = 11 }.Validate());
         Assert.Throws<InvalidOperationException>(() => new SmsRetryOptions { InitialIntervalSeconds = 0 }.Validate());
         Assert.Throws<InvalidOperationException>(() => new SmsRetryOptions { InitialIntervalSeconds = 86401 }.Validate());
+        new SmsRetryOptions { MaxAttempts = 0, InitialIntervalSeconds = 1 }.Validate();
+        new SmsRetryOptions { MaxAttempts = 10, InitialIntervalSeconds = 86400 }.Validate();
     }
 
     [Fact]
