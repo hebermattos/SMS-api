@@ -59,7 +59,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
         using var connection = connectionFactory.CreateConnection();
         return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
             Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/SmsMessageRepository.TryClaimQueuedAsync.10.sql"),
-            new { TenantId = tenantId, Id = id, Queued = SmsQueueStatus.Queued, Processing = SmsQueueStatus.Processing, UpdatedAt = updatedAt },
+            new { TenantId = tenantId, Id = id, Queued = SmsQueueStatus.Queued, Processing = SmsQueueStatus.Processing, Pending = SmsStatus.Pending, UpdatedAt = updatedAt },
             cancellationToken: cancellationToken)) != 0;
     }
 
