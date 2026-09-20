@@ -1,6 +1,7 @@
 SELECT
     EventId,
     TenantId,
+    UserId,
     OutboundDelta,
     InboundDelta,
     DeliveredDelta,
