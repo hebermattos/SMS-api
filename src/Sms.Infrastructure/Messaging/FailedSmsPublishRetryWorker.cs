@@ -38,20 +38,24 @@ public sealed class FailedSmsPublishRetryWorker(
         var published = 0;
         foreach (var row in rows)
         {
+            if (!await source.TryMarkQueuedAsync(row.TenantId, row.MessageId, cancellationToken))
+                continue;
+
             try
             {
                 await bus.Publish(
                     new SmsSendEvent(Guid.NewGuid(), row.TenantId, row.MessageId),
                     cancellationToken);
-                await source.MarkQueuedAsync(row.TenantId, row.MessageId, cancellationToken);
                 published++;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                await source.MarkNotQueuedAsync(row.TenantId, row.MessageId, CancellationToken.None);
                 throw;
             }
             catch (Exception exception)
             {
+                await source.MarkNotQueuedAsync(row.TenantId, row.MessageId, cancellationToken);
                 logger.LogError(exception, "Failed to republish SMS message {MessageId}.", row.MessageId);
             }
         }
