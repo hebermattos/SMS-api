@@ -36,9 +36,12 @@ public sealed class SendSmsServiceTests
     [InlineData("+1", " ")]
     public async Task SendAsync_RejectsInvalidRequest(string to, string body)
     {
+        var tenantId = Guid.NewGuid();
+        var context = new FakeTenantContext(tenantId);
         var service = new SendSmsService(
-            new FakeTenantContext(Guid.NewGuid()), new FakeRepository(), new FakeResolver(new FakeProvider("Twilio")), new FakePublisher(),
-            new(new TestOptOutRepository()), new FakeTimeZones(TimeZoneInfo.Utc), new FakeUsers(), new FixedTimeProvider(DateTimeOffset.UtcNow));
+            context, new FakeRepository(), new FakeResolver(new FakeProvider("Twilio")), new FakePublisher(),
+            new(new TestOptOutRepository()), new SendSmsValidator(context, new FakeTimeZones(TimeZoneInfo.Utc), new FakeUsers()),
+            new FixedTimeProvider(DateTimeOffset.UtcNow));
         await Assert.ThrowsAsync<ArgumentException>(() => service.SendAsync(new SendSmsRequest(to, body)));
     }
 
@@ -50,8 +53,9 @@ public sealed class SendSmsServiceTests
         var publisher = new FakePublisher();
         var clock = new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
         var zone = TimeZoneInfo.CreateCustomTimeZone("Tenant/MinusThree", TimeSpan.FromHours(-3), "Tenant", "Tenant");
-        var service = new SendSmsService(new FakeTenantContext(tenantId), repository, new FakeResolver(new FakeProvider("Twilio")),
-            publisher, new(new TestOptOutRepository()), new FakeTimeZones(zone), new FakeUsers(), clock);
+        var context = new FakeTenantContext(tenantId);
+        var service = new SendSmsService(context, repository, new FakeResolver(new FakeProvider("Twilio")),
+            publisher, new(new TestOptOutRepository()), new SendSmsValidator(context, new FakeTimeZones(zone), new FakeUsers()), clock);
 
         var result = await service.SendAsync(new SendSmsRequest("+15551234567", "hello", ScheduledAt: new DateTime(2026, 1, 1, 10, 0, 0)));
 
@@ -70,8 +74,15 @@ public sealed class SendSmsServiceTests
     }
 
     private static SendSmsService CreateService(Guid tenantId, FakeRepository repository, FakeProvider provider, FakePublisher publisher) =>
-        new(new FakeTenantContext(tenantId), repository, new FakeResolver(provider), publisher, new(new TestOptOutRepository()),
-            new FakeTimeZones(TimeZoneInfo.Utc), new FakeUsers(), new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+        CreateServiceCore(tenantId, repository, provider, publisher);
+
+    private static SendSmsService CreateServiceCore(Guid tenantId, FakeRepository repository, FakeProvider provider, FakePublisher publisher)
+    {
+        var context = new FakeTenantContext(tenantId);
+        return new SendSmsService(context, repository, new FakeResolver(provider), publisher, new(new TestOptOutRepository()),
+            new SendSmsValidator(context, new FakeTimeZones(TimeZoneInfo.Utc), new FakeUsers()),
+            new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+    }
 
     private sealed class FakeUsers : IPortalUserRepository
     {
@@ -113,7 +124,7 @@ public sealed class SendSmsServiceTests
         public Task<ProviderSendResult> SendAsync(string from, string to, string body, CancellationToken cancellationToken = default)
         {
             SendCalls++;
-            return Task.FromResult(new ProviderSendResult("unexpected", "sent"));
+            return Task.FromResult(new ProviderSendResult("unexpected", SmsStatus.Sent));
         }
     }
 
