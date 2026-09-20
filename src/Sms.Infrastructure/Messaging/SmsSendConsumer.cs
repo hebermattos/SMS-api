@@ -63,12 +63,10 @@ public sealed class SmsSendConsumer(
 
             var provider = providerResolver.Resolve(message.Provider);
             var sendResult = await provider.SendAsync(message.From, message.To, message.Body, cancellationToken);
-            var status = ParseStatus(sendResult.Status);
-
             await repository.UpdateStatusAsync(
                 sendEvent.TenantId,
                 sendEvent.MessageId,
-                status,
+                sendResult.Status,
                 sendResult.ProviderMessageId,
                 DateTimeOffset.UtcNow,
                 cancellationToken);
@@ -119,12 +117,4 @@ public sealed class SmsSendConsumer(
 
     private static bool IsScheduledMessageEvent(SmsSendEvent sendEvent) =>
         sendEvent.EventId == sendEvent.MessageId;
-
-    private static SmsStatus ParseStatus(string status) => status.ToLowerInvariant() switch
-    {
-        "sent" => SmsStatus.Sent,
-        "delivered" => SmsStatus.Delivered,
-        "failed" => SmsStatus.Failed,
-        _ => SmsStatus.Queued
-    };
 }

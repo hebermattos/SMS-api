@@ -4,6 +4,7 @@ using System.Text.Json;
 using Sms.Application.Common;
 using Sms.Application.Messages;
 using Sms.Application.Providers;
+using Sms.Domain.Messages;
 
 namespace Sms.Infrastructure.Providers;
 
@@ -65,6 +66,14 @@ public sealed class TwilioSmsProvider(
         if (string.IsNullOrWhiteSpace(sid))
             throw new InvalidOperationException("Twilio response did not contain a message SID.");
 
-        return new ProviderSendResult(sid, status ?? "queued");
+        return new ProviderSendResult(sid, MapStatus(status));
     }
+
+    private static SmsStatus MapStatus(string? status) => status?.ToLowerInvariant() switch
+    {
+        "sent" => SmsStatus.Sent,
+        "delivered" => SmsStatus.Delivered,
+        "failed" or "undelivered" or "canceled" => SmsStatus.Failed,
+        _ => SmsStatus.Queued
+    };
 }
