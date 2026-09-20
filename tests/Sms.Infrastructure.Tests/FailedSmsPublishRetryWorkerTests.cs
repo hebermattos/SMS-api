@@ -26,7 +26,8 @@ public sealed class FailedSmsPublishRetryWorkerTests
         Assert.Equal([first.MessageId, second.MessageId], published.Select(x => x.MessageId));
         Assert.Equal([first.TenantId, second.TenantId], published.Select(x => x.TenantId));
         Assert.All(published, item => Assert.NotEqual(Guid.Empty, item.EventId));
-        Assert.Equal([first.MessageId, second.MessageId], source.Queued.Select(x => x.MessageId));
+        Assert.Equal([first.MessageId, second.MessageId], source.Claimed.Select(x => x.MessageId));
+        Assert.Empty(source.Released);
     }
 
     [Fact]
@@ -45,7 +46,22 @@ public sealed class FailedSmsPublishRetryWorkerTests
 
         Assert.Equal(1, count);
         bus.Verify(x => x.Publish(It.IsAny<SmsSendEvent>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
-        Assert.Equal([second.MessageId], source.Queued.Select(x => x.MessageId));
+        Assert.Equal([first.MessageId, second.MessageId], source.Claimed.Select(x => x.MessageId));
+        Assert.Equal([first.MessageId], source.Released.Select(x => x.MessageId));
+    }
+
+    [Fact]
+    public async Task PublishBatchAsync_SkipsMessageWhenAnotherWorkerAlreadyClaimedIt()
+    {
+        var message = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var source = new Source([message]) { CanClaim = false };
+        var bus = new Mock<IBus>();
+        var worker = new FailedSmsPublishRetryWorker(source, bus.Object, NullLogger<FailedSmsPublishRetryWorker>.Instance);
+
+        var count = await worker.PublishBatchAsync();
+
+        Assert.Equal(0, count);
+        bus.Verify(x => x.Publish(It.IsAny<SmsSendEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -77,14 +93,25 @@ public sealed class FailedSmsPublishRetryWorkerTests
 
     private sealed class Source(IReadOnlyList<FailedSmsPublishMessage> messages) : IFailedSmsPublishSource
     {
-        public List<FailedSmsPublishMessage> Queued { get; } = [];
+        public List<FailedSmsPublishMessage> Claimed { get; } = [];
+        public List<FailedSmsPublishMessage> Released { get; } = [];
+        public bool CanClaim { get; init; } = true;
 
         public Task<IReadOnlyList<FailedSmsPublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(messages);
 
-        public Task MarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
+        public Task<bool> TryMarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
         {
-            Queued.Add(new FailedSmsPublishMessage(messageId, tenantId));
+            if (!CanClaim)
+                return Task.FromResult(false);
+
+            Claimed.Add(new FailedSmsPublishMessage(messageId, tenantId));
+            return Task.FromResult(true);
+        }
+
+        public Task MarkNotQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
+        {
+            Released.Add(new FailedSmsPublishMessage(messageId, tenantId));
             return Task.CompletedTask;
         }
     }
