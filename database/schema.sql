@@ -216,6 +216,9 @@ CREATE TABLE Alerts
 );
 CREATE INDEX IX_Alerts_Tenant_CreatedAt ON Alerts(TenantId, CreatedAt DESC, Id DESC)
     INCLUDE (IsRead, RuleId, Status, Provider, MatchCount);
+CREATE INDEX IX_Alerts_Tenant_Unread_CreatedAt ON Alerts(TenantId, CreatedAt DESC, Id DESC)
+    INCLUDE (RuleId, RuleName, Provider, Status, MatchCount, WindowMinutes)
+    WHERE NOT IsRead;
 
 CREATE TABLE AlertStatusCounters
 (
