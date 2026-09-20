@@ -56,6 +56,8 @@ docker compose down --remove-orphans --volumes
 docker compose up --build
 ```
 
+Database backups are stored outside Docker volumes in `./backups` by default, so `docker compose down --volumes` does not delete them. Set `POSTGRES_BACKUP_PATH` to an absolute path on independent storage for stronger protection.
+
 Docker is intended for local testing only. Never use fallback Compose credentials outside development.
 
 Docker Compose defines soft memory reservations for each service:
@@ -184,32 +186,38 @@ Fresh databases are initialized from:
 - `database/logs-schema.sql` — tenant activity and platform error logs
 - `database/reporting-schema.sql` — reporting projections
 
-### Automatic backup
+### Automatic backup and point-in-time recovery
 
-Docker Compose automatically creates a compressed PostgreSQL custom-format backup of the `sms_api` database every 24 hours. Backups are stored in the persistent `postgres-backups` Docker volume and backups older than 7 days are removed automatically.
+Docker Compose protects PostgreSQL with two complementary mechanisms:
+
+- A physical base backup created every 24 hours with `pg_basebackup`.
+- Continuous WAL archiving, with PostgreSQL forcing an archive segment switch at least every 60 seconds by default.
+
+Together, the base backup and archived WAL files support **Point-in-Time Recovery (PITR)**. A restore can replay database changes after the latest base backup up to a selected UTC recovery timestamp. This avoids the previous design's potential loss of up to 24 hours of data.
 
 The defaults can be changed with:
 
 ```text
+POSTGRES_BACKUP_PATH=./backups
 BACKUP_INTERVAL_SECONDS=86400
 BACKUP_RETENTION_DAYS=7
+WAL_ARCHIVE_TIMEOUT_SECONDS=60
 ```
 
-The backup container uses `pg_dump --format=custom`, writes to a temporary file, and renames it only after a successful dump so incomplete files are not treated as valid backups.
+`POSTGRES_BACKUP_PATH` is a host bind mount rather than a Docker named volume. Therefore, `docker compose down --volumes` does not remove the backups. For production, set it to storage independent from the PostgreSQL data disk/host and copy or replicate it to off-site storage.
 
-List the backups:
+Base backups are written to a temporary directory and renamed only after `pg_basebackup` succeeds. WAL files are archived continuously under `<backup-path>/wal`. Both base backups and archived WAL files use the configured retention period.
+
+List the backups and archived WAL files:
 
 ```bash
-docker compose exec postgres-backup ls -lh /backups
+ls -lh ./backups/base
+ls -lh ./backups/wal
 ```
 
-Restore a backup into an existing empty database:
+For PITR, restore the selected physical base backup into an empty PostgreSQL data directory, make the corresponding archived WAL files available, configure `restore_command` to copy WAL files from the archive, set `recovery_target_time` to the required UTC timestamp, create `recovery.signal`, and start PostgreSQL. Recovery must be tested regularly before relying on the backup as a disaster-recovery mechanism.
 
-```bash
-docker compose exec postgres-backup pg_restore --clean --if-exists --no-owner --no-acl --dbname=sms_api /backups/<backup-file>.dump
-```
-
-The Docker volume protects backups from normal container recreation, but it is still on the same Docker host. Production deployments should additionally copy backups to independent/off-site storage.
+The default `WAL_ARCHIVE_TIMEOUT_SECONDS=60` bounds how long a low-traffic server can keep an unarchived partial WAL segment before PostgreSQL forces a switch. It is an **RPO target, not a zero-data-loss guarantee**: host/storage failure can still lose WAL that has not reached independent storage. Guaranteed zero data loss across a complete database-host failure requires synchronous replication to another PostgreSQL instance in addition to backups.
 
 All dates are stored in UTC. Each tenant has an IANA time zone used for display, filters, and scheduled delivery.
 
