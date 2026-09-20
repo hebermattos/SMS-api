@@ -1,15 +1,13 @@
 using MassTransit;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Sms.Domain.Messages;
-using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Messaging;
 
-public sealed class FailedSmsPublishRetryWorker(
-    IFailedSmsPublishSource source,
+public sealed class SmsQueuePublisherWorker(
+    ISmsQueuePublishSource source,
     IBus bus,
-    ILogger<FailedSmsPublishRetryWorker> logger) : BackgroundService
+    ILogger<SmsQueuePublisherWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan PollingInterval = TimeSpan.FromMinutes(5);
 
@@ -24,7 +22,7 @@ public sealed class FailedSmsPublishRetryWorker(
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Failed to retry SMS queue publications.");
+                logger.LogError(exception, "Failed to publish SMS messages to the send queue.");
             }
 
             await Task.Delay(PollingInterval, stoppingToken);
@@ -34,11 +32,11 @@ public sealed class FailedSmsPublishRetryWorker(
     internal async Task<int> PublishBatchAsync(CancellationToken cancellationToken = default)
     {
         var rows = await source.GetPendingAsync(cancellationToken);
-
         var published = 0;
+
         foreach (var row in rows)
         {
-            if (!await source.TryMarkQueuedAsync(row.TenantId, row.MessageId, cancellationToken))
+            if (!await source.TryClaimAsync(row, cancellationToken))
                 continue;
 
             try
@@ -50,13 +48,13 @@ public sealed class FailedSmsPublishRetryWorker(
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                await source.MarkNotQueuedAsync(row.TenantId, row.MessageId, CancellationToken.None);
+                await source.ReleaseAsync(row, CancellationToken.None);
                 throw;
             }
             catch (Exception exception)
             {
-                await source.MarkNotQueuedAsync(row.TenantId, row.MessageId, cancellationToken);
-                logger.LogError(exception, "Failed to republish SMS message {MessageId}.", row.MessageId);
+                await source.ReleaseAsync(row, cancellationToken);
+                logger.LogError(exception, "Failed to publish SMS message {MessageId}.", row.MessageId);
             }
         }
 

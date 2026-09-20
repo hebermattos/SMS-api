@@ -44,7 +44,6 @@ builder.Services.AddInfrastructure(builder.Configuration, registerConsumers: tru
 builder.Services.AddInfrastructureWorkers();
 
 builder.Services.AddHostedService<AlertEvaluationOutboxPublisher>();
-builder.Services.AddHostedService<ScheduledSmsPublisher>();
-builder.Services.AddHostedService<FailedSmsPublishRetryWorker>();
+builder.Services.AddHostedService<SmsQueuePublisherWorker>();
 
 await builder.Build().RunAsync();
