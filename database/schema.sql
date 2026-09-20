@@ -123,6 +123,9 @@ CREATE TABLE TenantSmsProviders
     UpdatedAt TIMESTAMPTZ NULL
 );
 CREATE UNIQUE INDEX UX_TenantSmsProviders_Tenant_Provider ON TenantSmsProviders(TenantId, Provider);
+CREATE INDEX IX_TenantSmsProviders_Tenant_Active
+    ON TenantSmsProviders(TenantId, IsDefault DESC, Provider)
+    INCLUDE (FromNumber) WHERE IsActive;
 CREATE UNIQUE INDEX UX_TenantSmsProviders_Default
     ON TenantSmsProviders(TenantId) WHERE IsDefault AND IsActive;
 CREATE UNIQUE INDEX UX_TenantSmsProviders_CallbackRoute
