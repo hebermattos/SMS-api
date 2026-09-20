@@ -23,7 +23,7 @@ public sealed class RedisRateLimitCounterTests
                 keys = capturedKeys;
                 values = capturedValues;
             })
-            .ReturnsAsync((RedisResult)2L);
+            .ReturnsAsync(RedisResult.Create((RedisValue)2L));
 
         var redis = new Mock<IConnectionMultiplexer>();
         redis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(database.Object);
