@@ -69,6 +69,7 @@ Docker Compose defines soft memory reservations for each service:
 | Redis | 64 MB |
 | Ollama | 768 MB |
 | API | 256 MB |
+| Worker | 256 MB |
 | ClickStack | 512 MB |
 | OpenTelemetry Collector | 128 MB |
 | HyperDX authentication proxy | 32 MB |
@@ -245,9 +246,9 @@ Observability is deliberately split between **audit data** and **technical telem
 | OpenTelemetry traces | ClickStack / ClickHouse | Technical operations |
 | OpenTelemetry metrics | ClickStack / ClickHouse | Technical operations |
 
-The API exports technical telemetry over OTLP to a dedicated ClickStack OpenTelemetry Collector running in standalone mode. The collector writes directly to the ClickHouse instance bundled with ClickStack, while HyperDX remains the visualization UI. This keeps high-volume telemetry writes out of the PostgreSQL audit database while preserving the existing authorization and tenant-isolation model for user activity logs.
+The API and Worker export technical telemetry over OTLP to a dedicated ClickStack OpenTelemetry Collector running in standalone mode. The collector writes directly to the ClickHouse instance bundled with ClickStack, while HyperDX remains the visualization UI. This keeps high-volume telemetry writes out of the PostgreSQL audit database while preserving the existing authorization and tenant-isolation model for user activity logs.
 
-In Docker Compose the API sends OTLP/HTTP protobuf to `http://otel-collector:4318`. The collector is reachable only inside the Compose network, so its OTLP ports are not published to the host and local startup does not depend on a HyperDX-generated ingestion key. The collector writes to `http://clickstack:8123`. The local ClickStack container runs its HyperDX UI without built-in authentication and is reachable only inside the Compose network. A small Caddy proxy exposes HyperDX at `http://localhost:8081` with Basic Auth, defaulting to `HyperDX / HyperDX`; override those development defaults with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`. The ClickHouse HTTP endpoint is mapped to `18123`.
+In Docker Compose the API and Worker send OTLP/HTTP protobuf to `http://otel-collector:4318`. The collector is reachable only inside the Compose network, so its OTLP ports are not published to the host and local startup does not depend on a HyperDX-generated ingestion key. The collector writes to `http://clickstack:8123`. The local ClickStack container runs its HyperDX UI without built-in authentication and is reachable only inside the Compose network. A small Caddy proxy exposes HyperDX at `http://localhost:8081` with Basic Auth, defaulting to `HyperDX / HyperDX`; override those development defaults with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`. The ClickHouse HTTP endpoint is mapped to `18123`.
 
 ClickStack is technical infrastructure and must not be exposed as a tenant-facing log source. Secrets, access tokens, authorization headers, SMS bodies, and full phone numbers must never be emitted as telemetry.
 
@@ -293,12 +294,13 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 
 ![SMS API Docker Compose architecture](docs/images/sms-api-architecture-v2.svg)
 
-The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, RabbitMQ handles asynchronous messaging, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from the API and persists them in the ClickHouse instance bundled with ClickStack.
+The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, RabbitMQ handles asynchronous messaging between the API and the independently deployed Worker, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from both processes and persists them in the ClickHouse instance bundled with ClickStack.
 
-The API waits for database/provider initialization, RabbitMQ, Redis, ClickStack, and the standalone OpenTelemetry Collector before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
+The API and Worker are separate containers and can be deployed and scaled independently. The API handles HTTP, authentication, authorization, webhooks, and RabbitMQ publishing. The Worker owns RabbitMQ consumers, scheduled-message publishing, failed-publish retry, alert outbox publishing, and RabbitMQ monitoring. Both wait for their required infrastructure dependencies before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
 
 ```text
-src/Sms.Api              HTTP, authentication, authorization
+src/Sms.Api              HTTP, authentication, authorization, webhooks, RabbitMQ publishing
+src/Sms.Worker           RabbitMQ consumers and background workers
 src/Sms.Application      Use cases and contracts
 src/Sms.Domain           Domain models
 src/Sms.Infrastructure   SQL, providers, encryption, observability
@@ -310,7 +312,7 @@ tests                    Unit and integration tests
 
 ## RabbitMQ monitoring
 
-The API collects RabbitMQ queue metrics from the Management API every five minutes and exports them through the existing OpenTelemetry pipeline to ClickStack/HyperDX.
+The Worker collects RabbitMQ queue metrics from the Management API every five minutes and exports them through the existing OpenTelemetry pipeline to ClickStack/HyperDX.
 
 - `rabbitmq.queue.messages.ready`: messages waiting for a consumer.
 - `rabbitmq.queue.messages.unacknowledged`: messages currently being processed.
