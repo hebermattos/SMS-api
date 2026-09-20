@@ -83,7 +83,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
         | ForwardedHeaders.XForwardedProto
         | ForwardedHeaders.XForwardedHost;
     options.ForwardLimit = 1;
-    options.KnownIPNetworks.Clear();
+    options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
 builder.Services.AddRateLimiter(options =>
