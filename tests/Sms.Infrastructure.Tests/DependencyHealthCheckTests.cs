@@ -53,7 +53,7 @@ public sealed class DependencyHealthCheckTests
     [Fact]
     public async Task RedisHealthCheck_ReturnsHealthyWhenRedisResponds()
     {
-        var check = new DependencyHealthChecks.RedisHealthCheck(new FakeDistributedCache(), new CacheOptions(true));
+        var check = new DependencyHealthChecks.RedisHealthCheck(new FakeDistributedCache());
 
         var result = await check.CheckHealthAsync(Context(check, HealthStatus.Degraded));
 
@@ -64,7 +64,7 @@ public sealed class DependencyHealthCheckTests
     [Fact]
     public async Task RedisHealthCheck_ReturnsConfiguredFailureStatusWhenRedisFails()
     {
-        var check = new DependencyHealthChecks.RedisHealthCheck(new ThrowingDistributedCache(), new CacheOptions(true));
+        var check = new DependencyHealthChecks.RedisHealthCheck(new ThrowingDistributedCache());
 
         var result = await check.CheckHealthAsync(Context(check, HealthStatus.Degraded));
 
@@ -75,9 +75,7 @@ public sealed class DependencyHealthCheckTests
     [Fact]
     public async Task RedisHealthCheck_ReturnsHealthyWithoutAccessingRedisWhenCacheIsDisabled()
     {
-        var check = new DependencyHealthChecks.RedisHealthCheck(
-            new ThrowingDistributedCache(),
-            new CacheOptions(false));
+        var check = new DependencyHealthChecks.DisabledCacheHealthCheck();
 
         var result = await check.CheckHealthAsync(Context(check, HealthStatus.Degraded));
 
