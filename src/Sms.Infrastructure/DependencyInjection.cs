@@ -96,6 +96,7 @@ public static class DependencyInjection
         services.AddSingleton<ISmsWebhookUrlProvider, ConfiguredSmsWebhookUrlProvider>();
         services.AddScoped<IApiClientRepository, ApiClientRepository>();
         services.AddScoped<IPortalUserRepository, PortalUserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IPortalUserManagementRepository, PortalUserManagementRepository>();
         services.AddScoped<ITenantPortalUserManagementRepository, TenantPortalUserManagementRepository>();
         services.AddScoped<IAdministratorRepository, AdministratorRepository>();
