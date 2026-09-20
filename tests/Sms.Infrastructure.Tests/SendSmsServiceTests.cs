@@ -1,3 +1,4 @@
+using Sms.Application.Auth;
 using Sms.Application.Common;
 using Sms.Application.Messages;
 using Sms.Domain.Messages;
@@ -37,7 +38,7 @@ public sealed class SendSmsServiceTests
     {
         var service = new SendSmsService(
             new FakeTenantContext(Guid.NewGuid()), new FakeRepository(), new FakeResolver(new FakeProvider("Twilio")), new FakePublisher(),
-            new(new TestOptOutRepository()), new FakeTimeZones(TimeZoneInfo.Utc), new FixedTimeProvider(DateTimeOffset.UtcNow));
+            new(new TestOptOutRepository()), new FakeTimeZones(TimeZoneInfo.Utc), new FakeUsers(), new FixedTimeProvider(DateTimeOffset.UtcNow));
         await Assert.ThrowsAsync<ArgumentException>(() => service.SendAsync(new SendSmsRequest(to, body)));
     }
 
@@ -50,7 +51,7 @@ public sealed class SendSmsServiceTests
         var clock = new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
         var zone = TimeZoneInfo.CreateCustomTimeZone("Tenant/MinusThree", TimeSpan.FromHours(-3), "Tenant", "Tenant");
         var service = new SendSmsService(new FakeTenantContext(tenantId), repository, new FakeResolver(new FakeProvider("Twilio")),
-            publisher, new(new TestOptOutRepository()), new FakeTimeZones(zone), clock);
+            publisher, new(new TestOptOutRepository()), new FakeTimeZones(zone), new FakeUsers(), clock);
 
         var result = await service.SendAsync(new SendSmsRequest("+15551234567", "hello", ScheduledAt: new DateTime(2026, 1, 1, 10, 0, 0)));
 
@@ -70,7 +71,13 @@ public sealed class SendSmsServiceTests
 
     private static SendSmsService CreateService(Guid tenantId, FakeRepository repository, FakeProvider provider, FakePublisher publisher) =>
         new(new FakeTenantContext(tenantId), repository, new FakeResolver(provider), publisher, new(new TestOptOutRepository()),
-            new FakeTimeZones(TimeZoneInfo.Utc), new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+            new FakeTimeZones(TimeZoneInfo.Utc), new FakeUsers(), new FixedTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+
+    private sealed class FakeUsers : IPortalUserRepository
+    {
+        public Task<PortalUserAccount?> GetActiveByUsernameAsync(string username, string context, string? tenantCode, CancellationToken cancellationToken = default) => Task.FromResult<PortalUserAccount?>(null);
+        public Task<PortalUserAccount?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult<PortalUserAccount?>(null);
+    }
 
     private sealed class FakePublisher : ISmsSendEventPublisher
     {
