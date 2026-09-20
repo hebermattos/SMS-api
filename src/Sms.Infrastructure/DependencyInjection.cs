@@ -53,7 +53,7 @@ public static class DependencyInjection
         services.AddSingleton<TenantConfigurationCache>();
         services.AddSingleton<IProviderCatalogCache, ProviderCatalogCache>();
         services.AddSingleton<ITenantSmsOverviewOutbox, TenantSmsOverviewOutbox>();
-        services.AddSingleton<IFailedSmsPublishSource, FailedSmsPublishSource>();
+        services.AddSingleton<ISmsQueuePublishSource, SmsQueuePublishSource>();
         services.AddSingleton<ITenantSmsOverviewEventPublisher, TenantSmsOverviewEventPublisher>();
         services.AddScoped<ITenantSmsOverviewProjection, TenantSmsOverviewProjection>();
         var rabbitMq = RabbitMqAlertOptions.From(configuration);
