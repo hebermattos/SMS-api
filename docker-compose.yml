@@ -242,6 +242,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
       OTEL_SERVICE_NAME: "sms-api"
+      OTEL_RESOURCE_ATTRIBUTES: "service.instance.id=api-1,deployment.environment=development"
 
   api-2:
     mem_reservation: 256m
@@ -279,6 +280,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
       OTEL_SERVICE_NAME: "sms-api"
+      OTEL_RESOURCE_ATTRIBUTES: "service.instance.id=api-2,deployment.environment=development"
 
   haproxy:
     image: haproxy:3.2-alpine
