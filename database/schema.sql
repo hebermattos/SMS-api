@@ -108,7 +108,7 @@ CREATE TABLE SmsMessages
     FOREIGN KEY (TenantId, UserId) REFERENCES PortalUsers(TenantId, Id),
     CHECK (Direction IN (1, 2)),
     CHECK (UserId IS NULL OR Direction = 1),
-    CHECK (QueueStatus BETWEEN 1 AND 3),
+    CHECK (QueueStatus BETWEEN 1 AND 4),
     CHECK (Status BETWEEN 1 AND 5),
     CHECK
     (
