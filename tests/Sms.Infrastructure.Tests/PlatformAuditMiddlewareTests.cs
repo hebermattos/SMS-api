@@ -23,7 +23,7 @@ public sealed class PlatformAuditMiddlewareTests
         var administratorId = Guid.NewGuid().ToString();
         context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(PortalSecurity.AdminClaim, "true"), new Claim(ClaimTypes.NameIdentifier, administratorId)], "test"));
         var logger = new RecordingLogger();
-        await new PlatformAuditMiddleware(c => { c.Response.StatusCode = status; return Task.CompletedTask; }, logger).InvokeAsync(context);
+        await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new PlatformAuditMiddleware(logger));
         Assert.Equal(level, logger.Level);
         Assert.Equal("Administration.SaveProvider", logger.Values["Action"]);
         Assert.Equal(administratorId, logger.Values["Actor"]);
@@ -37,8 +37,8 @@ public sealed class PlatformAuditMiddlewareTests
     public async Task ExceptionIsRecordedAsFailureAndRethrownWithoutItsDetails()
     {
         var logger = new RecordingLogger();
-        var middleware = new PlatformAuditMiddleware(_ => throw new InvalidOperationException("secret"), logger);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => middleware.InvokeAsync(Context("Administration", "UpdateTenant")));
+        var step = new PlatformAuditMiddleware(logger);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => RunPipelineAsync(Context("Administration", "UpdateTenant"), _ => throw new InvalidOperationException("secret"), step));
         Assert.Equal(500, logger.Values["StatusCode"]);
         Assert.DoesNotContain("secret", logger.Message);
     }
@@ -51,12 +51,11 @@ public sealed class PlatformAuditMiddlewareTests
     public async Task IdentifiesLoginAndBootstrapOutcomes(string controller, int status, string actor)
     {
         var logger = new RecordingLogger();
-        await new PlatformAuditMiddleware(c => {
+        await RunPipelineAsync(Context(controller, "Token"), c => {
             c.Response.StatusCode = status;
             if (status == 200) c.Items[PortalSecurity.AdministratorLoginIdentityKey] = "verified-admin-id";
             return Task.CompletedTask;
-        }, logger)
-            .InvokeAsync(Context(controller, "Token"));
+        }, new PlatformAuditMiddleware(logger));
         Assert.Equal(actor, logger.Values["Actor"]);
     }
 
@@ -64,9 +63,12 @@ public sealed class PlatformAuditMiddlewareTests
     public async Task DoesNotAuditProviderCallbacksAsUserActions()
     {
         var logger = new RecordingLogger();
-        await new PlatformAuditMiddleware(_ => Task.CompletedTask, logger).InvokeAsync(Context("TwilioWebhooks", "Inbound"));
+        await RunPipelineAsync(Context("TwilioWebhooks", "Inbound"), _ => Task.CompletedTask, new PlatformAuditMiddleware(logger));
         Assert.Empty(logger.Values);
     }
+
+    private static Task RunPipelineAsync(HttpContext context, RequestDelegate next, params IAuditPipelineStep[] steps) =>
+        new AuditPipelineMiddleware(next).InvokeAsync(context, steps);
 
     private static DefaultHttpContext Context(string controller, string action)
     {

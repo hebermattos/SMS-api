@@ -11,7 +11,7 @@ public sealed class AlertServiceCoverageTests
     public async Task CreateRule_TrimsValuesAndPersistsRule()
     {
         var repository = new Repository();
-        var service = new AlertService(repository, TimeProvider.System);
+        var service = new AlertService(repository, new AlertRuleFactory(TimeProvider.System));
         var id = await service.CreateRuleAsync(tenantId,
             new("  Delivery failures  ", " Twilio ", SmsStatus.Failed, 5, 10, AlertRepeatMode.Repeating, 30, true));
 
@@ -26,7 +26,7 @@ public sealed class AlertServiceCoverageTests
     public async Task OnceRule_DiscardsRepeatIntervalAndBlankProvider()
     {
         var repository = new Repository();
-        await new AlertService(repository, TimeProvider.System).CreateRuleAsync(tenantId,
+        await new AlertService(repository, new AlertRuleFactory(TimeProvider.System)).CreateRuleAsync(tenantId,
             new("Rule", " ", SmsStatus.Failed, 1, 1, AlertRepeatMode.Once, 30, true));
         Assert.Null(repository.Rule!.Provider);
         Assert.Null(repository.Rule.RepeatIntervalMinutes);
@@ -36,7 +36,7 @@ public sealed class AlertServiceCoverageTests
     [MemberData(nameof(InvalidRules))]
     public async Task CreateRule_RejectsInvalidRules(SaveAlertRule rule)
     {
-        var service = new AlertService(new Repository(), TimeProvider.System);
+        var service = new AlertService(new Repository(), new AlertRuleFactory(TimeProvider.System));
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateRuleAsync(tenantId, rule));
     }
 
@@ -58,7 +58,7 @@ public sealed class AlertServiceCoverageTests
     [Fact]
     public async Task UpdateDeleteAndMarkRead_ThrowWhenRepositoryDoesNotFindItem()
     {
-        var service = new AlertService(new Repository(), TimeProvider.System);
+        var service = new AlertService(new Repository(), new AlertRuleFactory(TimeProvider.System));
         var request = new SaveAlertRule("Rule", null, SmsStatus.Failed, 1, 1, AlertRepeatMode.Once, null, true);
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateRuleAsync(tenantId, Guid.NewGuid(), request));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.DeleteRuleAsync(tenantId, Guid.NewGuid()));
@@ -71,7 +71,7 @@ public sealed class AlertServiceCoverageTests
     [InlineData(0, 201)]
     public async Task ListAlerts_RejectsInvalidPagination(int skip, int take)
     {
-        var service = new AlertService(new Repository(), TimeProvider.System);
+        var service = new AlertService(new Repository(), new AlertRuleFactory(TimeProvider.System));
         await Assert.ThrowsAsync<ArgumentException>(() => service.ListAlertsAsync(tenantId, false, skip, take));
     }
 
@@ -79,7 +79,7 @@ public sealed class AlertServiceCoverageTests
     public async Task RepositoryOperations_AreDelegated()
     {
         var repository = new Repository { Found = true };
-        var service = new AlertService(repository, TimeProvider.System);
+        var service = new AlertService(repository, new AlertRuleFactory(TimeProvider.System));
         Assert.Empty(await service.ListRulesAsync(tenantId));
         Assert.Empty(await service.ListAlertsAsync(tenantId, true, 0, 20));
         await service.DeleteRuleAsync(tenantId, Guid.NewGuid());
