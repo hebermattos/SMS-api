@@ -83,7 +83,7 @@ public sealed class TenantRateLimitMiddlewareTests
     {
         var tenantId = Guid.NewGuid();
         var nextCalls = 0;
-        var repository = new Repository(new TenantRateLimitSettings(1, 100));
+        var repository = new Repository(new TenantRateLimitSettings(1, 100, 20));
         var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
 
         await middleware.InvokeAsync(Context(tenantId, HttpMethods.Post, "/api/v1/message-assistant/improve"), repository);
