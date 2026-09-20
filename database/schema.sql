@@ -363,6 +363,7 @@ BEGIN
         (
             gen_random_uuid(),
             NEW.TenantId,
+            NEW.UserId,
             CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END,
@@ -390,6 +391,7 @@ BEGIN
             (
                 gen_random_uuid(),
                 NEW.TenantId,
+                NEW.UserId,
                 (CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 2 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 3 THEN 1 ELSE 0 END),
