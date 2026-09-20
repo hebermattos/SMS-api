@@ -44,7 +44,7 @@ public sealed class TwilioWebhooksControllerTests
     [InlineData("delivered",SmsStatus.Delivered)]
     [InlineData("failed",SmsStatus.Failed)]
     [InlineData("undelivered",SmsStatus.Failed)]
-    [InlineData("unknown",SmsStatus.Queued)]
+    [InlineData("unknown",SmsStatus.Pending)]
     public async Task Status_MapsProviderStatus(string value,SmsStatus expected)
     {
         var messages=new MessageRepository();
@@ -120,6 +120,7 @@ public sealed class TwilioWebhooksControllerTests
         public Task<IReadOnlyList<SmsStatusHistory>> GetStatusHistoryAsync(Guid t,Guid i,CancellationToken c=default)=>Task.FromResult<IReadOnlyList<SmsStatusHistory>>([]);
         public Task InsertAsync(SmsMessage m,CancellationToken c=default)=>Task.CompletedTask;
         public Task<bool> TryQueueScheduledAsync(Guid t,Guid i,DateTimeOffset u,CancellationToken c=default)=>Task.FromResult(false);
+        public Task UpdateQueueStatusAsync(Guid t,Guid i,SmsQueueStatus s,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
         public Task UpdateStatusAsync(Guid t,Guid i,SmsStatus s,string? p,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
     }
 }
