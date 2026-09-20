@@ -29,6 +29,22 @@ public sealed class SendSmsServiceTests
         Assert.Equal((tenantId, repository.Inserted.Id), publisher.Published);
     }
 
+    [Fact]
+    public async Task SendAsync_MarksMessagePublishFailedWhenQueuePublishFails()
+    {
+        var tenantId = Guid.NewGuid();
+        var repository = new FakeRepository();
+        var publisher = new FakePublisher { Exception = new InvalidOperationException("RabbitMQ unavailable") };
+        var service = CreateService(tenantId, repository, new FakeProvider("Twilio"), publisher);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SendAsync(new SendSmsRequest("+15551234567", "hello")));
+
+        Assert.NotNull(repository.Inserted);
+        Assert.Equal(SmsStatus.PublishFailed, repository.UpdatedStatus);
+        Assert.Equal(repository.Inserted!.Id, repository.UpdatedMessageId);
+    }
+
     [Theory]
     [InlineData("", "body")]
     [InlineData(" ", "body")]
@@ -93,11 +109,12 @@ public sealed class SendSmsServiceTests
     private sealed class FakePublisher : ISmsSendEventPublisher
     {
         public (Guid TenantId, Guid MessageId)? Published { get; private set; }
+        public Exception? Exception { get; init; }
 
         public Task PublishAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
         {
             Published = (tenantId, messageId);
-            return Task.CompletedTask;
+            return Exception is null ? Task.CompletedTask : Task.FromException(Exception);
         }
     }
 
@@ -131,13 +148,22 @@ public sealed class SendSmsServiceTests
     private sealed class FakeRepository : ISmsMessageRepository
     {
         public SmsMessage? Inserted { get; private set; }
+        public Guid? UpdatedMessageId { get; private set; }
+        public SmsStatus? UpdatedStatus { get; private set; }
+
         public Task InsertAsync(SmsMessage message, CancellationToken cancellationToken = default)
         {
             Inserted = message;
             return Task.CompletedTask;
         }
 
-        public Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
+        {
+            UpdatedMessageId = id;
+            UpdatedStatus = status;
+            return Task.CompletedTask;
+        }
+
         public Task<SmsMessage?> GetByIdAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default) => Task.FromResult<SmsMessage?>(null);
         public Task<IReadOnlyList<SmsMessage>> GetHistoryAsync(Guid tenantId, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SmsMessage>>([]);
         public Task<IReadOnlyList<SmsStatusHistory>> GetStatusHistoryAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SmsStatusHistory>>([]);
