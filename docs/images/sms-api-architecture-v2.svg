@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1050" viewBox="0 0 1600 1050">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
 <defs><style>
-.title{font:700 36px Arial,sans-serif;fill:#102a56}.sub{font:20px Arial,sans-serif;fill:#64748b}.h{font:700 20px Arial,sans-serif;fill:#102a56}.t{font:700 18px Arial,sans-serif;fill:#102a56}.s{font:15px Arial,sans-serif;fill:#334155}.mini{font:13px Arial,sans-serif;fill:#475569}.box{rx:12;ry:12;stroke-width:2}.group{rx:12;ry:12;fill:#fff;stroke:#64748b;stroke-width:1.5;stroke-dasharray:8 7}.line{stroke:#102a56;stroke-width:2.3;fill:none;marker-end:url(#a)}.dash{stroke:#64748b;stroke-width:2;fill:none;stroke-dasharray:7 6;marker-end:url(#g)}
+.title{font:700 36px Arial,sans-serif;fill:#102a56}.sub{font:20px Arial,sans-serif;fill:#64748b}.h{font:700 20px Arial,sans-serif;fill:#102a56}.t{font:700 18px Arial,sans-serif;fill:#102a56}.s{font:15px Arial,sans-serif;fill:#334155}.mini{font:13px Arial,sans-serif;fill:#475569}.box{rx:14;ry:14;stroke-width:2}.group{rx:16;ry:16;fill:#fff;stroke:#cbd5e1;stroke-width:1.5}.line{stroke:#102a56;stroke-width:2.3;fill:none;marker-end:url(#a)}.dash{stroke:#64748b;stroke-width:2;fill:none;stroke-dasharray:7 6;marker-end:url(#g)}
 </style><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#102a56"/></marker><marker id="g" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#64748b"/></marker></defs>
-<rect width="1600" height="1050" fill="#fff"/>
+<rect width="1600" height="1100" fill="#fff"/>
 <text x="800" y="48" text-anchor="middle" class="title">SMS API – Docker Compose Architecture</text>
 <text x="800" y="80" text-anchor="middle" class="sub">HAProxy load balancing across two API instances with independent background processing</text>
 
@@ -17,11 +17,11 @@
 <rect x="765" y="115" width="300" height="130" fill="#eef6ff" stroke="#1683e8" class="box"/>
 <text x="915" y="155" text-anchor="middle" class="h">SMS Worker</text><text x="915" y="183" text-anchor="middle" class="s">.NET 8 Worker Service</text><text x="915" y="211" text-anchor="middle" class="mini">Consumers · Schedulers · Monitoring</text>
 
-<rect x="1210" y="100" width="350" height="175" class="group"/><text x="1385" y="132" text-anchor="middle" class="h">External SMS Providers</text>
-<rect x="1240" y="150" width="290" height="45" fill="#fff" stroke="#aaa" class="box"/><text x="1385" y="179" text-anchor="middle" class="t">Twilio</text>
-<rect x="1240" y="210" width="290" height="45" fill="#fff" stroke="#aaa" class="box"/><text x="1385" y="239" text-anchor="middle" class="t">Bandwidth</text>
-<path d="M1065 165H1240" class="line"/><text x="1152" y="150" text-anchor="middle" class="mini">Send SMS</text>
-<path d="M1240 232H1150V260H450V195" class="line"/><text x="1135" y="213" text-anchor="middle" class="mini">Webhooks → API</text>
+<rect x="1200" y="105" width="360" height="165" class="group"/><text x="1380" y="136" text-anchor="middle" class="h">External SMS Providers</text>
+<rect x="1235" y="150" width="290" height="42" fill="#fff" stroke="#aaa" class="box"/><text x="1380" y="177" text-anchor="middle" class="t">Twilio</text>
+<rect x="1235" y="207" width="290" height="42" fill="#fff" stroke="#aaa" class="box"/><text x="1380" y="234" text-anchor="middle" class="t">Bandwidth</text>
+<path d="M1065 165H1235" class="line"/><text x="1152" y="150" text-anchor="middle" class="mini">Send SMS</text>
+<path d="M1235 228H1160V285H720V216H695" class="line"/><text x="1130" y="255" text-anchor="middle" class="mini">Webhooks → API</text>
 
 <rect x="40" y="330" width="210" height="115" fill="#f7f1ff" stroke="#8b5cf6" class="box"/><text x="145" y="370" text-anchor="middle" class="h">Ollama</text><text x="145" y="398" text-anchor="middle" class="s">Qwen2.5 0.5B</text><text x="145" y="425" text-anchor="middle" class="mini">Local AI assistant</text>
 <rect x="290" y="330" width="210" height="115" fill="#effdf3" stroke="#16a34a" class="box"/><text x="395" y="374" text-anchor="middle" class="h">Redis</text><text x="395" y="402" text-anchor="middle" class="s">Cache</text><text x="395" y="428" text-anchor="middle" class="mini">localhost:6379</text>
@@ -40,36 +40,36 @@
 <path d="M965 245V290H1202V330" class="line"/><text x="1050" y="310" class="mini">Worker telemetry</text>
 <path d="M1305 387H1340" class="line"/>
 
-<rect x="35" y="500" width="475" height="220" class="group"/><text x="55" y="532" class="h">Initialization</text>
+<rect x="35" y="505" width="475" height="215" class="group"/><text x="55" y="532" class="h">Initialization</text>
 <rect x="60" y="560" width="190" height="125" fill="#f1fbff" stroke="#38bdf8" class="box"/><text x="155" y="598" text-anchor="middle" class="t">db-init</text><text x="155" y="626" text-anchor="middle" class="s">Databases + schemas</text><text x="155" y="654" text-anchor="middle" class="mini">After PostgreSQL health</text>
 <rect x="285" y="560" width="195" height="125" fill="#f7f1ff" stroke="#8b5cf6" class="box"/><text x="382" y="598" text-anchor="middle" class="t">provider-init</text><text x="382" y="626" text-anchor="middle" class="s">Admin + providers</text><text x="382" y="654" text-anchor="middle" class="mini">After db-init</text>
 <path d="M250 622H285" class="dash"/>
 
-<rect x="545" y="500" width="665" height="220" class="group"/><text x="565" y="532" class="h">PostgreSQL Databases</text>
+<rect x="545" y="505" width="665" height="215" class="group"/><text x="565" y="532" class="h">PostgreSQL Databases</text>
 <rect x="575" y="570" width="180" height="110" fill="#eef5ff" stroke="#2563eb" class="box"/><text x="665" y="610" text-anchor="middle" class="t">sms_api</text><text x="665" y="638" text-anchor="middle" class="mini">Application data</text>
 <rect x="785" y="570" width="180" height="110" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="875" y="610" text-anchor="middle" class="t">sms_api_logs</text><text x="875" y="638" text-anchor="middle" class="mini">Audit + error logs</text>
 <rect x="995" y="570" width="185" height="110" fill="#effcf3" stroke="#16a34a" class="box"/><text x="1087" y="610" text-anchor="middle" class="t">sms_api_reporting</text><text x="1087" y="638" text-anchor="middle" class="mini">Reports + aggregates</text>
 <path d="M940 445V520H665V570" class="line"/><path d="M940 520H875V570" class="line"/><path d="M940 520H1087V570" class="line"/>
 <path d="M480 622H575" class="dash"/>
 
-<rect x="1245" y="500" width="315" height="220" class="group"/><text x="1265" y="532" class="h">Processing ownership</text>
+<rect x="1245" y="505" width="315" height="215" class="group"/><text x="1265" y="532" class="h">Processing ownership</text>
 <text x="1270" y="575" class="s">API</text><text x="1325" y="575" class="mini">HTTP · auth · webhooks · publish</text>
 <text x="1270" y="610" class="s">Worker</text><text x="1340" y="610" class="mini">consume · schedule · retry</text>
 <text x="1340" y="635" class="mini">alert outbox · queue monitoring</text>
 <text x="1270" y="675" class="mini">Deploy and scale independently</text>
 
-<rect x="35" y="770" width="300" height="170" class="group"/><text x="55" y="802" class="h">Automatic Backup / PITR</text>
+<rect x="35" y="770" width="300" height="180" class="group"/><text x="55" y="802" class="h">Automatic Backup / PITR</text>
 <rect x="60" y="830" width="250" height="80" fill="#f7f1ff" stroke="#8b5cf6" class="box"/><text x="185" y="860" text-anchor="middle" class="t">postgres-backup</text><text x="185" y="885" text-anchor="middle" class="mini">pg_basebackup + WAL archive</text>
 <path d="M665 680V745H185V830" class="line"/>
 
-<rect x="370" y="770" width="430" height="170" class="group"/><text x="390" y="802" class="h">Persistent Storage</text>
+<rect x="370" y="770" width="430" height="180" class="group"/><text x="390" y="802" class="h">Persistent Storage</text>
 <rect x="395" y="830" width="380" height="80" fill="#f8fafc" stroke="#64748b" class="box"/><text x="585" y="858" text-anchor="middle" class="t">Volumes + host backup path</text><text x="585" y="884" text-anchor="middle" class="mini">postgres-data · clickstack-data · ollama-data</text><text x="585" y="902" text-anchor="middle" class="mini">POSTGRES_BACKUP_PATH bind mount</text>
 <path d="M310 870H395" class="line"/>
 
-<rect x="835" y="770" width="300" height="170" class="group"/><text x="855" y="802" class="h">Optional</text>
+<rect x="835" y="770" width="300" height="180" class="group"/><text x="855" y="802" class="h">Optional</text>
 <rect x="860" y="830" width="250" height="80" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="985" y="860" text-anchor="middle" class="t">webhook-tests</text><text x="985" y="885" text-anchor="middle" class="mini">Docker profile: tests</text>
 
-<rect x="1170" y="770" width="390" height="220" class="group"/><text x="1190" y="802" class="h">Legend</text>
+<rect x="1170" y="770" width="390" height="240" class="group"/><text x="1190" y="802" class="h">Legend</text>
 <rect x="1200" y="830" width="28" height="20" fill="#eef6ff" stroke="#1683e8"/><text x="1245" y="846" class="s">Application process</text>
 <rect x="1200" y="865" width="28" height="20" fill="#fff8e7" stroke="#f59e0b"/><text x="1245" y="881" class="s">Message broker</text>
 <rect x="1200" y="900" width="28" height="20" fill="#fff0f2" stroke="#ef476f"/><text x="1245" y="916" class="s">Database service</text>

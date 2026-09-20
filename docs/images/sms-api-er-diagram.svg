@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1220" viewBox="0 0 1600 1220">
 <defs><style>
-.title{font:700 36px Arial,sans-serif;fill:#102a56}.sub{font:20px Arial,sans-serif;fill:#64748b}.h{font:700 19px Arial,sans-serif;fill:#102a56}.t{font:700 16px Arial,sans-serif;fill:#102a56}.s{font:14px Arial,sans-serif;fill:#334155}.mini{font:12px Arial,sans-serif;fill:#475569}.box{rx:12;ry:12;stroke-width:2}.group{rx:12;ry:12;fill:#fff;stroke:#64748b;stroke-width:1.5;stroke-dasharray:8 7}.line{stroke:#102a56;stroke-width:2;fill:none;marker-end:url(#a)}.dash{stroke:#64748b;stroke-width:1.8;fill:none;stroke-dasharray:7 6;marker-end:url(#g)}
+.title{font:700 36px Arial,sans-serif;fill:#102a56}.sub{font:20px Arial,sans-serif;fill:#64748b}.h{font:700 19px Arial,sans-serif;fill:#102a56}.t{font:700 16px Arial,sans-serif;fill:#102a56}.s{font:14px Arial,sans-serif;fill:#334155}.mini{font:12px Arial,sans-serif;fill:#475569}.box{rx:14;ry:14;stroke-width:2}.group{rx:16;ry:16;fill:#fff;stroke:#cbd5e1;stroke-width:1.5}.line{stroke:#102a56;stroke-width:2;fill:none;marker-end:url(#a)}.dash{stroke:#64748b;stroke-width:1.8;fill:none;stroke-dasharray:7 6;marker-end:url(#g)}
 </style><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#102a56"/></marker><marker id="g" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#64748b"/></marker></defs>
 <rect width="1600" height="1220" fill="#fff"/>
 <text x="800" y="48" text-anchor="middle" class="title">SMS API – Application Database ER Diagram</text>
@@ -12,7 +12,7 @@
 <rect x="630" y="175" width="220" height="95" fill="#eef6ff" stroke="#1683e8" class="box"/><text x="740" y="207" text-anchor="middle" class="t">ApiClients</text><text x="740" y="232" text-anchor="middle" class="mini">PK Id · FK TenantId</text><text x="740" y="252" text-anchor="middle" class="mini">ClientId · IsActive</text>
 <rect x="910" y="175" width="260" height="95" fill="#f7f1ff" stroke="#8b5cf6" class="box"/><text x="1040" y="207" text-anchor="middle" class="t">TenantRateLimits</text><text x="1040" y="232" text-anchor="middle" class="mini">PK/FK TenantId</text><text x="1040" y="252" text-anchor="middle" class="mini">API · SMS · Ollama limits</text>
 <rect x="1230" y="175" width="260" height="95" fill="#f7f1ff" stroke="#8b5cf6" class="box"/><text x="1360" y="207" text-anchor="middle" class="t">TenantAiSettings</text><text x="1360" y="232" text-anchor="middle" class="mini">PK/FK TenantId</text><text x="1360" y="252" text-anchor="middle" class="mini">ImprovePrompt · ValidatePrompt</text>
-<path d="M290 220H350" class="line"/><path d="M290 220H630" class="line"/><path d="M290 220H910" class="line"/><path d="M290 220H1230" class="line"/>
+<path d="M290 220H320V155H1360V175" class="line"/><path d="M320 220H350" class="line"/><path d="M740 155V175" class="line"/><path d="M1040 155V175" class="line"/>
 
 <rect x="35" y="340" width="1530" height="300" class="group"/><text x="55" y="372" class="h">Messaging</text>
 <rect x="70" y="410" width="235" height="105" fill="#effdf3" stroke="#16a34a" class="box"/><text x="187" y="442" text-anchor="middle" class="t">MessageTemplates</text><text x="187" y="467" text-anchor="middle" class="mini">PK Id · FK TenantId</text><text x="187" y="487" text-anchor="middle" class="mini">Name · Body</text>
@@ -31,7 +31,7 @@
 <rect x="175" y="890" width="285" height="90" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="317" y="922" text-anchor="middle" class="t">AlertEvaluationOutbox</text><text x="317" y="947" text-anchor="middle" class="mini">PK Id · FK TenantId · Status · PublishedAtUtc</text>
 <rect x="555" y="890" width="285" height="90" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="697" y="922" text-anchor="middle" class="t">AlertEvaluationInbox</text><text x="697" y="947" text-anchor="middle" class="mini">PK EventId · ProcessedAtUtc</text>
 <path d="M305 800H380" class="line"/><text x="342" y="788" text-anchor="middle" class="mini">triggers</text>
-<path d="M830 850V875H317V890" class="dash"/><text x="580" y="870" text-anchor="middle" class="mini">evaluation pipeline</text>
+<path d="M830 850V870H317V890" class="dash"/><text x="580" y="870" text-anchor="middle" class="mini">evaluation pipeline</text>
 <path d="M460 935H555" class="dash"/><text x="507" y="923" text-anchor="middle" class="mini">consume</text>
 
 <rect x="1050" y="675" width="515" height="330" class="group"/><text x="1070" y="707" class="h">Reporting projection pipeline</text>
@@ -42,9 +42,8 @@
 <rect x="80" y="1095" width="300" height="45" fill="#f8fafc" stroke="#64748b" class="box"/><text x="230" y="1123" text-anchor="middle" class="t">PlatformAdministrators</text>
 <text x="420" y="1110" class="s">No foreign keys in the current schema.</text><text x="420" y="1135" class="mini">All tenant-owned tables reference Tenants directly or through composite message/rule relationships.</text>
 
-<path d="M180 270V325H187V410" class="line"/><path d="M180 270V325H525V395" class="line"/><path d="M180 270V325H1220V410" class="line"/>
-<path d="M460 270V320H525V395" class="line"/>
-<path d="M180 270V535H207V550" class="line"/>
-<path d="M180 270V660H187V750" class="line"/><path d="M180 270V655H830V750" class="line"/><path d="M180 270V650H317V890" class="line"/>
+<path d="M180 270V320H1450V365H1220V410" class="line"/><path d="M187 320V410" class="line"/><path d="M525 320V395" class="line"/><path d="M207 320V550" class="line"/>
+<path d="M460 270V345H525V395" class="line"/>
+<path d="M180 320V665H187V750" class="line"/><path d="M830 665V750" class="line"/><path d="M317 665V890" class="line"/>
 <path d="M525 530V655H1307V755" class="dash"/><text x="915" y="645" class="mini">insert/update trigger</text>
 </svg>
