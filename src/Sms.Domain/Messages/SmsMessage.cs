@@ -1,7 +1,8 @@
 namespace Sms.Domain.Messages;
 
 public enum SmsDirection { Outbound = 1, Inbound = 2 }
-public enum SmsStatus { Queued = 1, Sent = 2, Delivered = 3, Failed = 4, Received = 5, Scheduled = 6, NotQueued = 7 }
+public enum SmsQueueStatus { NotQueued = 1, Queued = 2, Scheduled = 3 }
+public enum SmsStatus { Pending = 1, Sent = 2, Delivered = 3, Failed = 4, Received = 5 }
 
 public sealed class SmsMessage
 {
@@ -14,6 +15,7 @@ public sealed class SmsMessage
     public string Provider { get; init; } = string.Empty;
     public string? ProviderMessageId { get; set; }
     public SmsDirection Direction { get; init; }
+    public SmsQueueStatus QueueStatus { get; set; }
     public SmsStatus Status { get; set; }
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset? ScheduledAtUtc { get; init; }
