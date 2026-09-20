@@ -30,10 +30,7 @@ public static class DependencyInjection
         retryOptions.Validate();
         services.AddSingleton(retryOptions);
 
-        var cacheOptions = CacheOptions.From(configuration);
-        services.AddSingleton(cacheOptions);
-
-        if (cacheOptions.Enabled)
+        if (IsCacheEnabled(configuration))
         {
             var redisConnectionString = configuration.GetConnectionString("Redis");
             if (string.IsNullOrWhiteSpace(redisConnectionString))
@@ -165,5 +162,11 @@ public static class DependencyInjection
         });
         services.AddScoped<ISmsProvider>(sp => sp.GetRequiredService<BandwidthSmsProvider>());
         return services;
+    }
+
+    private static bool IsCacheEnabled(IConfiguration configuration)
+    {
+        var configured = configuration["Cache:Enabled"];
+        return !bool.TryParse(configured, out var enabled) || enabled;
     }
 }
