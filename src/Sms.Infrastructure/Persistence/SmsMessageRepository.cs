@@ -54,6 +54,15 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
             cancellationToken: cancellationToken)) != 0;
     }
 
+    public async Task<bool> TryClaimQueuedAsync(Guid tenantId, Guid id, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/SmsMessageRepository.TryClaimQueuedAsync.10.sql"),
+            new { TenantId = tenantId, Id = id, Queued = SmsQueueStatus.Queued, Processing = SmsQueueStatus.Processing, UpdatedAt = updatedAt },
+            cancellationToken: cancellationToken)) != 0;
+    }
+
     public async Task UpdateQueueStatusAsync(Guid tenantId, Guid id, SmsQueueStatus queueStatus, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
     {
         var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/SmsMessageRepository.UpdateQueueStatusAsync.09.sql");
