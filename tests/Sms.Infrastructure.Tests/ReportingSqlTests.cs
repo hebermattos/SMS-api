@@ -31,7 +31,7 @@ public sealed class ReportingSqlTests
         }).Build();
         var consumer = new TenantSmsOverviewConsumer(new TenantSmsOverviewProjection(new ReportingSqlConnectionFactory(configuration)));
         var tenantId = Guid.NewGuid();
-        var messageId = Guid.NewGuid();
+        var messageId = Guid.NewGuid();\n        var userId = Guid.NewGuid();
         var eventIds = new List<Guid>();
 
         using var application = new NpgsqlConnection(applicationConnectionString);
@@ -53,10 +53,10 @@ public sealed class ReportingSqlTests
                 UPDATE SmsMessages
                 SET Status = 3, UpdatedAt = CURRENT_TIMESTAMP
                 WHERE TenantId = @TenantId AND Id = @MessageId;
-                """, new { TenantId = tenantId, MessageId = messageId });
+                """, new { TenantId = tenantId, MessageId = messageId, UserId = userId });
 
             var events = (await application.QueryAsync<TenantSmsOverviewEvent>("""
-                SELECT EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta,
+                SELECT EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta,
                        FailedDelta, PendingDelta, OccurredAtUtc
                 FROM TenantSmsOverviewOutbox
                 WHERE TenantId = @TenantId
@@ -75,7 +75,7 @@ public sealed class ReportingSqlTests
             var counters = await reporting.QuerySingleAsync<(long Outbound, long Inbound, long Delivered, long Failed, long Pending)>(
                 "SELECT Outbound, Inbound, Delivered, Failed, Pending FROM TenantSmsOverview WHERE TenantId=@TenantId;",
                 new { TenantId = tenantId });
-            Assert.Equal((1L, 0L, 1L, 0L, 0L), counters);
+            Assert.Equal((1L, 0L, 1L, 0L, 0L), counters);\n\n            var userCounters = await reporting.QuerySingleAsync<(long TotalMessages, long Delivered, long Failed, long Pending)>(\n                \"SELECT TotalMessages, Delivered, Failed, Pending FROM UserSmsOverview WHERE TenantId=@TenantId AND UserId=@UserId;\",\n                new { TenantId = tenantId, UserId = userId });\n            Assert.Equal((1L, 1L, 0L, 0L), userCounters);
         }
         finally
         {
