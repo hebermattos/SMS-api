@@ -1,5 +1,3 @@
-using Sms.Domain.Messages;
-
 namespace Sms.Application.Alerts;
 
 public sealed class AlertService(IAlertRepository repository, AlertRuleFactory ruleFactory)
@@ -42,5 +40,4 @@ public sealed class AlertService(IAlertRepository repository, AlertRuleFactory r
 
     public Task MarkAllReadAsync(Guid tenantId, CancellationToken cancellationToken = default) =>
         repository.MarkAllReadAsync(tenantId, cancellationToken);
-
 }
