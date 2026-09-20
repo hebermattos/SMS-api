@@ -8,7 +8,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using Sms.Application.Common;
 using Sms.Application.Messages;
 using Sms.Application.Providers;
-using Sms.Infrastructure.Caching;
 
 namespace Sms.Infrastructure.Providers;
 
@@ -17,8 +16,7 @@ public sealed class BandwidthSmsProvider(
     IHttpClientFactory httpClientFactory,
     ITenantContext tenantContext,
     ITenantSmsProviderRepository configurations,
-    IDistributedCache cache,
-    CacheOptions cacheOptions) : ISmsProvider
+    IDistributedCache cache) : ISmsProvider
 {
     public string Name => "Bandwidth";
 
@@ -58,13 +56,9 @@ public sealed class BandwidthSmsProvider(
 
     private async Task<string> GetAccessTokenAsync(string clientId, string clientSecret, CancellationToken cancellationToken)
     {
-        string? cacheKey = null;
-        if (cacheOptions.Enabled)
-        {
-            cacheKey = BuildAccessTokenCacheKey(tenantContext.TenantId, clientId, clientSecret);
-            var cachedToken = await cache.GetStringAsync(cacheKey, cancellationToken);
-            if (!string.IsNullOrWhiteSpace(cachedToken)) return cachedToken;
-        }
+        var cacheKey = BuildAccessTokenCacheKey(tenantContext.TenantId, clientId, clientSecret);
+        var cachedToken = await cache.GetStringAsync(cacheKey, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(cachedToken)) return cachedToken;
 
         var client = httpClientFactory.CreateClient("BandwidthOAuth");
         using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/oauth2/token");
@@ -77,7 +71,7 @@ public sealed class BandwidthSmsProvider(
         if (string.IsNullOrWhiteSpace(token?.AccessToken))
             throw new InvalidOperationException("Bandwidth OAuth response did not include an access token.");
 
-        if (cacheOptions.Enabled && cacheKey is not null && token.ExpiresIn > 0)
+        if (token.ExpiresIn > 0)
         {
             var lifetimeSeconds = Math.Max(1, token.ExpiresIn - 10);
             await cache.SetStringAsync(cacheKey, token.AccessToken,
