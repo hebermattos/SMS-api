@@ -175,7 +175,23 @@ All dates are stored in UTC. Each tenant has an IANA time zone used for display,
 
 Application data, tenant activity logs, reporting data, opt-outs, provider credentials, alerts, and message processing are tenant-isolated.
 
-Technical OpenTelemetry logs, traces, and metrics are exported over OTLP to the local ClickStack service and stored in ClickHouse. Tenant user activity and error-level platform logs remain in PostgreSQL so the existing tenant and platform log APIs keep their authorization and isolation semantics. ClickStack is technical observability infrastructure and must not be exposed as a tenant-facing log source.
+## Observability
+
+Observability is deliberately split between **audit data** and **technical telemetry**:
+
+| Data | Destination | Access |
+| --- | --- | --- |
+| Tenant user activity | PostgreSQL `sms_api_logs` | Tenant users, filtered by tenant |
+| Platform error logs | PostgreSQL `sms_api_logs` | Platform users |
+| OpenTelemetry logs | ClickStack / ClickHouse | Technical operations |
+| OpenTelemetry traces | ClickStack / ClickHouse | Technical operations |
+| OpenTelemetry metrics | ClickStack / ClickHouse | Technical operations |
+
+The API exports technical telemetry over OTLP to ClickStack. ClickStack bundles the OpenTelemetry Collector, ClickHouse storage, and HyperDX UI. This keeps high-volume telemetry writes out of the PostgreSQL audit database while preserving the existing authorization and tenant-isolation model for user activity logs.
+
+In Docker Compose the API sends OTLP/gRPC to `http://clickstack:4317`. HyperDX is available locally at `http://localhost:8081`. OTLP/gRPC and OTLP/HTTP are exposed on ports `4317` and `4318`, and the ClickHouse HTTP endpoint is mapped to `18123`.
+
+ClickStack is technical infrastructure and must not be exposed as a tenant-facing log source. Secrets, access tokens, authorization headers, SMS bodies, and full phone numbers must never be emitted as telemetry.
 
 ## Security
 
@@ -219,7 +235,9 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 
 ![SMS API Docker Compose architecture](docs/images/sms-api-architecture.svg)
 
-The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts isolated databases for application data, tenant/platform audit logs, and reporting. Technical OpenTelemetry logs, traces, and metrics are sent through OTLP to ClickStack and stored in ClickHouse. The API starts only after database and provider initialization complete and RabbitMQ and Redis are healthy. The optional `webhook-tests` service is enabled through the `tests` profile.
+The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, RabbitMQ handles asynchronous messaging, and ClickStack receives technical OpenTelemetry logs, traces, and metrics over OTLP and persists them in ClickHouse.
+
+The API waits for database/provider initialization, RabbitMQ, Redis, and ClickStack before starting. The optional `webhook-tests` service is enabled through the `tests` profile.
 
 ```text
 src/Sms.Api              HTTP, authentication, authorization
