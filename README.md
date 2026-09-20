@@ -86,7 +86,7 @@ These values are resource reservations, not hard memory limits. Docker may allow
 - Use the local AI assistant to improve and validate SMS/template text without sending message content to a hosted AI service.
 - Create reusable message templates with `{{variableName}}` variables. System variables include `{{recipientName}}`, `{{recipientPhone}}`, and `{{tenantName}}`; custom variables can be supplied by API, CSV, or UI workflows.
 - Query message and status history.
-- Reports and overview dashboards.
+- Reports and overview dashboards, with CSV download of the currently displayed report table.
 - Configurable alert rules and in-UI alerts.
 - Opt-out management with CSV import/export.
 - Tenant user administration.
