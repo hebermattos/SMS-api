@@ -43,7 +43,7 @@ public sealed class AdministrationService(IAdministrationRepository repository,
     public async Task UpdateRateLimitsAsync(Guid tenantId, TenantRateLimitSettings settings, CancellationToken cancellationToken)
     {
         await GetTenantAsync(tenantId, cancellationToken);
-        if (settings.RequestsPerMinute is < 1 or > 100000 || settings.SmsPerMinute is < 1 or > 100000)
+        if (settings.RequestsPerMinute is < 1 or > 100000 || settings.SmsPerMinute is < 1 or > 100000 || settings.OllamaRequestsPerMinute is < 1 or > 100000)
             throw new ArgumentException("Rate limits must be between 1 and 100000 requests per minute.");
         await rateLimits.SaveAsync(tenantId, settings, cancellationToken);
     }
