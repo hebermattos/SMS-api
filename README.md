@@ -279,6 +279,16 @@ tools/Sms.Provision      Bootstrap provisioning
 tests                    Unit and integration tests
 ```
 
+## RabbitMQ monitoring
+
+The API collects RabbitMQ queue metrics from the Management API every five minutes and exports them through the existing OpenTelemetry pipeline to ClickStack/HyperDX.
+
+- `rabbitmq.queue.messages.ready`: messages waiting for a consumer.
+- `rabbitmq.queue.messages.unacknowledged`: messages currently being processed.
+- `rabbitmq.queue.consumers`: active consumers per queue.
+
+Metrics include the `rabbitmq.queue` attribute for filtering. The monitored queues are `sms.send`, `sms.alert.evaluation`, and `sms.reporting.overview`. Collection failures are logged as errors.
+
 ## Roadmap
 
 ### Account security
@@ -300,7 +310,8 @@ tests                    Unit and integration tests
 - [ ] Backup verification and restore drills.
 - [ ] Off-site backup storage.
 - [ ] Backup failure notifications.
-- [ ] RabbitMQ queue monitoring and dead-letter management.
+- [x] RabbitMQ queue monitoring.
+- [ ] RabbitMQ dead-letter management.
 - [ ] PostgreSQL health, storage, and slow-query monitoring.
 - [ ] Tenant usage quotas and consumption dashboards.
 

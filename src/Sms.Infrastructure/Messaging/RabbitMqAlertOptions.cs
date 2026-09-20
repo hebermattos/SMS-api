@@ -6,6 +6,7 @@ public sealed class RabbitMqAlertOptions
 {
     public string Host { get; init; } = "localhost";
     public int Port { get; init; } = 5672;
+    public int ManagementPort { get; init; } = 15672;
     public string User { get; init; } = "guest";
     public string Password { get; init; } = "guest";
     public string VirtualHost { get; init; } = "/";
@@ -20,6 +21,7 @@ public sealed class RabbitMqAlertOptions
         {
             Host = section["Host"] ?? "localhost",
             Port = int.TryParse(section["Port"], out var port) ? port : 5672,
+            ManagementPort = int.TryParse(section["ManagementPort"], out var managementPort) ? managementPort : 15672,
             User = section["User"] ?? "guest",
             Password = section["Password"] ?? "guest",
             VirtualHost = section["VirtualHost"] ?? "/",
