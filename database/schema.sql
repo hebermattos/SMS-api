@@ -107,7 +107,7 @@ CREATE TABLE SmsMessages
     FOREIGN KEY (TenantId, UserId) REFERENCES PortalUsers(TenantId, Id),
     CHECK (Direction IN (1, 2)),
     CHECK (UserId IS NULL OR Direction = 1),
-    CHECK (Status BETWEEN 1 AND 6),
+    CHECK (Status BETWEEN 1 AND 7),
     CHECK
     (
         (Status = 6 AND Direction = 1 AND ScheduledAtUtc IS NOT NULL)
@@ -374,7 +374,7 @@ BEGIN
             CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END,
-            CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2, 6) THEN 1 ELSE 0 END,
+            CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2, 6, 7) THEN 1 ELSE 0 END,
             CURRENT_TIMESTAMP
         );
     RETURN NEW;
@@ -402,7 +402,7 @@ BEGIN
                 (CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 2 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 3 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 4 THEN 1 ELSE 0 END),
-                (CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2, 6) THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status IN (1, 2, 6) THEN 1 ELSE 0 END),
+                (CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2, 6, 7) THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status IN (1, 2, 6, 7) THEN 1 ELSE 0 END),
                 CURRENT_TIMESTAMP
             );
     END IF;
