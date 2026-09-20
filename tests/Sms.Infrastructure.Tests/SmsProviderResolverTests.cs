@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Sms.Application.Messages;
 using Sms.Infrastructure.Providers;
+using Sms.Domain.Messages;
 
 namespace Sms.Infrastructure.Tests;
 
@@ -45,6 +46,6 @@ public sealed class SmsProviderResolverTests
     {
         public string Name { get; } = name;
         public Task<ProviderSendResult> SendAsync(string from, string to, string body, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ProviderSendResult("id", "sent"));
+            Task.FromResult(new ProviderSendResult("id", SmsStatus.Sent));
     }
 }
