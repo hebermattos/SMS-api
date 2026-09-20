@@ -21,7 +21,7 @@ public sealed class SendSmsService(
         await optOut.EnsureCanSendAsync(tenantContext.TenantId, request.To, cancellationToken);
 
         var provider = providerResolver.Resolve(request.Provider);
-        var status = scheduledAtUtc.HasValue ? SmsStatus.Scheduled : SmsStatus.NotQueued;
+        var queueStatus = scheduledAtUtc.HasValue ? SmsQueueStatus.Scheduled : SmsQueueStatus.NotQueued;
         var message = new SmsMessage
         {
             Id = Guid.NewGuid(),
@@ -32,7 +32,8 @@ public sealed class SendSmsService(
             Body = request.Body,
             Provider = provider.Name,
             Direction = SmsDirection.Outbound,
-            Status = status,
+            QueueStatus = queueStatus,
+            Status = SmsStatus.Pending,
             CreatedAt = now,
             ScheduledAtUtc = scheduledAtUtc
         };
@@ -41,16 +42,15 @@ public sealed class SendSmsService(
         if (!scheduledAtUtc.HasValue)
         {
             await eventPublisher.PublishAsync(message.TenantId, message.Id, cancellationToken);
-            await repository.UpdateStatusAsync(
+            await repository.UpdateQueueStatusAsync(
                 message.TenantId,
                 message.Id,
-                SmsStatus.Queued,
-                null,
+                SmsQueueStatus.Queued,
                 clock.GetUtcNow(),
                 cancellationToken);
-            status = SmsStatus.Queued;
+            queueStatus = SmsQueueStatus.Queued;
         }
 
-        return new SendSmsResult(message.Id, provider.Name, null, status.ToString(), scheduledAtUtc);
+        return new SendSmsResult(message.Id, provider.Name, null, queueStatus.ToString(), scheduledAtUtc);
     }
 }
