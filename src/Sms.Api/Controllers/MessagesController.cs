@@ -38,7 +38,7 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetHistory([FromQuery] int skip = 0, [FromQuery] int take = 50, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetHistory([FromQuery] int skip = 0, [FromQuery] int take = 20, CancellationToken cancellationToken = default)
     {
         if (skip < 0) return BadRequest("skip must be zero or greater.");
         take = Math.Clamp(take, 1, 200);
