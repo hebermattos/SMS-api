@@ -7,7 +7,7 @@ WITH candidate AS
       AND ProviderMessageId=@ProviderMessageId
       AND
       (
-          Status=@Queued
+          Status=@Pending
           OR (Status=@Sent AND @Status IN (@Delivered, @Failed))
       )
     FOR UPDATE
