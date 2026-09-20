@@ -22,6 +22,23 @@ public sealed class TenantRateLimitMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WithoutLoginClaim_BypassesRateLimit()
+    {
+        var tenantId = Guid.NewGuid();
+        var nextCalls = 0;
+        var repository = new Repository(new TenantRateLimitSettings(1, 1, 1));
+        var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
+        var context = new DefaultHttpContext();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim("tenant_id", tenantId.ToString())], "test"));
+
+        await middleware.InvokeAsync(context, repository);
+
+        Assert.Equal(1, nextCalls);
+        Assert.Equal(0, repository.GetCalls);
+    }
+
+    [Fact]
     public async Task InvokeAsync_ApiRequest_UsesApiLimitAndReturns429WhenExceeded()
     {
         var tenantId = Guid.NewGuid();
