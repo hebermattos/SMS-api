@@ -33,18 +33,18 @@ docker compose up --build
 
 Local services:
 
-| Service | Address |
-| --- | --- |
-| UI | `http://localhost:4200` |
-| API (HAProxy → 2 API instances) | `http://localhost:8080` |
+| Service | Address | Notes |
+| --- | --- | --- |
+| UI | `http://localhost:4200` | Angular administration UI |
+| API (HAProxy → 2 API instances) | `http://localhost:8080` | Single host-facing API endpoint |
 | HAProxy stats | `http://localhost:8404/stats` | Local-only backend health, sessions, requests, and errors |
-| Swagger | `http://localhost:8080/swagger` |
-| Health | `http://localhost:8080/health` |
-| HyperDX | `http://localhost:8081` |
-| RabbitMQ Management | `http://localhost:15672` |
-| PostgreSQL | `localhost:5432` |
-| Redis | `localhost:6379` |
-| ClickHouse HTTP | `http://localhost:18123` |
+| Swagger | `http://localhost:8080/swagger` | API documentation |
+| Health | `http://localhost:8080/health` | Dependency health through HAProxy |
+| HyperDX | `http://localhost:8081` | Technical telemetry UI |
+| RabbitMQ Management | `http://localhost:15672` | Queue management UI |
+| PostgreSQL | `localhost:5432` | Application, logs, and reporting databases |
+| Redis | `localhost:6379` | Shared cache and distributed rate-limit state |
+| ClickHouse HTTP | `http://localhost:18123` | Technical telemetry storage |
 
 Local credentials:
 
@@ -75,7 +75,7 @@ Docker is intended for local testing only. Never use fallback Compose credential
 ### Tenant
 
 - Send and schedule SMS messages. Outbound messages may be associated with a tenant user; portal sends are associated automatically, while API clients may supply an optional `userId`.
-- Use the local AI assistant to improve and validate SMS/template text without sending message content to a hosted AI service.
+- Use the local AI assistant to get improvement suggestions for SMS/template text without sending message content to a hosted AI service.
 - Create reusable message templates with `{{variableName}}` variables. System variables include `{{recipientName}}`, `{{recipientPhone}}`, and `{{tenantName}}`; custom variables can be supplied by API, CSV, or UI workflows.
 - Query message and status history.
 - Reports and overview dashboards, with CSV download of the currently displayed report table.
@@ -94,13 +94,13 @@ Swagger documents the complete API surface.
 
 ## Local AI message assistant
 
-Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints. AI assistant requests use a dedicated per-tenant `OllamaRequestsPerMinute` rate-limit bucket, configured alongside the API and SMS tenant limits. The default is 6 requests per minute per authenticated login. API requests default to 120 per minute per login, and SMS sends default to 10 per minute per login. Exceeding the limit returns HTTP `429`.
+Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints. AI assistant requests use a dedicated per-tenant `OllamaRequestsPerMinute` rate-limit bucket, configured alongside the API and SMS tenant limits. The default is 6 requests per minute per authenticated login. API requests default to 120 per minute per login, and SMS sends default to 10 per minute per login. Authenticated rate-limit keys combine tenant, login, and request bucket. Counters are shared through Redis, so limits remain consistent when HAProxy sends consecutive requests to different API instances. Exceeding a limit returns HTTP `429`.
 
 Ollama model initialization runs independently from the API startup. A slow or failed model pull does not prevent the API from starting; AI assistance becomes available after `ollama-init` successfully downloads the model.
 
 The improve operation makes SMS text shorter and clearer while instructing the model to preserve template variables exactly. Validation checks clarity, spelling, ambiguous wording, and malformed template placeholders. It does not make legal/compliance decisions.
 
-SMS/template content sent to these endpoints stays inside the local Ollama deployment. AI output should be treated as a suggestion and reviewed before sending. Platform administrators can configure separate improve and validation prompts for each tenant from the company settings screen. Tenant users can use **Improve with AI** and **Validate** directly from Send SMS and the template editor.
+SMS/template content sent to these endpoints stays inside the local Ollama deployment. AI output should be treated as a suggestion and reviewed before sending. Platform administrators can configure separate improve and validation prompts for each tenant from the company settings screen. The tenant UI exposes a single AI action that returns suggestions for improving SMS and template text.
 
 ## Messaging
 
@@ -282,8 +282,9 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 
 ![SMS API Docker Compose architecture](docs/images/sms-api-architecture-v2.svg)
 
-Docker Compose runs two independent API instances behind HAProxy. HAProxy exposes `http://localhost:8080`, distributes requests using round-robin, and actively checks each API through `GET /health`; unhealthy instances are removed from rotation automatically.
-HAProxy exposes local-only runtime statistics on `http://localhost:8404/stats`. API containers use a 30-second Docker stop grace period so ASP.NET Core can stop accepting new work and finish in-flight requests during shutdown.
+Docker Compose runs two independent API instances behind HAProxy. HAProxy exposes `http://localhost:8080`, distributes requests using round-robin, and actively checks each API through `GET /health`; unhealthy instances are removed from rotation automatically. It forwards the original client IP, protocol, and host through `X-Forwarded-For`, `X-Forwarded-Proto`, and `X-Forwarded-Host`, which ASP.NET Core processes before rate limiting and authentication.
+
+HAProxy exposes local-only runtime statistics on `http://localhost:8404/stats`. HAProxy and both API containers use a 30-second Docker stop grace period, allowing in-flight requests to finish before containers are terminated.
 
 The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, RabbitMQ handles asynchronous messaging between the API and the independently deployed Worker, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from both processes and persists them in the ClickHouse instance bundled with ClickStack.
 
