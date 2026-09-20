@@ -99,6 +99,7 @@ CREATE TABLE SmsMessages
     Provider VARCHAR(50) NOT NULL,
     ProviderMessageId VARCHAR(200) NULL,
     Direction INTEGER NOT NULL,
+    QueueStatus INTEGER NOT NULL,
     Status INTEGER NOT NULL,
     CreatedAt TIMESTAMPTZ NOT NULL,
     ScheduledAtUtc TIMESTAMPTZ NULL,
@@ -107,21 +108,22 @@ CREATE TABLE SmsMessages
     FOREIGN KEY (TenantId, UserId) REFERENCES PortalUsers(TenantId, Id),
     CHECK (Direction IN (1, 2)),
     CHECK (UserId IS NULL OR Direction = 1),
-    CHECK (Status BETWEEN 1 AND 7),
+    CHECK (QueueStatus BETWEEN 1 AND 3),
+    CHECK (Status BETWEEN 1 AND 5),
     CHECK
     (
-        (Status = 6 AND Direction = 1 AND ScheduledAtUtc IS NOT NULL)
-        OR Status <> 6
+        (QueueStatus = 3 AND Direction = 1 AND ScheduledAtUtc IS NOT NULL)
+        OR QueueStatus <> 3
     )
 );
 CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON SmsMessages(TenantId, CreatedAt DESC, Id DESC);
 CREATE INDEX IX_SmsMessages_Tenant_User_CreatedAt ON SmsMessages(TenantId, UserId, CreatedAt DESC, Id DESC) WHERE UserId IS NOT NULL;
 CREATE INDEX IX_SmsMessages_CreatedAt ON SmsMessages(CreatedAt DESC, Id DESC)
-    INCLUDE (TenantId, Provider, Direction, Status);
+    INCLUDE (TenantId, Provider, Direction, QueueStatus, Status);
 CREATE INDEX IX_SmsMessages_Scheduled ON SmsMessages(ScheduledAtUtc, Id)
-    INCLUDE (TenantId) WHERE Status = 6;
+    INCLUDE (TenantId) WHERE QueueStatus = 3;
 CREATE INDEX IX_SmsMessages_QueuedScheduledRetry ON SmsMessages(UpdatedAt, ScheduledAtUtc, Id)
-    INCLUDE (TenantId) WHERE Status = 1 AND ScheduledAtUtc IS NOT NULL;
+    INCLUDE (TenantId) WHERE QueueStatus = 2 AND ScheduledAtUtc IS NOT NULL;
 CREATE UNIQUE INDEX UX_SmsMessages_Tenant_Provider_Message
     ON SmsMessages(TenantId, Provider, ProviderMessageId)
     WHERE ProviderMessageId IS NOT NULL;
@@ -374,7 +376,7 @@ BEGIN
             CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END,
-            CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2, 6, 7) THEN 1 ELSE 0 END,
+            CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2) THEN 1 ELSE 0 END,
             CURRENT_TIMESTAMP
         );
     RETURN NEW;
@@ -402,7 +404,7 @@ BEGIN
                 (CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 2 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 3 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 4 THEN 1 ELSE 0 END),
-                (CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2, 6, 7) THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status IN (1, 2, 6, 7) THEN 1 ELSE 0 END),
+                (CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2) THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status IN (1, 2) THEN 1 ELSE 0 END),
                 CURRENT_TIMESTAMP
             );
     END IF;
