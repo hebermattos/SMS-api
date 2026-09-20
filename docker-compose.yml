@@ -66,6 +66,8 @@ services:
     depends_on:
       clickstack:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     environment:
       HYPERDX_USERNAME: "${HYPERDX_USERNAME:-HyperDX}"
       HYPERDX_PASSWORD: "${HYPERDX_PASSWORD:-HyperDX}"
@@ -226,7 +228,7 @@ services:
       RabbitMq__ManagementPort: "15672"
       RabbitMq__User: "${RABBITMQ_USER:-sms}"
       RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://clickstack:4318"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
       OTEL_SERVICE_NAME: "sms-api"
     ports: ["8080:8080"]
