@@ -22,18 +22,21 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
+        if (skip < 0) return BadRequest("skip must be zero or greater.");
+        take = Math.Clamp(take, 1, 200);
         var message = await repository.GetByIdAsync(tenantContext.TenantId, id, cancellationToken);
         return message is null ? NotFound() : Ok(ToResponse(message, await Zone(cancellationToken)));
     }
 
     [HttpGet("{id:guid}/status-history")]
-    public async Task<IActionResult> GetStatusHistory(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetStatusHistory(Guid id, int skip = 0, int take = 20, CancellationToken cancellationToken = default)
     {
         var message = await repository.GetByIdAsync(tenantContext.TenantId, id, cancellationToken);
         if (message is null) return NotFound();
 
         var zone = await Zone(cancellationToken);
         return Ok((await repository.GetStatusHistoryAsync(tenantContext.TenantId, id, cancellationToken))
+            .Skip(skip).Take(take)
             .Select(item => new { item.Id, item.MessageId, item.Status, CreatedAt = TimeZoneInfo.ConvertTime(item.CreatedAt, zone) }));
     }
 
