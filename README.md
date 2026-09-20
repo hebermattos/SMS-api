@@ -15,7 +15,7 @@ Multi-tenant REST API for sending, receiving, scheduling, tracking, and querying
 - Twilio and Bandwidth
 - RabbitMQ + MassTransit
 - Redis
-- OpenTelemetry
+- OpenTelemetry + ClickStack (ClickHouse)
 - Docker Compose for local testing
 
 ## Quick start
@@ -34,6 +34,9 @@ Local services:
 - Health: http://localhost:8080/health
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
+- ClickStack / HyperDX: http://localhost:8081
+- ClickHouse HTTP: http://localhost:18123
+- OTLP: localhost:4317 (gRPC) / localhost:4318 (HTTP)
 
 Local credentials:
 
@@ -62,6 +65,7 @@ Docker Compose defines soft memory reservations for each service:
 | RabbitMQ | 256 MB |
 | Redis | 64 MB |
 | API | 256 MB |
+| ClickStack | 512 MB |
 | UI | 32 MB |
 | Database initialization | 128 MB |
 | Provider initialization | 128 MB |
@@ -134,6 +138,9 @@ RabbitMq__Host
 RabbitMq__Port
 RabbitMq__User
 RabbitMq__Password
+OTEL_EXPORTER_OTLP_ENDPOINT
+OTEL_EXPORTER_OTLP_PROTOCOL
+OTEL_SERVICE_NAME
 ```
 
 `Cache__Enabled` defaults to `true`. Set it to `false` to bypass all Redis-backed caching, including tenant configuration and Bandwidth OAuth tokens; when disabled, the Redis connection string is not required by the API. `Encryption__MasterKey` must be Base64 for exactly 32 bytes. Use HTTPS for real provider callbacks and outside local development. Redis should be reachable only from trusted application infrastructure.
@@ -143,7 +150,7 @@ RabbitMq__Password
 `GET /health` checks the API dependencies and returns their individual status and latency.
 
 - `postgres.application` — application database; failure makes the API unhealthy.
-- `postgres.observability` — logs, traces, and metrics database.
+- `postgres.observability` — tenant activity and platform error-log database.
 - `postgres.reporting` — reporting database.
 - `redis` — Redis connectivity used by the caches; reports `Healthy` with `Cache is disabled.` when caching is disabled.
 - `rabbitmq` — RabbitMQ TCP connectivity.
@@ -161,12 +168,14 @@ The project uses Dapper and does not use migrations. Runtime SQL is stored under
 Fresh databases are initialized from:
 
 - `database/schema.sql` — application data
-- `database/logs-schema.sql` — logs, traces, and metrics
+- `database/logs-schema.sql` — tenant activity and platform error logs
 - `database/reporting-schema.sql` — reporting projections
 
 All dates are stored in UTC. Each tenant has an IANA time zone used for display, filters, and scheduled delivery.
 
-Application data, logs, reporting data, opt-outs, provider credentials, alerts, and message processing are tenant-isolated.
+Application data, tenant activity logs, reporting data, opt-outs, provider credentials, alerts, and message processing are tenant-isolated.
+
+Technical OpenTelemetry logs, traces, and metrics are exported over OTLP to the local ClickStack service and stored in ClickHouse. Tenant user activity and error-level platform logs remain in PostgreSQL so the existing tenant and platform log APIs keep their authorization and isolation semantics. ClickStack is technical observability infrastructure and must not be exposed as a tenant-facing log source.
 
 ## Security
 
@@ -210,7 +219,7 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 
 ![SMS API Docker Compose architecture](docs/images/sms-api-architecture.svg)
 
-The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts three isolated databases for application data, observability, and reporting. The API starts only after database and provider initialization complete and RabbitMQ and Redis are healthy. The optional `webhook-tests` service is enabled through the `tests` profile.
+The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts isolated databases for application data, tenant/platform audit logs, and reporting. Technical OpenTelemetry logs, traces, and metrics are sent through OTLP to ClickStack and stored in ClickHouse. The API starts only after database and provider initialization complete and RabbitMQ and Redis are healthy. The optional `webhook-tests` service is enabled through the `tests` profile.
 
 ```text
 src/Sms.Api              HTTP, authentication, authorization
