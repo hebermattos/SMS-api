@@ -65,6 +65,16 @@ CREATE TABLE TenantRateLimits
     UpdatedAt TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE TenantAiSettings
+(
+    TenantId UUID PRIMARY KEY REFERENCES Tenants(Id) ON DELETE CASCADE,
+    ImprovePrompt TEXT NOT NULL,
+    ValidatePrompt TEXT NOT NULL,
+    UpdatedAt TIMESTAMPTZ NOT NULL,
+    CHECK (char_length(ImprovePrompt) BETWEEN 1 AND 8000),
+    CHECK (char_length(ValidatePrompt) BETWEEN 1 AND 8000)
+);
+
 CREATE TABLE MessageTemplates
 (
     Id UUID PRIMARY KEY,

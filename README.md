@@ -104,7 +104,7 @@ Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended f
 
 The improve operation makes SMS text shorter and clearer while instructing the model to preserve template variables exactly. Validation checks clarity, spelling, ambiguous wording, and malformed template placeholders. It does not make legal/compliance decisions.
 
-SMS/template content sent to these endpoints stays inside the local Ollama deployment. AI output should be treated as a suggestion and reviewed before sending.
+SMS/template content sent to these endpoints stays inside the local Ollama deployment. AI output should be treated as a suggestion and reviewed before sending. Platform administrators can configure separate improve and validation prompts for each tenant from the company settings screen. Tenant users can use **Improve with AI** and **Validate** directly from Send SMS and the template editor.
 
 ## Messaging
 

@@ -128,6 +128,7 @@ public static class DependencyInjection
         services.AddScoped<ILogEntryRepository, LogEntryRepository>();
         services.AddScoped<ITenantSmsProviderRepository, TenantSmsProviderRepository>();
         services.AddScoped<ISmsProviderResolver, SmsProviderResolver>();
+        services.AddScoped<ITenantAiSettingsRepository, TenantAiSettingsRepository>();
         services.AddHttpClient<IMessageAssistant, OllamaMessageAssistant>(client =>
         {
             client.BaseAddress = new Uri(configuration["Ollama:BaseUrl"] ?? "http://ollama:11434/");

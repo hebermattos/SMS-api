@@ -9,6 +9,7 @@ namespace Sms.Api.Controllers;
 
 public sealed record UpdateTenantRequest(string Name, string TimeZoneId, bool IsActive);
 public sealed record UpdateTenantRateLimitsRequest(int RequestsPerMinute, int SmsPerMinute);
+public sealed record UpdateTenantAiSettingsRequest(string ImprovePrompt, string ValidatePrompt);
 public sealed record CreateClientRequest(string? ClientId);
 public sealed record ClientStateRequest(bool IsActive);
 public sealed record CreateAdministratorRequest(string Username, string Email, string Password);
@@ -20,7 +21,7 @@ public sealed record ResetAdministratorPasswordRequest(string Password);
 [ServiceFilter(typeof(PortalExceptionFilter))]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/admin")]
-public sealed class AdministrationController(AdministrationService service, AdministratorAuthenticationService administrators) : ControllerBase
+public sealed class AdministrationController(AdministrationService service, AdministratorAuthenticationService administrators, Sms.Application.Messages.ITenantAiSettingsRepository aiSettings) : ControllerBase
 {
     [HttpGet("administrators")]
     public async Task<IActionResult> ListAdministrators(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
@@ -75,6 +76,21 @@ public sealed class AdministrationController(AdministrationService service, Admi
     {
         await service.UpdateRateLimitsAsync(tenantId,
             new TenantRateLimitSettings(request.RequestsPerMinute, request.SmsPerMinute), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("tenants/{tenantId:guid}/ai-settings")]
+    public async Task<IActionResult> GetAiSettings(Guid tenantId, CancellationToken cancellationToken) =>
+        Ok(await aiSettings.GetAsync(tenantId, cancellationToken));
+
+    [HttpPut("tenants/{tenantId:guid}/ai-settings")]
+    public async Task<IActionResult> UpdateAiSettings(Guid tenantId, UpdateTenantAiSettingsRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.ImprovePrompt) || request.ImprovePrompt.Length > 8000 ||
+            string.IsNullOrWhiteSpace(request.ValidatePrompt) || request.ValidatePrompt.Length > 8000)
+            return BadRequest(new { error = "AI prompts are required and cannot exceed 8000 characters." });
+        await service.GetTenantAsync(tenantId, cancellationToken);
+        await aiSettings.SaveAsync(tenantId, new(request.ImprovePrompt.Trim(), request.ValidatePrompt.Trim()), cancellationToken);
         return NoContent();
     }
 
