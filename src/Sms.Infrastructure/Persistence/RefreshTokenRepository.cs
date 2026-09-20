@@ -9,35 +9,30 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
     {
         const string sql = """
             INSERT INTO RefreshTokens
-                (Id, UserId, Username, TenantId, Context, Role, TokenHash, ExpiresAt, CreatedAt)
+                (Id, UserId, Username, TenantId, Context, Role, IsPlatformAdministrator, TokenHash, ExpiresAt, CreatedAt)
             VALUES
-                (@Id, @UserId, @Username, @TenantId, @Context, @Role, @TokenHash, @ExpiresAt, CURRENT_TIMESTAMP);
+                (@Id, @UserId, @Username, @TenantId, @Context, @Role, @IsPlatformAdministrator, @TokenHash, @ExpiresAt, CURRENT_TIMESTAMP);
             """;
         using var connection = connections.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(sql, new
         {
-            session.Id, session.UserId, session.Username, session.TenantId,
-            session.Context, session.Role, TokenHash = tokenHash, session.ExpiresAt
+            session.Id, session.UserId, session.Username, session.TenantId, session.Context, session.Role,
+            session.IsPlatformAdministrator, TokenHash = tokenHash, session.ExpiresAt
         }, cancellationToken: cancellationToken));
     }
 
     public async Task<RefreshTokenSession?> RotateAsync(
-        byte[] currentTokenHash,
-        byte[] replacementTokenHash,
-        Guid replacementId,
-        DateTimeOffset replacementExpiresAt,
-        CancellationToken cancellationToken = default)
+        byte[] currentTokenHash, byte[] replacementTokenHash, Guid replacementId,
+        DateTimeOffset replacementExpiresAt, CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateNpgsqlConnection();
         await connection.OpenAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         const string selectSql = """
-            SELECT Id, UserId, Username, TenantId, Context, Role, ExpiresAt
+            SELECT Id, UserId, Username, TenantId, Context, Role, IsPlatformAdministrator, ExpiresAt
             FROM RefreshTokens
-            WHERE TokenHash = @TokenHash
-              AND RevokedAt IS NULL
-              AND ExpiresAt > CURRENT_TIMESTAMP
+            WHERE TokenHash = @TokenHash AND RevokedAt IS NULL AND ExpiresAt > CURRENT_TIMESTAMP
             FOR UPDATE;
             """;
         var session = await connection.QuerySingleOrDefaultAsync<RefreshTokenSession>(
@@ -58,14 +53,14 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
 
         const string insertSql = """
             INSERT INTO RefreshTokens
-                (Id, UserId, Username, TenantId, Context, Role, TokenHash, ExpiresAt, CreatedAt)
+                (Id, UserId, Username, TenantId, Context, Role, IsPlatformAdministrator, TokenHash, ExpiresAt, CreatedAt)
             VALUES
-                (@Id, @UserId, @Username, @TenantId, @Context, @Role, @TokenHash, @ExpiresAt, CURRENT_TIMESTAMP);
+                (@Id, @UserId, @Username, @TenantId, @Context, @Role, @IsPlatformAdministrator, @TokenHash, @ExpiresAt, CURRENT_TIMESTAMP);
             """;
         await connection.ExecuteAsync(new CommandDefinition(insertSql, new
         {
-            Id = replacementId, session.UserId, session.Username, session.TenantId,
-            session.Context, session.Role, TokenHash = replacementTokenHash, ExpiresAt = replacementExpiresAt
+            Id = replacementId, session.UserId, session.Username, session.TenantId, session.Context, session.Role,
+            session.IsPlatformAdministrator, TokenHash = replacementTokenHash, ExpiresAt = replacementExpiresAt
         }, transaction, cancellationToken: cancellationToken));
 
         await transaction.CommitAsync(cancellationToken);
