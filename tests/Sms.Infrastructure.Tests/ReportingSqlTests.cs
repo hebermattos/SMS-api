@@ -31,7 +31,8 @@ public sealed class ReportingSqlTests
         }).Build();
         var consumer = new TenantSmsOverviewConsumer(new TenantSmsOverviewProjection(new ReportingSqlConnectionFactory(configuration)));
         var tenantId = Guid.NewGuid();
-        var messageId = Guid.NewGuid();\n        var userId = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
         var eventIds = new List<Guid>();
 
         using var application = new NpgsqlConnection(applicationConnectionString);
@@ -45,10 +46,13 @@ public sealed class ReportingSqlTests
                 INSERT Tenants(Id, Name, IsActive, CreatedAt)
                 VALUES (@TenantId, 'Reporting tenant', TRUE, CURRENT_TIMESTAMP);
 
+                INSERT PortalUsers(Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive, CreatedAt)
+                VALUES (@UserId, @TenantId, 'report-user', 'report@example.com', decode('00','hex'), decode('00','hex'), 600000, 'tenant', 'user', TRUE, CURRENT_TIMESTAMP);
+
                 INSERT SmsMessages
-                    (Id, TenantId, "From", "To", Body, Provider, Direction, Status, CreatedAt)
+                    (Id, TenantId, UserId, "From", "To", Body, Provider, Direction, Status, CreatedAt)
                 VALUES
-                    (@MessageId, @TenantId, 'encrypted-from', 'encrypted-to', 'encrypted-body', 'Mock', 1, 1, CURRENT_TIMESTAMP);
+                    (@MessageId, @TenantId, @UserId, 'encrypted-from', 'encrypted-to', 'encrypted-body', 'Mock', 1, 1, CURRENT_TIMESTAMP);
 
                 UPDATE SmsMessages
                 SET Status = 3, UpdatedAt = CURRENT_TIMESTAMP
@@ -75,17 +79,23 @@ public sealed class ReportingSqlTests
             var counters = await reporting.QuerySingleAsync<(long Outbound, long Inbound, long Delivered, long Failed, long Pending)>(
                 "SELECT Outbound, Inbound, Delivered, Failed, Pending FROM TenantSmsOverview WHERE TenantId=@TenantId;",
                 new { TenantId = tenantId });
-            Assert.Equal((1L, 0L, 1L, 0L, 0L), counters);\n\n            var userCounters = await reporting.QuerySingleAsync<(long TotalMessages, long Delivered, long Failed, long Pending)>(\n                \"SELECT TotalMessages, Delivered, Failed, Pending FROM UserSmsOverview WHERE TenantId=@TenantId AND UserId=@UserId;\",\n                new { TenantId = tenantId, UserId = userId });\n            Assert.Equal((1L, 1L, 0L, 0L), userCounters);
+            Assert.Equal((1L, 0L, 1L, 0L, 0L), counters);
+
+            var userCounters = await reporting.QuerySingleAsync<(long TotalMessages, long Delivered, long Failed, long Pending)>(
+                "SELECT TotalMessages, Delivered, Failed, Pending FROM UserSmsOverview WHERE TenantId=@TenantId AND UserId=@UserId;",
+                new { TenantId = tenantId, UserId = userId });
+            Assert.Equal((1L, 1L, 0L, 0L), userCounters);
         }
         finally
         {
             if (eventIds.Count > 0)
                 await reporting.ExecuteAsync("DELETE TenantSmsOverviewInbox WHERE EventId IN @EventIds;", new { EventIds = eventIds });
-            await reporting.ExecuteAsync("DELETE TenantSmsOverview WHERE TenantId=@TenantId;", new { TenantId = tenantId });
+            await reporting.ExecuteAsync("DELETE UserSmsOverview WHERE TenantId=@TenantId; DELETE TenantSmsOverview WHERE TenantId=@TenantId;", new { TenantId = tenantId });
             await application.ExecuteAsync("""
                 DELETE TenantSmsOverviewOutbox WHERE TenantId=@TenantId;
                 DELETE SmsMessageStatusHistory WHERE TenantId=@TenantId;
                 DELETE SmsMessages WHERE TenantId=@TenantId;
+                DELETE PortalUsers WHERE TenantId=@TenantId;
                 DELETE Tenants WHERE Id=@TenantId;
                 """, new { TenantId = tenantId });
         }
