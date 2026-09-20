@@ -13,6 +13,7 @@ Production-oriented multi-tenant SMS platform for sending, receiving, scheduling
 | Area | Technology |
 | --- | --- |
 | API | ASP.NET Core / .NET 8 |
+| Load balancing | HAProxy |
 | Data | PostgreSQL 17 + Dapper |
 | UI | Angular 21 |
 | Messaging | RabbitMQ + MassTransit |
@@ -35,7 +36,8 @@ Local services:
 | Service | Address |
 | --- | --- |
 | UI | `http://localhost:4200` |
-| API | `http://localhost:8080` |
+| API (HAProxy → 2 API instances) | `http://localhost:8080` |
+| HAProxy stats | `http://localhost:8404/stats` | Local-only backend health, sessions, requests, and errors |
 | Swagger | `http://localhost:8080/swagger` |
 | Health | `http://localhost:8080/health` |
 | HyperDX | `http://localhost:8081` |
@@ -234,7 +236,7 @@ Observability is deliberately split between **audit data** and **technical telem
 
 The API and Worker export technical telemetry over OTLP to a dedicated ClickStack OpenTelemetry Collector running in standalone mode. The collector writes directly to the ClickHouse instance bundled with ClickStack, while HyperDX remains the visualization UI. This keeps high-volume telemetry writes out of the PostgreSQL audit database while preserving the existing authorization and tenant-isolation model for user activity logs.
 
-In Docker Compose the API and Worker send OTLP/HTTP protobuf to `http://otel-collector:4318`. The collector is reachable only inside the Compose network, so its OTLP ports are not published to the host and local startup does not depend on a HyperDX-generated ingestion key. The collector writes to `http://clickstack:8123`. The local ClickStack container runs its HyperDX UI without built-in authentication and is reachable only inside the Compose network. A small Caddy proxy exposes HyperDX at `http://localhost:8081` with Basic Auth, defaulting to `HyperDX / HyperDX`; override those development defaults with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`. The ClickHouse HTTP endpoint is mapped to `18123`.
+In Docker Compose both API instances and the Worker send OTLP/HTTP protobuf to `http://otel-collector:4318`. Both API instances keep the logical OpenTelemetry service name `sms-api`, while `service.instance.id` identifies them individually as `api-1` and `api-2`. This allows HyperDX to aggregate the APIs as one service or filter logs, traces, metrics, latency, and errors by a specific instance. The collector is reachable only inside the Compose network, so its OTLP ports are not published to the host and local startup does not depend on a HyperDX-generated ingestion key. The collector writes to `http://clickstack:8123`. The local ClickStack container runs its HyperDX UI without built-in authentication and is reachable only inside the Compose network. A small Caddy proxy exposes HyperDX at `http://localhost:8081` with Basic Auth, defaulting to `HyperDX / HyperDX`; override those development defaults with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`. The ClickHouse HTTP endpoint is mapped to `18123`.
 
 ClickStack is technical infrastructure and must not be exposed as a tenant-facing log source. Secrets, access tokens, authorization headers, SMS bodies, and full phone numbers must never be emitted as telemetry.
 
@@ -280,6 +282,9 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 
 ![SMS API Docker Compose architecture](docs/images/sms-api-architecture-v2.svg)
 
+Docker Compose runs two independent API instances behind HAProxy. HAProxy exposes `http://localhost:8080`, distributes requests using round-robin, and actively checks each API through `GET /health`; unhealthy instances are removed from rotation automatically.
+HAProxy exposes local-only runtime statistics on `http://localhost:8404/stats`. API containers use a 30-second Docker stop grace period so ASP.NET Core can stop accepting new work and finish in-flight requests during shutdown.
+
 The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, RabbitMQ handles asynchronous messaging between the API and the independently deployed Worker, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from both processes and persists them in the ClickHouse instance bundled with ClickStack.
 
 ### Application database ER diagram
@@ -288,7 +293,7 @@ The diagram reflects the current Docker Compose topology and startup dependencie
 
 The diagram represents the PostgreSQL application schema defined in `database/schema.sql` and uses the same visual language as the Docker Compose architecture diagram. Auxiliary observability and reporting databases remain separate from the transactional application database. `PlatformAdministrators` and `AlertEvaluationInbox` have no foreign-key relationships in the current schema.
 
-The API and Worker are separate containers and can be deployed and scaled independently. The API handles HTTP, authentication, authorization, webhooks, and RabbitMQ publishing. The Worker owns RabbitMQ consumers, scheduled-message publishing, failed-publish retry, alert outbox publishing, and RabbitMQ monitoring. Both wait for their required infrastructure dependencies before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
+The two API containers and Worker are separate processes and can be deployed and scaled independently. HAProxy is the single host-facing API entry point; API containers are reachable only on the internal Compose network. The API handles HTTP, authentication, authorization, webhooks, and RabbitMQ publishing. The Worker owns RabbitMQ consumers, scheduled-message publishing, failed-publish retry, alert outbox publishing, and RabbitMQ monitoring. Both wait for their required infrastructure dependencies before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
 
 ```text
 src/Sms.Api              HTTP, authentication, authorization, webhooks, RabbitMQ publishing

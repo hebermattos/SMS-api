@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Sms.Api.Filters;
 using Sms.Api.Health;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -75,6 +76,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
 });
 builder.Services.AddAuthorization(PortalSecurity.ConfigureAuthorization);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost;
+    options.ForwardLimit = 1;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -87,6 +97,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddDependencyHealthChecks(builder.Configuration);
 
 var app = builder.Build();
+app.UseForwardedHeaders();
 app.UseSwaggerDocumentation();
 if (!app.Environment.IsDevelopment())
 {
