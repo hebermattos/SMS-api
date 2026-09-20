@@ -41,6 +41,7 @@ builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddOtlpExporter())
     .WithMetrics(metrics => metrics
+        .AddMeter(Sms.Infrastructure.Messaging.RabbitMqMonitoringService.MeterName)
         .AddAspNetCoreInstrumentation()
         .AddOtlpExporter());
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
