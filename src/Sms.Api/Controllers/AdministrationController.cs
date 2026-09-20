@@ -8,7 +8,7 @@ using Sms.Application.Auth;
 namespace Sms.Api.Controllers;
 
 public sealed record UpdateTenantRequest(string Name, string TimeZoneId, bool IsActive);
-public sealed record UpdateTenantRateLimitsRequest(int RequestsPerMinute, int SmsPerMinute);
+public sealed record UpdateTenantRateLimitsRequest(int RequestsPerMinute, int SmsPerMinute, int OllamaRequestsPerMinute);
 public sealed record UpdateTenantAiSettingsRequest(string ImprovePrompt, string ValidatePrompt);
 public sealed record CreateClientRequest(string? ClientId);
 public sealed record ClientStateRequest(bool IsActive);
@@ -83,7 +83,7 @@ public sealed class AdministrationController(AdministrationService service, Admi
     public async Task<IActionResult> UpdateRateLimits(Guid tenantId, UpdateTenantRateLimitsRequest request, CancellationToken cancellationToken)
     {
         await service.UpdateRateLimitsAsync(tenantId,
-            new TenantRateLimitSettings(request.RequestsPerMinute, request.SmsPerMinute), cancellationToken);
+            new TenantRateLimitSettings(request.RequestsPerMinute, request.SmsPerMinute, request.OllamaRequestsPerMinute), cancellationToken);
         return NoContent();
     }
 

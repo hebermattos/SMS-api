@@ -24,8 +24,8 @@ public sealed class TenantRateLimitMiddleware(RequestDelegate next)
                 || context.Request.Path.StartsWithSegments("/api/v1/messages/send")
                 || context.Request.Path.StartsWithSegments("/api/v1/messages/bulk"));
 
-        var limit = aiRequest ? 1 : smsRequest ? limits.SmsPerMinute : limits.RequestsPerMinute;
-        var window = aiRequest ? TimeSpan.FromSeconds(3) : TimeSpan.FromMinutes(1);
+        var limit = aiRequest ? limits.OllamaRequestsPerMinute : smsRequest ? limits.SmsPerMinute : limits.RequestsPerMinute;
+        var window = TimeSpan.FromMinutes(1);
         var bucket = aiRequest ? "ai" : smsRequest ? "sms" : "api";
         var key = $"{tenantId:N}:{bucket}";
         var now = DateTimeOffset.UtcNow;
