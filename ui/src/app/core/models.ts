@@ -6,7 +6,7 @@ export interface PortalSession { token: string; identity: string; role: PortalRo
 export interface Tenant { id: string; name: string; timeZoneId: string; isActive: boolean; createdAt: string; }
 export interface Client { id: string; clientId: string; isActive: boolean; createdAt: string; }
 export interface Administrator { id: string; username: string; isActive: boolean; createdAt: string; }
-export interface PortalUser { id: string; tenantId: string | null; username: string; context: PortalContext; role: PortalPermissionRole; isActive: boolean; createdAt: string; }
+export interface PortalUser { id: string; tenantId: string | null; username: string; email: string; context: PortalContext; role: PortalPermissionRole; isActive: boolean; createdAt: string; }
 export interface IssuedSecret { clientId: string; clientSecret: string; }
 export interface ProvisionedTenant { tenant_id: string; name: string; client_id: string; client_secret: string; }
 export interface ProviderField { key: string; label: string; secret: boolean; required: boolean; }

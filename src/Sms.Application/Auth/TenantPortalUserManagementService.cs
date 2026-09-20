@@ -26,6 +26,19 @@ public sealed class TenantPortalUserManagementService(
             "tenant", role), cancellationToken);
     }
 
+    public async Task UpdateAsync(
+        Guid tenantId, Guid id, string username, string email, string role,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateUsername(username);
+        ValidateEmail(email);
+        ValidateRole(role);
+
+        if (!await repository.UpdateAsync(
+            tenantId, id, username.Trim(), email.Trim().ToLowerInvariant(), role, cancellationToken))
+            throw new KeyNotFoundException();
+    }
+
     public async Task SetActiveAsync(
         Guid tenantId, Guid id, bool isActive,
         CancellationToken cancellationToken = default)

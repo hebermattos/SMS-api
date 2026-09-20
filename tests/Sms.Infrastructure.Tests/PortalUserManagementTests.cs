@@ -42,6 +42,10 @@ public sealed class PortalUserManagementTests
         Assert.Equal(tenantId, repository.User.TenantId);
         Assert.Equal("tenant", repository.User.Context);
         Assert.Equal(tenantId, (await service.ListAsync(tenantId)).Single().TenantId);
+        await service.UpdateAsync(tenantId, id, "updated_user", "updated@example.com", "administrator");
+        Assert.Equal("updated_user", repository.User.Username);
+        Assert.Equal("updated@example.com", repository.User.Email);
+        Assert.Equal("administrator", repository.User.Role);
         await service.SetActiveAsync(tenantId, id, false);
         Assert.False(repository.Active);
         await service.ResetPasswordAsync(tenantId, id, "another-valid-password");
@@ -96,6 +100,13 @@ public sealed class PortalUserManagementTests
         public Task<IReadOnlyList<PortalUserSummary>> ListAsync(Guid tenantId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<PortalUserSummary>>(User is null || User.TenantId != tenantId ? [] : [Summary(User)]);
         public Task<Guid> CreateAsync(NewPortalUser user, CancellationToken cancellationToken = default) { User = user; return Task.FromResult(user.Id); }
+        public Task<bool> UpdateAsync(Guid tenantId, Guid id, string username, string email, string role, CancellationToken cancellationToken = default)
+        {
+            LastTenantId = tenantId;
+            if (User?.Id != id || User.TenantId != tenantId) return Task.FromResult(false);
+            User = User with { Username = username, Email = email, Role = role };
+            return Task.FromResult(true);
+        }
         public Task<bool> SetActiveAsync(Guid tenantId, Guid id, bool isActive, CancellationToken cancellationToken = default)
         { LastTenantId = tenantId; if (User?.Id != id || User.TenantId != tenantId) return Task.FromResult(false); Active = isActive; return Task.FromResult(true); }
         public Task<bool> ResetPasswordAsync(Guid tenantId, Guid id, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken = default)

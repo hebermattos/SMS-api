@@ -30,6 +30,24 @@ public sealed class TenantPortalUserManagementRepository(SqlConnectionFactory co
         }
     }
 
+    public async Task<bool> UpdateAsync(
+        Guid tenantId, Guid id, string username, string email, string role,
+        CancellationToken cancellationToken = default)
+    {
+        using var connection = connections.CreateConnection();
+        try
+        {
+            return await connection.ExecuteAsync(new CommandDefinition(
+                Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantPortalUserManagementRepository.UpdateAsync.05.sql"),
+                new { TenantId = tenantId, Id = id, Username = username, Email = email, Role = role },
+                cancellationToken: cancellationToken)) == 1;
+        }
+        catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            throw new PortalUserConflictException();
+        }
+    }
+
     public async Task<bool> SetActiveAsync(
         Guid tenantId, Guid id, bool isActive,
         CancellationToken cancellationToken = default)
