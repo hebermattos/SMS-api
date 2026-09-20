@@ -39,7 +39,28 @@ public sealed class SendSmsService(
 
         await repository.InsertAsync(message, cancellationToken);
         if (!scheduledAtUtc.HasValue)
-            await eventPublisher.PublishAsync(message.TenantId, message.Id, cancellationToken);
+        {
+            try
+            {
+                await eventPublisher.PublishAsync(message.TenantId, message.Id, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                await repository.UpdateStatusAsync(
+                    message.TenantId,
+                    message.Id,
+                    SmsStatus.PublishFailed,
+                    null,
+                    clock.GetUtcNow(),
+                    cancellationToken);
+                throw;
+            }
+        }
+
         return new SendSmsResult(message.Id, provider.Name, null, status.ToString(), scheduledAtUtc);
     }
 }
