@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Sms.Api.Auth;
@@ -104,7 +105,7 @@ public sealed class RecentFeatureCoverageTests
         Assert.True(improved.IsValid);
         Assert.Contains("Improve prompt", handler.RequestBody!);
 
-        handler.Response = """{"response":"prefix {\\\"isValid\\\":false,\\\"issues\\\":[\\\"too long\\\"]} suffix"}""";
+        handler.Response = JsonSerializer.Serialize(new { response = """prefix {"isValid":false,"issues":["too long"]} suffix""" });
         var validation = await assistant.ValidateAsync(settings.TenantId, "hello");
         Assert.False(validation.IsValid);
         Assert.Equal("too long", Assert.Single(validation.Issues));
