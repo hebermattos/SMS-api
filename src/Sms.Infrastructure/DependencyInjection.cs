@@ -44,7 +44,7 @@ public static class DependencyInjection
         }
         else
         {
-            services.AddSingleton<IDistributedCache, DisabledDistributedCache>();
+            services.AddSingleton<IDistributedCache, DisabledDistributedCacheProxy>();
         }
 
         services.AddSingleton<SqlConnectionFactory>();
