@@ -110,6 +110,10 @@ SMS/template content sent to these endpoints stays inside the local Ollama deplo
 
 ## Messaging
 
+Outbound provider calls use a platform-wide transient-failure retry policy. HTTP 429, HTTP 5xx, and provider network failures are retried with exponential backoff. Permanent provider errors, invalid configuration, invalid numbers, and opt-out failures are not retried. The defaults are 3 retries with an initial 60-second interval (approximately 1, 2, and 4 minutes). Configure globally with `SmsRetry__MaxAttempts` and `SmsRetry__InitialIntervalSeconds`; the effective policy is available to platform administrators at `GET /api/v1/admin/sms-retry`.
+
+
+
 The provider is selected per request. All providers implement `ISmsProvider`, while provider-specific code remains isolated from the application core.
 
 - **Twilio:** signed callbacks using `X-Twilio-Signature`.
