@@ -16,8 +16,12 @@ public sealed class TenantUsersController(
     TenantPortalUserManagementService users) : ControllerBase
 {
     [HttpGet]
-    public Task<IReadOnlyList<PortalUserSummary>> List(CancellationToken cancellationToken) =>
-        users.ListAsync(tenantContext.TenantId, cancellationToken);
+    public async Task<IReadOnlyList<PortalUserSummary>> List(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
+    {
+        if (skip < 0) throw new ArgumentException("Invalid pagination.");
+        take = Math.Clamp(take, 1, 200);
+        return (await users.ListAsync(tenantContext.TenantId, cancellationToken)).Skip(skip).Take(take).ToList();
+    }
 
     [HttpPost]
     public async Task<IActionResult> Create(
