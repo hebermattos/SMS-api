@@ -273,7 +273,7 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 
 ### Docker Compose
 
-![SMS API Docker Compose architecture](docs/images/sms-api-architecture.svg)
+![SMS API Docker Compose architecture](docs/images/sms-api-architecture-v2.svg)
 
 The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, RabbitMQ handles asynchronous messaging, and ClickStack receives technical OpenTelemetry logs, traces, and metrics over OTLP and persists them in ClickHouse.
 
