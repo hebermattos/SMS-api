@@ -55,7 +55,8 @@ CREATE UNIQUE INDEX UX_PortalUsers_PlatformUsername
     ON PortalUsers(Username) WHERE Context = 'platform';
 CREATE UNIQUE INDEX UX_PortalUsers_TenantUsername
     ON PortalUsers(TenantId, Username) WHERE Context = 'tenant';
-CREATE INDEX IX_PortalUsers_TenantId ON PortalUsers(TenantId) WHERE TenantId IS NOT NULL;\nCREATE UNIQUE INDEX UX_PortalUsers_TenantId_Id ON PortalUsers(TenantId, Id) WHERE TenantId IS NOT NULL;
+CREATE INDEX IX_PortalUsers_TenantId ON PortalUsers(TenantId) WHERE TenantId IS NOT NULL;
+CREATE UNIQUE INDEX UX_PortalUsers_TenantId_Id ON PortalUsers(TenantId, Id) WHERE TenantId IS NOT NULL;
 
 CREATE TABLE TenantRateLimits
 (
@@ -110,7 +111,8 @@ CREATE TABLE SmsMessages
         OR Status <> 6
     )
 );
-CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON SmsMessages(TenantId, CreatedAt DESC, Id DESC);\nCREATE INDEX IX_SmsMessages_Tenant_User_CreatedAt ON SmsMessages(TenantId, UserId, CreatedAt DESC, Id DESC) WHERE UserId IS NOT NULL;
+CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON SmsMessages(TenantId, CreatedAt DESC, Id DESC);
+CREATE INDEX IX_SmsMessages_Tenant_User_CreatedAt ON SmsMessages(TenantId, UserId, CreatedAt DESC, Id DESC) WHERE UserId IS NOT NULL;
 CREATE INDEX IX_SmsMessages_CreatedAt ON SmsMessages(CreatedAt DESC, Id DESC)
     INCLUDE (TenantId, Provider, Direction, Status);
 CREATE INDEX IX_SmsMessages_Scheduled ON SmsMessages(ScheduledAtUtc, Id)
@@ -316,6 +318,7 @@ CREATE TABLE TenantSmsOverviewOutbox
     SequenceNumber BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     EventId UUID NOT NULL UNIQUE,
     TenantId UUID NOT NULL REFERENCES Tenants(Id) ON DELETE CASCADE,
+    UserId UUID NULL,
     OutboundDelta BIGINT NOT NULL,
     InboundDelta BIGINT NOT NULL,
     DeliveredDelta BIGINT NOT NULL,
@@ -328,7 +331,7 @@ CREATE TABLE TenantSmsOverviewOutbox
 );
 CREATE INDEX IX_TenantSmsOverviewOutbox_Pending
     ON TenantSmsOverviewOutbox(SequenceNumber)
-    INCLUDE (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+    INCLUDE (EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
     WHERE PublishedAtUtc IS NULL;
 
 CREATE OR REPLACE FUNCTION enqueue_alert_evaluation()
@@ -358,11 +361,12 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     INSERT INTO TenantSmsOverviewOutbox
-        (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+        (EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
     VALUES
         (
             gen_random_uuid(),
             NEW.TenantId,
+            NEW.UserId,
             CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END,
@@ -385,11 +389,12 @@ AS $$
 BEGIN
     IF NEW.Direction IS DISTINCT FROM OLD.Direction OR NEW.Status IS DISTINCT FROM OLD.Status THEN
         INSERT INTO TenantSmsOverviewOutbox
-            (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+            (EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
         VALUES
             (
                 gen_random_uuid(),
                 NEW.TenantId,
+                NEW.UserId,
                 (CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 2 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 3 THEN 1 ELSE 0 END),

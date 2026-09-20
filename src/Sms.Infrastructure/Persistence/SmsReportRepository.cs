@@ -27,7 +27,7 @@ public sealed class SmsReportRepository(SqlConnectionFactory connectionFactory) 
             providers);
     }
 
-    public async Task<PlatformSmsReportSummary> GetPlatformSummaryAsync(SmsReportFilter filter, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<UserSmsReportSummary>> GetUserSummaryAsync(Guid tenantId, CancellationToken cancellationToken = default)\n    {\n        var sql = Sms.Infrastructure.Sql.SqlQuery.Load(\"Persistence/SmsReportRepository.GetUserSummaryAsync.03.sql\");\n        using var connection = connectionFactory.CreateConnection();\n        var rows = await connection.QueryAsync<UserSmsReportSummary>(new CommandDefinition(sql, new { TenantId = tenantId }, cancellationToken: cancellationToken));\n        return rows.AsList();\n    }\n\n    public async Task<PlatformSmsReportSummary> GetPlatformSummaryAsync(SmsReportFilter filter, CancellationToken cancellationToken = default)
     {
         var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/SmsReportRepository.GetPlatformSummaryAsync.02.sql");
         using var connection = connectionFactory.CreateConnection();

@@ -10,3 +10,23 @@ DO UPDATE SET
     Failed=TenantSmsOverview.Failed + EXCLUDED.Failed,
     Pending=TenantSmsOverview.Pending + EXCLUDED.Pending,
     UpdatedAtUtc=GREATEST(TenantSmsOverview.UpdatedAtUtc, EXCLUDED.UpdatedAtUtc);
+
+
+INSERT INTO UserSmsOverview
+    (TenantId, UserId, TotalMessages, Delivered, Failed, Pending, UpdatedAtUtc)
+SELECT
+    @TenantId,
+    @UserId,
+    CASE WHEN @OutboundDelta > 0 THEN @OutboundDelta ELSE 0 END,
+    @DeliveredDelta,
+    @FailedDelta,
+    @PendingDelta,
+    @OccurredAtUtc
+WHERE @UserId IS NOT NULL
+ON CONFLICT (TenantId, UserId)
+DO UPDATE SET
+    TotalMessages=UserSmsOverview.TotalMessages + EXCLUDED.TotalMessages,
+    Delivered=UserSmsOverview.Delivered + EXCLUDED.Delivered,
+    Failed=UserSmsOverview.Failed + EXCLUDED.Failed,
+    Pending=UserSmsOverview.Pending + EXCLUDED.Pending,
+    UpdatedAtUtc=GREATEST(UserSmsOverview.UpdatedAtUtc, EXCLUDED.UpdatedAtUtc);
