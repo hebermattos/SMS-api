@@ -13,11 +13,13 @@ public sealed class RefreshTokenService(
 {
     public async Task<IssuedTokens> IssueAsync(
         Guid userId, string username, Guid? tenantId, string context, string role,
+        bool isPlatformAdministrator = false,
         CancellationToken cancellationToken = default)
     {
         var raw = CreateToken();
         var expiresAt = DateTimeOffset.UtcNow.AddDays(options.Value.RefreshExpirationDays);
-        var session = new RefreshTokenSession(Guid.NewGuid(), userId, username, tenantId, context, role, expiresAt);
+        var session = new RefreshTokenSession(
+            Guid.NewGuid(), userId, username, tenantId, context, role, isPlatformAdministrator, expiresAt);
         await repository.CreateAsync(session, Hash(raw), cancellationToken);
         return Build(session, raw);
     }
@@ -33,14 +35,14 @@ public sealed class RefreshTokenService(
             Hash(refreshToken), Hash(replacement), replacementId, replacementExpiresAt, cancellationToken);
         if (session is null) return null;
 
-        var replacementSession = session with { Id = replacementId, ExpiresAt = replacementExpiresAt };
-        return Build(replacementSession, replacement);
+        return Build(session with { Id = replacementId, ExpiresAt = replacementExpiresAt }, replacement);
     }
 
     private IssuedTokens Build(RefreshTokenSession session, string refreshToken)
     {
-        var accessToken = tokens.CreatePortalUser(
-            session.UserId, session.Username, session.TenantId, session.Context, session.Role);
+        var accessToken = session.IsPlatformAdministrator
+            ? tokens.CreateAdministrator(session.UserId, session.Username)
+            : tokens.CreatePortalUser(session.UserId, session.Username, session.TenantId, session.Context, session.Role);
         return new IssuedTokens(accessToken, refreshToken, options.Value.ExpirationMinutes * 60);
     }
 
