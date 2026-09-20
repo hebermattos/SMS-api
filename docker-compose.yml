@@ -45,10 +45,9 @@ services:
       retries: 20
 
   clickstack:
-    image: docker.io/clickhouse/clickstack-all-in-one:2.21.0
+    image: docker.io/clickhouse/clickstack-local:2.21.0
     mem_reservation: 512m
     ports:
-      - "8081:8080"
       - "4317:4317"
       - "4318:4318"
       - "18123:8123"
@@ -60,6 +59,31 @@ services:
       timeout: 3s
       retries: 20
       start_period: 10s
+
+  hyperdx-auth:
+    image: caddy:2.10-alpine
+    mem_reservation: 32m
+    depends_on:
+      clickstack:
+        condition: service_healthy
+    environment:
+      HYPERDX_USERNAME: "${HYPERDX_USERNAME:-HyperDX}"
+      HYPERDX_PASSWORD: "${HYPERDX_PASSWORD:-HyperDX}"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        PASSWORD_HASH="$(caddy hash-password --plaintext "$HYPERDX_PASSWORD")"
+        cat > /tmp/Caddyfile <<EOF
+        :8080 {
+          basic_auth {
+            $HYPERDX_USERNAME $PASSWORD_HASH
+          }
+          reverse_proxy clickstack:8080
+        }
+        EOF
+        exec caddy run --config /tmp/Caddyfile --adapter caddyfile
+    ports: ["8081:8080"]
 
   backup-init:
     image: alpine:3.22
