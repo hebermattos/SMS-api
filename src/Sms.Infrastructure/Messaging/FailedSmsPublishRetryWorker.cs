@@ -1,15 +1,13 @@
 using MassTransit;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Sms.Domain.Messages;
-using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Messaging;
 
-public sealed class FailedSmsPublishRetryWorker(
+public sealed class SmsQueuePublisherWorker(
     IFailedSmsPublishSource source,
     IBus bus,
-    ILogger<FailedSmsPublishRetryWorker> logger) : BackgroundService
+    ILogger<SmsQueuePublisherWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan PollingInterval = TimeSpan.FromMinutes(5);
 
@@ -24,7 +22,7 @@ public sealed class FailedSmsPublishRetryWorker(
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Failed to retry SMS queue publications.");
+                logger.LogError(exception, "Failed to publish SMS messages to the queue.");
             }
 
             await Task.Delay(PollingInterval, stoppingToken);
@@ -56,7 +54,7 @@ public sealed class FailedSmsPublishRetryWorker(
             catch (Exception exception)
             {
                 await source.MarkNotQueuedAsync(row.TenantId, row.MessageId, cancellationToken);
-                logger.LogError(exception, "Failed to republish SMS message {MessageId}.", row.MessageId);
+                logger.LogError(exception, "Failed to publish SMS message {MessageId}.", row.MessageId);
             }
         }
 
