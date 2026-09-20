@@ -567,3 +567,6 @@ obj/
 .env.*
 !.env.example
 appsettings.Development.json
+
+# Local PostgreSQL base backups and WAL archive
+/backups/
