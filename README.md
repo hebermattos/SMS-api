@@ -4,20 +4,23 @@
 ![Built with Codex](https://img.shields.io/badge/Built%20with-Codex-000000?style=flat-square&logo=openai&logoColor=white)
 ![AI Reviewed](https://img.shields.io/badge/AI%20Generated-Human%20Reviewed-blue?style=flat-square)
 
-Multi-tenant REST API for sending, receiving, scheduling, tracking, and querying SMS messages.
+Production-oriented multi-tenant SMS platform for sending, receiving, scheduling, tracking, and reporting messages through multiple providers.
 
-## Stack
+**Highlights:** strict tenant isolation · Twilio/Bandwidth provider abstraction · RabbitMQ workers · UTC scheduling with tenant time zones · encrypted SMS/provider data · reporting · OpenTelemetry · local AI assistance.
 
-- ASP.NET Core / .NET 8
-- PostgreSQL 17 + Dapper
-- Angular 21
-- JWT authentication
-- Twilio and Bandwidth
-- RabbitMQ + MassTransit
-- Redis
-- OpenTelemetry + ClickStack (ClickHouse)
-- Ollama + Qwen2.5 0.5B for local message assistance
-- Docker Compose for local testing
+## Technology
+
+| Area | Technology |
+| --- | --- |
+| API | ASP.NET Core / .NET 8 |
+| Data | PostgreSQL 17 + Dapper |
+| UI | Angular 21 |
+| Messaging | RabbitMQ + MassTransit |
+| Cache | Redis |
+| Providers | Twilio + Bandwidth |
+| Observability | OpenTelemetry + ClickStack / ClickHouse |
+| Local AI | Ollama + Qwen2.5 0.5B |
+| Local runtime | Docker Compose |
 
 ## Quick start
 
@@ -29,14 +32,17 @@ docker compose up --build
 
 Local services:
 
-- UI: http://localhost:4200
-- API: http://localhost:8080
-- Swagger: http://localhost:8080/swagger
-- Health: http://localhost:8080/health
-- PostgreSQL: localhost:5432
-- Redis: localhost:6379
-- ClickStack / HyperDX: http://localhost:8081 (Basic Auth)
-- ClickHouse HTTP: http://localhost:18123
+| Service | Address |
+| --- | --- |
+| UI | `http://localhost:4200` |
+| API | `http://localhost:8080` |
+| Swagger | `http://localhost:8080/swagger` |
+| Health | `http://localhost:8080/health` |
+| HyperDX | `http://localhost:8081` |
+| RabbitMQ Management | `http://localhost:15672` |
+| PostgreSQL | `localhost:5432` |
+| Redis | `localhost:6379` |
+| ClickHouse HTTP | `http://localhost:18123` |
 
 Local credentials:
 
@@ -60,26 +66,7 @@ Database backups are stored outside Docker volumes in `./backups` by default, so
 
 Docker is intended for local testing only. Never use fallback Compose credentials outside development.
 
-Docker Compose defines soft memory reservations for each service:
-
-| Service | Memory reservation |
-| --- | ---: |
-| PostgreSQL | 128 MB reserved / 256 MB limit |
-| RabbitMQ | 256 MB |
-| Redis | 64 MB |
-| Ollama | 768 MB |
-| API | 256 MB |
-| Worker | 256 MB |
-| ClickStack | 512 MB |
-| OpenTelemetry Collector | 128 MB |
-| HyperDX authentication proxy | 32 MB |
-| UI | 32 MB |
-| Database initialization | 128 MB |
-| PostgreSQL backup | 64 MB |
-| Provider initialization | 128 MB |
-| Webhook tests | 256 MB |
-
-These values are resource reservations, not hard memory limits. Docker may allow a container to use more memory when the host has capacity. The UI starts independently from the API; its Nginx proxy resolves the API dynamically, so the UI container can remain available while backend dependencies are still starting. API requests return a gateway error until the API becomes reachable.
+> Docker is intended for local testing. Resource reservations and limits are defined directly in `docker-compose.yml`; treat that file as the source of truth.
 
 ## Features
 
@@ -116,7 +103,6 @@ SMS/template content sent to these endpoints stays inside the local Ollama deplo
 ## Messaging
 
 Outbound provider calls use a platform-wide transient-failure retry policy. HTTP 429, HTTP 5xx, and provider network failures are retried with exponential backoff. Permanent provider errors, invalid configuration, invalid numbers, and opt-out failures are not retried. The defaults are 3 retries with an initial 60-second interval (approximately 1, 2, and 4 minutes). Configure globally with `SmsRetry__MaxAttempts` and `SmsRetry__InitialIntervalSeconds`; the effective policy is available to platform administrators at `GET /api/v1/admin/sms-retry`.
-
 
 
 The provider is selected per request. All providers implement `ISmsProvider`, while provider-specific code remains isolated from the application core.
