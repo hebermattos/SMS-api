@@ -1,9 +1,9 @@
 WITH inserted_message AS
 (
     INSERT INTO SmsMessages
-        (Id, TenantId, UserId, "From", "To", Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, ScheduledAtUtc, UpdatedAt)
+        (Id, TenantId, UserId, "From", "To", Body, Provider, ProviderMessageId, Direction, QueueStatus, Status, CreatedAt, ScheduledAtUtc, UpdatedAt)
     VALUES
-        (@Id, @TenantId, @UserId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @Status, @CreatedAt, @ScheduledAtUtc, @UpdatedAt)
+        (@Id, @TenantId, @UserId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @QueueStatus, @Status, @CreatedAt, @ScheduledAtUtc, @UpdatedAt)
     RETURNING TenantId, Id, Provider, Status, CreatedAt
 ),
 inserted_history AS
