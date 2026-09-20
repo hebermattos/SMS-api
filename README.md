@@ -35,7 +35,7 @@ Local services:
 - Health: http://localhost:8080/health
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
-- ClickStack / HyperDX: http://localhost:8081
+- ClickStack / HyperDX: http://localhost:8081 (Basic Auth)
 - ClickHouse HTTP: http://localhost:18123
 - OTLP: localhost:4317 (gRPC) / localhost:4318 (HTTP)
 
@@ -44,10 +44,11 @@ Local credentials:
 ```text
 Client:    client / client
 Platform:  platform / platform
+HyperDX:   HyperDX / HyperDX
 RabbitMQ:  sms / sms
 ```
 
-Override administrator defaults with `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `ADMIN_EMAIL`.
+Override administrator defaults with `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `ADMIN_EMAIL`. Override the local HyperDX access credentials with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`.
 
 Reset the local environment:
 
@@ -70,6 +71,7 @@ Docker Compose defines soft memory reservations for each service:
 | Ollama | 768 MB |
 | API | 256 MB |
 | ClickStack | 512 MB |
+| HyperDX authentication proxy | 32 MB |
 | UI | 32 MB |
 | Database initialization | 128 MB |
 | PostgreSQL backup | 64 MB |
@@ -159,6 +161,8 @@ RabbitMq__Host
 RabbitMq__Port
 RabbitMq__User
 RabbitMq__Password
+HYPERDX_USERNAME
+HYPERDX_PASSWORD
 OTEL_EXPORTER_OTLP_ENDPOINT
 OTEL_EXPORTER_OTLP_PROTOCOL
 OTEL_SERVICE_NAME
@@ -243,7 +247,7 @@ Observability is deliberately split between **audit data** and **technical telem
 
 The API exports technical telemetry over OTLP to ClickStack. ClickStack bundles the OpenTelemetry Collector, ClickHouse storage, and HyperDX UI. This keeps high-volume telemetry writes out of the PostgreSQL audit database while preserving the existing authorization and tenant-isolation model for user activity logs.
 
-In Docker Compose the API sends OTLP/HTTP protobuf to `http://clickstack:4318`. This avoids HTTP/2 gRPC transport issues such as `ENHANCE_YOUR_CALM` / `too_many_pings` while preserving the same OpenTelemetry logs, traces, and metrics pipeline. HyperDX is available locally at `http://localhost:8081`. OTLP/gRPC and OTLP/HTTP are exposed on ports `4317` and `4318`, and the ClickHouse HTTP endpoint is mapped to `18123`.
+In Docker Compose the API sends OTLP/HTTP protobuf to `http://clickstack:4318`. This avoids HTTP/2 gRPC transport issues such as `ENHANCE_YOUR_CALM` / `too_many_pings` while preserving the same OpenTelemetry logs, traces, and metrics pipeline. The local ClickStack container runs its HyperDX UI without built-in authentication and is reachable only inside the Compose network. A small Caddy proxy exposes HyperDX at `http://localhost:8081` with Basic Auth, defaulting to `HyperDX / HyperDX`; override those development defaults with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`. OTLP/gRPC and OTLP/HTTP remain exposed directly on ports `4317` and `4318`, and the ClickHouse HTTP endpoint is mapped to `18123`.
 
 ClickStack is technical infrastructure and must not be exposed as a tenant-facing log source. Secrets, access tokens, authorization headers, SMS bodies, and full phone numbers must never be emitted as telemetry.
 
@@ -291,7 +295,7 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 
 The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, RabbitMQ handles asynchronous messaging, and ClickStack receives technical OpenTelemetry logs, traces, and metrics over OTLP and persists them in ClickHouse.
 
-The API waits for database/provider initialization, RabbitMQ, Redis, and ClickStack before starting. The optional `webhook-tests` service is enabled through the `tests` profile.
+The API waits for database/provider initialization, RabbitMQ, Redis, and ClickStack before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
 
 ```text
 src/Sms.Api              HTTP, authentication, authorization
