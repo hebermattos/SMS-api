@@ -299,7 +299,7 @@ tests                    Unit and integration tests
 
 - [x] Scheduled delivery in the tenant time zone.
 - [ ] Bulk sends with validation, progress, cancellation, and per-recipient results.
-- [ ] Message templates.
+- [x] Tenant message templates with system and custom variables.
 - [ ] Inbound auto-replies and routing rules.
 
 ### Extensibility
