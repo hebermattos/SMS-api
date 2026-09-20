@@ -10,7 +10,7 @@ public sealed class AlertServiceTests
     {
         var repository = new FakeAlertRepository();
         var tenantId = Guid.NewGuid();
-        var service = new AlertService(repository, TimeProvider.System);
+        var service = new AlertService(repository, new AlertRuleFactory(TimeProvider.System));
 
         var id = await service.CreateRuleAsync(tenantId,
             new(" Failure spike ", " Twilio ", SmsStatus.Failed, 10, 15, AlertRepeatMode.Once, 99, true));
@@ -31,7 +31,7 @@ public sealed class AlertServiceTests
     public async Task CreateRule_RejectsInvalidConfiguration(
         string name, int threshold, int window, AlertRepeatMode mode, int? interval)
     {
-        var service = new AlertService(new FakeAlertRepository(), TimeProvider.System);
+        var service = new AlertService(new FakeAlertRepository(), new AlertRuleFactory(TimeProvider.System));
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateRuleAsync(Guid.NewGuid(),
             new(name, null, SmsStatus.Failed, threshold, window, mode, interval, true)));
     }
@@ -39,7 +39,7 @@ public sealed class AlertServiceTests
     [Fact]
     public async Task CreateRule_RejectsScheduledStatus()
     {
-        var service = new AlertService(new FakeAlertRepository(), TimeProvider.System);
+        var service = new AlertService(new FakeAlertRepository(), new AlertRuleFactory(TimeProvider.System));
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateRuleAsync(Guid.NewGuid(),
             new("Scheduled", null, SmsStatus.Scheduled, 1, 5, AlertRepeatMode.Once, null, true)));
@@ -48,7 +48,7 @@ public sealed class AlertServiceTests
     [Fact]
     public async Task MissingTenantOwnedRecords_AreNotModified()
     {
-        var service = new AlertService(new FakeAlertRepository(), TimeProvider.System);
+        var service = new AlertService(new FakeAlertRepository(), new AlertRuleFactory(TimeProvider.System));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateRuleAsync(Guid.NewGuid(), Guid.NewGuid(),
             new("Rule", null, SmsStatus.Failed, 1, 5, AlertRepeatMode.Once, null, true)));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.DeleteRuleAsync(Guid.NewGuid(), Guid.NewGuid()));
