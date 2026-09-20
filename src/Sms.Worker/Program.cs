@@ -6,6 +6,7 @@ using Sms.Application.Common;
 using Sms.Infrastructure;
 using Sms.Infrastructure.Messaging;
 using Sms.Infrastructure.Observability;
+using Sms.Worker;
 
 var builder = Host.CreateApplicationBuilder(args);
 
