@@ -16,11 +16,12 @@ public sealed class RequestAuditMiddleware(ILogger<RequestAuditMiddleware> logge
             audit.Action?.ControllerName, audit.Action?.ActionName, context.Response.StatusCode);
 
         logger.LogInformation(
-            "{Activity} {RequestMethod} {RequestPath} returned HTTP {StatusCode} for client {ClientId}, tenant {TenantId}.",
+            "{Activity} {RequestMethod} {RequestPath} returned HTTP {StatusCode} in {ElapsedMilliseconds} ms for client {ClientId}, tenant {TenantId}.",
             activity,
             context.Request.Method,
             context.Request.Path.Value,
             audit.Failed ? StatusCodes.Status500InternalServerError : context.Response.StatusCode,
+            Stopwatch.GetElapsedTime(audit.StartedTimestamp).TotalMilliseconds,
             context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
             parsedTenantId);
 
