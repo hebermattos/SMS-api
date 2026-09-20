@@ -85,6 +85,19 @@ public sealed class RegistrationAndModelTests
         Assert.True(options.Enabled);
     }
 
+    [Theory]
+    [InlineData("false", false)]
+    [InlineData("true", true)]
+    [InlineData("invalid", true)]
+    public void CacheOptions_ParsesConfiguration(string value, bool expected)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Cache:Enabled"] = value })
+            .Build();
+
+        Assert.Equal(expected, CacheOptions.From(configuration).Enabled);
+    }
+
     [Fact]
     public async Task MockProvider_ReturnsFlowTestResult()
     {
