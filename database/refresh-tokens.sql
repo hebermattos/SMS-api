@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS RefreshTokens
     TenantId UUID NULL,
     Context VARCHAR(20) NOT NULL,
     Role VARCHAR(20) NOT NULL,
+    IsPlatformAdministrator BOOLEAN NOT NULL DEFAULT FALSE,
     TokenHash BYTEA NOT NULL UNIQUE,
     ExpiresAt TIMESTAMPTZ NOT NULL,
     CreatedAt TIMESTAMPTZ NOT NULL,
