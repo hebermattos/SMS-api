@@ -24,10 +24,9 @@ export class AuthService implements OnDestroy {
       const saved = sessionStorage.getItem(this.storageKey);
       if (!saved) return;
       const session = JSON.parse(saved);
-      if (!session || typeof session.token !== 'string' || typeof session.refreshToken !== 'string'
-          || typeof session.identity !== 'string') throw new Error('Invalid session.');
-      this.refreshToken = session.refreshToken;
-      this.accept(session.token, session.refreshToken, session.identity,
+      if (!session || typeof session.token !== 'string' || typeof session.identity !== 'string') throw new Error('Invalid session.');
+      this.refreshToken = session.refreshToken ?? null;
+      this.accept(session.token, session.refreshToken ?? null, session.identity,
         session.context ?? (session.role === 'admin' ? 'platform' : 'tenant'));
     } catch {
       this.clearStoredSession();
@@ -38,12 +37,12 @@ export class AuthService implements OnDestroy {
 
   loginTenant(clientId: string, clientSecret: string) {
     return this.http.post<TokenResponse>('/api/v1/auth/token', { clientId, clientSecret })
-      .pipe(tap(value => this.accept(value.access_token, value.refresh_token, clientId, 'tenant')));
+      .pipe(tap(value => this.accept(value.access_token, value.refresh_token ?? null, clientId, 'tenant')));
   }
 
   loginAdmin(username: string, password: string) {
     return this.http.post<TokenResponse>('/api/v1/admin/auth/token', { username, password })
-      .pipe(tap(value => this.accept(value.access_token, value.refresh_token, username, 'platform')));
+      .pipe(tap(value => this.accept(value.access_token, value.refresh_token ?? null, username, 'platform')));
   }
 
   loginPortal(username: string, password: string, context: PortalContext, tenantCode?: string) {
@@ -51,7 +50,7 @@ export class AuthService implements OnDestroy {
       ? { username, password, context, tenantCode }
       : { username, password, context };
     return this.http.post<TokenResponse>('/api/v1/portal/auth/token', request)
-      .pipe(tap(value => this.accept(value.access_token, value.refresh_token, username, context)));
+      .pipe(tap(value => this.accept(value.access_token, value.refresh_token ?? null, username, context)));
   }
 
   bearer(): string | null { return Date.now() < this.expiresAt ? this.token : null; }
@@ -77,13 +76,13 @@ export class AuthService implements OnDestroy {
     }
     const endpoint = this.role() === 'admin' ? '/api/v1/admin/auth/refresh' : '/api/v1/portal/auth/refresh';
     this.http.post<TokenResponse>(endpoint, { refreshToken: this.refreshToken }).subscribe({
-      next: value => this.accept(value.access_token, value.refresh_token, this.identity(), this.context()!),
+      next: value => this.accept(value.access_token, value.refresh_token ?? null, this.identity(), this.context()!),
       error: () => this.logout(true)
     });
   }
 
-  private accept(token: string, refreshToken: string, identity: string, fallbackContext: PortalContext = 'tenant') {
-    if (!refreshToken || token.split('.').length !== 3) throw new Error('Invalid session.');
+  private accept(token: string, refreshToken: string | null, identity: string, fallbackContext: PortalContext = 'tenant') {
+    if (token.split('.').length !== 3) throw new Error('Invalid session.');
     const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const claims = JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, '='))) as {
       exp: number; context?: PortalContext; role?: PortalPermissionRole; platform_admin?: string;
@@ -103,7 +102,8 @@ export class AuthService implements OnDestroy {
     this.permissionRole.set(permissionRole);
     this.identity.set(identity);
     this.expired.set(false);
-    this.timer = setTimeout(() => this.refresh(), Math.max(1000, this.expiresAt - Date.now() - 60000));
+    this.timer = setTimeout(() => refreshToken ? this.refresh() : this.logout(true),
+      Math.max(1000, this.expiresAt - Date.now() - 60000));
 
     try {
       sessionStorage.setItem(this.storageKey, JSON.stringify({
