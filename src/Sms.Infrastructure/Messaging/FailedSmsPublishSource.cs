@@ -7,6 +7,7 @@ namespace Sms.Infrastructure.Messaging;
 public interface IFailedSmsPublishSource
 {
     Task<IReadOnlyList<FailedSmsPublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default);
+    Task MarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default);
 }
 
 public sealed record FailedSmsPublishMessage(Guid MessageId, Guid TenantId);
@@ -22,5 +23,14 @@ public sealed class FailedSmsPublishSource(SqlConnectionFactory connectionFactor
             cancellationToken: cancellationToken));
 
         return rows.AsList();
+    }
+
+    public async Task MarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishSource.MarkQueuedAsync.01.sql"),
+            new { TenantId = tenantId, MessageId = messageId, Queued = SmsStatus.Queued, NotQueued = SmsStatus.NotQueued, UpdatedAt = DateTimeOffset.UtcNow },
+            cancellationToken: cancellationToken));
     }
 }
