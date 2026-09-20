@@ -53,7 +53,7 @@ public sealed class AdministratorAuthenticationTests
         await authentication.CreateAsync("admin", "admin@example.com", Password);
         repository.Account = repository.Account! with { IsActive = active };
         var tokens = new TokenService(Options.Create(new JwtOptions { Key = "local-test-key-at-least-32-characters", Issuer = "test", Audience = "test" }));
-        var controller = new AdminAuthController(tokens, authentication) { ControllerContext = new() { HttpContext = new DefaultHttpContext() } };
+        var controller = new AdminAuthController(CreateRefreshTokens(tokens, repository), authentication) { ControllerContext = new() { HttpContext = new DefaultHttpContext() } };
         var result = await controller.Token(new(" admin ", correctPassword ? Password : "wrong"));
         if (allowed)
         {
@@ -117,6 +117,21 @@ public sealed class AdministratorAuthenticationTests
         context.Principal!.AddIdentity(new ClaimsIdentity([new Claim("tenant_id", Guid.NewGuid().ToString())]));
         await PortalSecurity.ValidateTenantAsync(context);
         Assert.NotNull(context.Result?.Failure);
+    }
+
+    private static RefreshTokenService CreateRefreshTokens(TokenService tokens, IAdministratorRepository administrators) =>
+        new(new RefreshTokens(), tokens, new PortalUsers(), administrators,
+            Options.Create(new JwtOptions { Key = "local-test-key-at-least-32-characters", Issuer = "test", Audience = "test" }));
+
+    private sealed class RefreshTokens : IRefreshTokenRepository
+    {
+        public Task CreateAsync(RefreshTokenSession session, byte[] tokenHash, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<RefreshTokenSession?> RotateAsync(byte[] currentTokenHash, byte[] replacementTokenHash, Guid replacementId, DateTimeOffset replacementExpiresAt, CancellationToken cancellationToken = default) => Task.FromResult<RefreshTokenSession?>(null);
+    }
+    private sealed class PortalUsers : IPortalUserRepository
+    {
+        public Task<PortalUserAccount?> GetActiveByUsernameAsync(string username, string context, string? tenantCode, CancellationToken cancellationToken = default) => Task.FromResult<PortalUserAccount?>(null);
+        public Task<PortalUserAccount?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult<PortalUserAccount?>(null);
     }
 
     private sealed class Administrators : IAdministratorRepository
