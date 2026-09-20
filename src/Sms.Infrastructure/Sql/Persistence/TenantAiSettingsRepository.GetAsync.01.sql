@@ -1,0 +1,1 @@
+SELECT ImprovePrompt, ValidatePrompt FROM TenantAiSettings WHERE TenantId=@TenantId;
