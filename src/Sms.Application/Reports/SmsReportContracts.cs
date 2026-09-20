@@ -47,3 +47,13 @@ public sealed record PlatformSmsReportTenantSummary(
     long Delivered,
     long Failed,
     long Received);
+
+
+public sealed record UserSmsReportSummary(
+    Guid UserId,
+    string Username,
+    long TotalMessages,
+    long Delivered,
+    long Failed,
+    long Pending,
+    DateTimeOffset UpdatedAtUtc);
