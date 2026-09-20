@@ -18,7 +18,7 @@ public sealed class FailedSmsPublishSource(SqlConnectionFactory connectionFactor
         using var connection = connectionFactory.CreateConnection();
         var rows = await connection.QueryAsync<FailedSmsPublishMessage>(new CommandDefinition(
             Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishRetryWorker.PublishBatchAsync.01.sql"),
-            new { PublishFailed = SmsStatus.PublishFailed },
+            new { NotQueued = SmsStatus.NotQueued },
             cancellationToken: cancellationToken));
 
         return rows.AsList();
