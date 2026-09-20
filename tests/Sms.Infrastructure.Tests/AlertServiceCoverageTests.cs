@@ -44,7 +44,7 @@ public sealed class AlertServiceCoverageTests
     {
         yield return [new SaveAlertRule("", null, SmsStatus.Failed, 1, 1, AlertRepeatMode.Once, null, true)];
         yield return [new SaveAlertRule(new string('x', 121), null, SmsStatus.Failed, 1, 1, AlertRepeatMode.Once, null, true)];
-        yield return [new SaveAlertRule("Rule", null, SmsStatus.Scheduled, 1, 1, AlertRepeatMode.Once, null, true)];
+        yield return [new SaveAlertRule("Rule", null, (SmsStatus)99, 1, 1, AlertRepeatMode.Once, null, true)];
         yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 0, 1, AlertRepeatMode.Once, null, true)];
         yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 1_000_001, 1, AlertRepeatMode.Once, null, true)];
         yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 1, 0, AlertRepeatMode.Once, null, true)];

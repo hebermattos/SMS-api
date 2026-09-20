@@ -37,12 +37,12 @@ public sealed class AlertServiceTests
     }
 
     [Fact]
-    public async Task CreateRule_RejectsScheduledStatus()
+    public async Task CreateRule_RejectsUndefinedStatus()
     {
         var service = new AlertService(new FakeAlertRepository(), new AlertRuleFactory(TimeProvider.System));
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateRuleAsync(Guid.NewGuid(),
-            new("Scheduled", null, SmsStatus.Scheduled, 1, 5, AlertRepeatMode.Once, null, true)));
+            new("Invalid", null, (SmsStatus)99, 1, 5, AlertRepeatMode.Once, null, true)));
     }
 
     [Fact]
