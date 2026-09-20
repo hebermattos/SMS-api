@@ -22,7 +22,8 @@ from=''; to=''; status=''; direction=''; provider='';
 constructor(){this.load();this.loadUsers();}
 load(){this.loading.set(true);this.error.set('');const url=this.auth.role()==='admin'?'/api/v1/admin/reports/sms':'/api/v1/reports/sms';this.http.get<SmsReportSummary|PlatformSmsReportSummary>(url,{params:this.params()}).pipe(takeUntilDestroyed(this.destroyRef),finalize(()=>this.loading.set(false))).subscribe({next:data=>{if(this.auth.role()==='admin'){this.platformReport.set(data as PlatformSmsReportSummary);this.tenantReport.set(null);}else{this.tenantReport.set(data as SmsReportSummary);this.platformReport.set(null);}},error:e=>this.error.set(errorMessage(e))});}
 params(){let p=new HttpParams();if(this.from)p=p.set('from',this.from+'T00:00:00Z');if(this.to){const end=new Date(this.to+'T00:00:00Z');end.setUTCDate(end.getUTCDate()+1);p=p.set('to',end.toISOString());}if(this.status)p=p.set('status',this.status);if(this.direction)p=p.set('direction',this.direction);if(this.provider.trim())p=p.set('provider',this.provider.trim());return p;}
-loadUsers(){if(this.auth.role()==='admin'){this.userReport.set([]);return;}this.http.get<UserSmsReportSummary[]>('/api/v1/reports/sms/users').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({next:data=>this.userReport.set(data),error:()=>this.userReport.set([])});}\nclearFilters(){this.from='';this.to='';this.status='';this.direction='';this.provider='';this.load();}
+loadUsers(){if(this.auth.role()==='admin'){this.userReport.set([]);return;}this.http.get<UserSmsReportSummary[]>('/api/v1/reports/sms/users').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({next:data=>this.userReport.set(data),error:()=>this.userReport.set([])});}
+clearFilters(){this.from='';this.to='';this.status='';this.direction='';this.provider='';this.load();}
 hasReport(){return this.auth.role()==='admin'?this.platformReport()!==null:this.tenantReport()!==null;}
 downloadCsv(){
   const rows:string[][]=[];
@@ -35,7 +36,8 @@ downloadCsv(){
     rows.push(['Provider','Total','Delivered','Failed','Delivery rate']);
     for(const provider of report.byProvider)rows.push([provider.provider,String(provider.totalMessages),String(provider.delivered),String(provider.failed),this.percent(provider.delivered,provider.totalMessages)+'%']);
   }
-  const csv='\uFEFF'+rows.map(row=>row.map(value=>this.csvValue(value)).join(',')).join('\r\n');
+  const csv='\uFEFF'+rows.map(row=>row.map(value=>this.csvValue(value)).join(',')).join('\r
+');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob); const link=document.createElement('a');
   link.href=url; link.download='sms-report-'+new Date().toISOString().slice(0,10)+'.csv'; link.click(); URL.revokeObjectURL(url);
