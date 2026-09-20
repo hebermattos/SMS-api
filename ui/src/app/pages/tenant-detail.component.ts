@@ -18,7 +18,7 @@ export class TenantDetailComponent {
   readonly tenant = signal<Tenant | null>(null); readonly clients = signal<Client[]>([]); readonly providers = signal<ProviderConfig[]>([]); readonly catalog = signal<ProviderDefinition[]>([]);
   readonly tab = signal<'settings' | 'clients' | 'providers'>('clients'); readonly loading = signal(false); readonly busy = signal(false); readonly error = signal(''); readonly success = signal('');
   readonly secret = signal<IssuedSecret | null>(null); readonly page = signal(0); readonly hasNext = signal(false); readonly editingProvider = signal<ProviderDefinition | null>(null); readonly existingProvider = signal<ProviderConfig | null>(null);
-  tenantName = ''; timeZoneId = 'UTC'; improvePrompt = ''; validatePrompt = ''; requestsPerMinute = 600; smsPerMinute = 60; ollamaRequestsPerMinute = 20; clientId = ''; accountId = ''; fromNumber = ''; apiSecret = ''; providerActive = true; providerDefault = false; settings: Record<string, string> = {};
+  tenantName = ''; timeZoneId = 'UTC'; improvePrompt = ''; validatePrompt = ''; requestsPerMinute = 120; smsPerMinute = 10; ollamaRequestsPerMinute = 6; clientId = ''; accountId = ''; fromNumber = ''; apiSecret = ''; providerActive = true; providerDefault = false; settings: Record<string, string> = {};
 
   constructor() { this.load(); }
   load() {
