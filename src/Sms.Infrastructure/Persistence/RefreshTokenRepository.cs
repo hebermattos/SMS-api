@@ -7,12 +7,7 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
 {
     public async Task CreateAsync(RefreshTokenSession session, byte[] tokenHash, CancellationToken cancellationToken = default)
     {
-        const string sql = """
-            INSERT INTO RefreshTokens
-                (Id, UserId, Username, TenantId, Context, Role, IsPlatformAdministrator, TokenHash, ExpiresAt, CreatedAt)
-            VALUES
-                (@Id, @UserId, @Username, @TenantId, @Context, @Role, @IsPlatformAdministrator, @TokenHash, @ExpiresAt, CURRENT_TIMESTAMP);
-            """;
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/RefreshTokenRepository.CreateAsync.01.sql");
         using var connection = connections.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(sql, new
         {
@@ -29,12 +24,7 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
         await connection.OpenAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        const string selectSql = """
-            SELECT Id, UserId, Username, TenantId, Context, Role, IsPlatformAdministrator, ExpiresAt
-            FROM RefreshTokens
-            WHERE TokenHash = @TokenHash AND RevokedAt IS NULL AND ExpiresAt > CURRENT_TIMESTAMP
-            FOR UPDATE;
-            """;
+        var selectSql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/RefreshTokenRepository.RotateAsync.01.sql");
         var session = await connection.QuerySingleOrDefaultAsync<RefreshTokenSession>(
             new CommandDefinition(selectSql, new { TokenHash = currentTokenHash }, transaction, cancellationToken: cancellationToken));
         if (session is null)
@@ -43,20 +33,11 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
             return null;
         }
 
-        const string revokeSql = """
-            UPDATE RefreshTokens
-            SET RevokedAt = CURRENT_TIMESTAMP, ReplacedByHash = @ReplacementHash
-            WHERE Id = @Id AND RevokedAt IS NULL;
-            """;
+        var revokeSql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/RefreshTokenRepository.RotateAsync.02.sql");
         await connection.ExecuteAsync(new CommandDefinition(revokeSql,
             new { session.Id, ReplacementHash = replacementTokenHash }, transaction, cancellationToken: cancellationToken));
 
-        const string insertSql = """
-            INSERT INTO RefreshTokens
-                (Id, UserId, Username, TenantId, Context, Role, IsPlatformAdministrator, TokenHash, ExpiresAt, CreatedAt)
-            VALUES
-                (@Id, @UserId, @Username, @TenantId, @Context, @Role, @IsPlatformAdministrator, @TokenHash, @ExpiresAt, CURRENT_TIMESTAMP);
-            """;
+        var insertSql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/RefreshTokenRepository.RotateAsync.03.sql");
         await connection.ExecuteAsync(new CommandDefinition(insertSql, new
         {
             Id = replacementId, session.UserId, session.Username, session.TenantId, session.Context, session.Role,
