@@ -7,6 +7,7 @@ public sealed record RefreshTokenSession(
     Guid? TenantId,
     string Context,
     string Role,
+    bool IsPlatformAdministrator,
     DateTimeOffset ExpiresAt);
 
 public interface IRefreshTokenRepository
