@@ -85,8 +85,7 @@ public sealed class BandwidthSmsProviderTests
             factory,
             new TenantContext(tenant),
             new Repo(config),
-            new TestDistributedCache(),
-            new CacheOptions(cacheEnabled));
+            cacheEnabled ? new TestDistributedCache() : new DisabledDistributedCacheProxy());
     }
 
     private static TenantSmsProviderConfiguration Config(Guid tenant)=>
