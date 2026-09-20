@@ -196,8 +196,6 @@ services:
         condition: service_healthy
       clickstack:
         condition: service_healthy
-      ollama-init:
-        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
