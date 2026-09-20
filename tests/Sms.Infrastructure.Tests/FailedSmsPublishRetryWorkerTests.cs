@@ -96,6 +96,35 @@ public sealed class FailedSmsPublishRetryWorkerTests
     }
 
     [Fact]
+    public async Task PublishBatchAsync_PropagatesClaimFailureWithoutPublishing()
+    {
+        var message = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var source = new ThrowingClaimSource(message);
+        var bus = new Mock<IBus>();
+        var worker = new FailedSmsPublishRetryWorker(source, bus.Object, NullLogger<FailedSmsPublishRetryWorker>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => worker.PublishBatchAsync());
+
+        bus.Verify(x => x.Publish(It.IsAny<SmsSendEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task BackgroundWorker_HandlesSourceFailureUntilStopped()
+    {
+        var source = new ThrowingPendingSource();
+        var worker = new FailedSmsPublishRetryWorker(
+            source,
+            Mock.Of<IBus>(),
+            NullLogger<FailedSmsPublishRetryWorker>.Instance);
+
+        await worker.StartAsync(default);
+        await source.Called.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await worker.StopAsync(default);
+
+        Assert.True(source.Calls >= 1);
+    }
+
+    [Fact]
     public async Task BackgroundWorker_StartsAndStopsWithNoPendingMessages()
     {
         var worker = new FailedSmsPublishRetryWorker(
@@ -106,6 +135,37 @@ public sealed class FailedSmsPublishRetryWorkerTests
         await worker.StartAsync(default);
         await Task.Delay(25);
         await worker.StopAsync(default);
+    }
+
+    private sealed class ThrowingClaimSource(FailedSmsPublishMessage message) : IFailedSmsPublishSource
+    {
+        public Task<IReadOnlyList<FailedSmsPublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<FailedSmsPublishMessage>>([message]);
+
+        public Task<bool> TryMarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("claim failed");
+
+        public Task MarkNotQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+    }
+
+    private sealed class ThrowingPendingSource : IFailedSmsPublishSource
+    {
+        public TaskCompletionSource Called { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Calls { get; private set; }
+
+        public Task<IReadOnlyList<FailedSmsPublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            Called.TrySetResult();
+            throw new InvalidOperationException("database unavailable");
+        }
+
+        public Task<bool> TryMarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(false);
+
+        public Task MarkNotQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class Source(IReadOnlyList<FailedSmsPublishMessage> messages) : IFailedSmsPublishSource
