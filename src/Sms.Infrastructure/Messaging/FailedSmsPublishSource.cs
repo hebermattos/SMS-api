@@ -29,7 +29,7 @@ public sealed class FailedSmsPublishSource(SqlConnectionFactory connectionFactor
     {
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(
-            "UPDATE SmsMessages SET Status = @Queued, UpdatedAt = @UpdatedAt WHERE TenantId = @TenantId AND Id = @MessageId AND Status = @NotQueued",
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishSource.MarkQueuedAsync.01.sql"),
             new { TenantId = tenantId, MessageId = messageId, Queued = SmsStatus.Queued, NotQueued = SmsStatus.NotQueued, UpdatedAt = DateTimeOffset.UtcNow },
             cancellationToken: cancellationToken));
     }
