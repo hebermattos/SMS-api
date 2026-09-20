@@ -147,8 +147,8 @@ services:
       RabbitMq__Port: "5672"
       RabbitMq__User: "${RABBITMQ_USER:-sms}"
       RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://clickstack:4317"
-      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://clickstack:4318"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
       OTEL_SERVICE_NAME: "sms-api"
     ports: ["8080:8080"]
 

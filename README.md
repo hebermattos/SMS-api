@@ -189,7 +189,7 @@ Observability is deliberately split between **audit data** and **technical telem
 
 The API exports technical telemetry over OTLP to ClickStack. ClickStack bundles the OpenTelemetry Collector, ClickHouse storage, and HyperDX UI. This keeps high-volume telemetry writes out of the PostgreSQL audit database while preserving the existing authorization and tenant-isolation model for user activity logs.
 
-In Docker Compose the API sends OTLP/gRPC to `http://clickstack:4317`. HyperDX is available locally at `http://localhost:8081`. OTLP/gRPC and OTLP/HTTP are exposed on ports `4317` and `4318`, and the ClickHouse HTTP endpoint is mapped to `18123`.
+In Docker Compose the API sends OTLP/HTTP protobuf to `http://clickstack:4318`. This avoids HTTP/2 gRPC transport issues such as `ENHANCE_YOUR_CALM` / `too_many_pings` while preserving the same OpenTelemetry logs, traces, and metrics pipeline. HyperDX is available locally at `http://localhost:8081`. OTLP/gRPC and OTLP/HTTP are exposed on ports `4317` and `4318`, and the ClickHouse HTTP endpoint is mapped to `18123`.
 
 ClickStack is technical infrastructure and must not be exposed as a tenant-facing log source. Secrets, access tokens, authorization headers, SMS bodies, and full phone numbers must never be emitted as telemetry.
 
