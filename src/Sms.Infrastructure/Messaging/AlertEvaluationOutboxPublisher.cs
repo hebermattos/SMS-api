@@ -11,29 +11,39 @@ public sealed class AlertEvaluationOutboxPublisher(
     IBus bus,
     ILogger<AlertEvaluationOutboxPublisher> logger) : BackgroundService
 {
+    private static readonly TimeSpan ActiveDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan MaxIdleDelay = TimeSpan.FromSeconds(10);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var delay = ActiveDelay;
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await PublishBatchAsync(stoppingToken);
+                var published = await PublishBatchAsync(stoppingToken);
+                delay = published > 0
+                    ? ActiveDelay
+                    : TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, MaxIdleDelay.TotalSeconds));
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception)
             {
                 logger.LogError(exception, "Failed to publish alert evaluation outbox.");
+                delay = MaxIdleDelay;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+            await Task.Delay(delay, stoppingToken);
         }
     }
 
-    private async Task PublishBatchAsync(CancellationToken cancellationToken)
+    private async Task<int> PublishBatchAsync(CancellationToken cancellationToken)
     {
         using var connection = connectionFactory.CreateConnection();
         var rows = await connection.QueryAsync<OutboxRow>(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationOutboxPublisher.PublishBatchAsync.01.sql"), cancellationToken: cancellationToken));
 
+        var published = 0;
         foreach (var row in rows)
         {
             await bus.Publish(new AlertEvaluationEvent(
@@ -41,7 +51,10 @@ public sealed class AlertEvaluationOutboxPublisher(
             await connection.ExecuteAsync(new CommandDefinition(
                 Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationOutboxPublisher.PublishBatchAsync.02.sql"),
                 new { Id = row.EventId }, cancellationToken: cancellationToken));
+            published++;
         }
+
+        return published;
     }
 
     private sealed record OutboxRow(Guid EventId, Guid TenantId, string Provider, Sms.Domain.Messages.SmsStatus Status, DateTimeOffset OccurredAtUtc);
