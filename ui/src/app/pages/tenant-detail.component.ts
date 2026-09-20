@@ -18,13 +18,13 @@ export class TenantDetailComponent {
   readonly tenant = signal<Tenant | null>(null); readonly clients = signal<Client[]>([]); readonly providers = signal<ProviderConfig[]>([]); readonly catalog = signal<ProviderDefinition[]>([]);
   readonly tab = signal<'settings' | 'clients' | 'providers'>('clients'); readonly loading = signal(false); readonly busy = signal(false); readonly error = signal(''); readonly success = signal('');
   readonly secret = signal<IssuedSecret | null>(null); readonly page = signal(0); readonly hasNext = signal(false); readonly editingProvider = signal<ProviderDefinition | null>(null); readonly existingProvider = signal<ProviderConfig | null>(null);
-  tenantName = ''; timeZoneId = 'UTC'; requestsPerMinute = 600; smsPerMinute = 60; clientId = ''; accountId = ''; fromNumber = ''; apiSecret = ''; providerActive = true; providerDefault = false; settings: Record<string, string> = {};
+  tenantName = ''; timeZoneId = 'UTC'; improvePrompt = ''; validatePrompt = ''; requestsPerMinute = 600; smsPerMinute = 60; clientId = ''; accountId = ''; fromNumber = ''; apiSecret = ''; providerActive = true; providerDefault = false; settings: Record<string, string> = {};
 
   constructor() { this.load(); }
   load() {
     this.loading.set(true); this.error.set('');
-    forkJoin({ tenant: this.http.get<Tenant>(this.base), clients: this.http.get<Client[]>(`${this.base}/clients?take=21`), providers: this.http.get<ProviderConfig[]>(`${this.base}/providers`), catalog: this.http.get<ProviderDefinition[]>('/api/v1/admin/providers/catalog'), rateLimits: this.http.get<TenantRateLimitSettings>(`${this.base}/rate-limits`) })
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({ next: data => { this.tenant.set(data.tenant); this.tenantName = data.tenant.name; this.timeZoneId = data.tenant.timeZoneId; this.clients.set(data.clients.slice(0,20)); this.hasNext.set(data.clients.length > 20); this.page.set(0); this.providers.set(data.providers); this.catalog.set(data.catalog); this.requestsPerMinute = data.rateLimits.requestsPerMinute; this.smsPerMinute = data.rateLimits.smsPerMinute; }, error: error => this.error.set(errorMessage(error)) });
+    forkJoin({ tenant: this.http.get<Tenant>(this.base), clients: this.http.get<Client[]>(`${this.base}/clients?take=21`), providers: this.http.get<ProviderConfig[]>(`${this.base}/providers`), catalog: this.http.get<ProviderDefinition[]>('/api/v1/admin/providers/catalog'), rateLimits: this.http.get<TenantRateLimitSettings>(`${this.base}/rate-limits`), aiSettings: this.http.get<{ improvePrompt: string; validatePrompt: string }>(`${this.base}/ai-settings`) })
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({ next: data => { this.tenant.set(data.tenant); this.tenantName = data.tenant.name; this.timeZoneId = data.tenant.timeZoneId; this.clients.set(data.clients.slice(0,20)); this.hasNext.set(data.clients.length > 20); this.page.set(0); this.providers.set(data.providers); this.catalog.set(data.catalog); this.requestsPerMinute = data.rateLimits.requestsPerMinute; this.smsPerMinute = data.rateLimits.smsPerMinute; this.improvePrompt = data.aiSettings.improvePrompt; this.validatePrompt = data.aiSettings.validatePrompt; }, error: error => this.error.set(errorMessage(error)) });
   }
   changeTab(tab: 'settings' | 'clients' | 'providers') { if (this.busy()) return; this.tab.set(tab); this.error.set(''); this.success.set(''); this.closeProvider(); }
   updateTenant(isActive = this.tenant()?.isActive ?? true) {
@@ -74,6 +74,11 @@ export class TenantDetailComponent {
     const definition = this.editingProvider(); if (!definition || this.busy()) return;
     this.start(); this.http.put<void>(`${this.base}/providers/${encodeURIComponent(definition.name)}`, { accountId: this.accountId, fromNumber: this.fromNumber, isActive: this.providerActive, isDefault: this.providerActive && this.providerDefault, apiSecret: this.apiSecret || null, settings: this.settings })
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => { this.busy.set(false); this.apiSecret = ''; for (const field of definition.fields.filter(x => x.secret)) this.settings[field.key] = ''; })).subscribe({ next: () => { this.closeProvider(); this.success.set('Configuration saved securely.'); this.http.get<ProviderConfig[]>(`${this.base}/providers`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: rows => this.providers.set(rows), error: error => this.error.set(errorMessage(error)) }); }, error: error => this.error.set(errorMessage(error)) });
+  }
+  saveAiSettings() {
+    if (this.busy() || !this.improvePrompt.trim() || !this.validatePrompt.trim()) return;
+    this.start(); this.http.put<void>(`${this.base}/ai-settings`, { improvePrompt: this.improvePrompt, validatePrompt: this.validatePrompt })
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({ next: () => this.success.set('AI prompts saved.'), error: error => this.error.set(errorMessage(error)) });
   }
   private start() { this.busy.set(true); this.error.set(''); this.success.set(''); }
 }
