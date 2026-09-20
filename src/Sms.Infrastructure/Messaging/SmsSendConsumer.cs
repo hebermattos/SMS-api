@@ -1,11 +1,9 @@
-using Dapper;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Sms.Application.Common;
 using Sms.Application.Messages;
 using Sms.Application.OptOut;
 using Sms.Domain.Messages;
-using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Messaging;
 
@@ -14,15 +12,11 @@ public sealed class SmsSendConsumer(
     ISmsMessageRepository repository,
     ISmsProviderResolver providerResolver,
     OptOutService optOut,
-    SqlConnectionFactory connectionFactory,
     ILogger<SmsSendConsumer> logger) : IConsumer<SmsSendEvent>
 {
     public async Task Consume(ConsumeContext<SmsSendEvent> context)
     {
         var sendEvent = context.Message;
-        if (await IsProcessedAsync(sendEvent.EventId, context.CancellationToken))
-            return;
-
         tenantContext.SetTenant(sendEvent.TenantId);
 
         var message = await repository.GetByIdAsync(
@@ -46,10 +40,7 @@ public sealed class SmsSendConsumer(
         }
 
         if (message.QueueStatus != SmsQueueStatus.Queued)
-        {
-            await MarkProcessedAsync(sendEvent.EventId, context.CancellationToken);
             return;
-        }
 
         var claimed = await repository.TryClaimQueuedAsync(
             sendEvent.TenantId,
@@ -58,14 +49,10 @@ public sealed class SmsSendConsumer(
             context.CancellationToken);
 
         if (!claimed)
-        {
-            await MarkProcessedAsync(sendEvent.EventId, context.CancellationToken);
             return;
-        }
 
         message.QueueStatus = SmsQueueStatus.Processing;
         await SendAsync(sendEvent, message, context.CancellationToken);
-        await MarkProcessedAsync(sendEvent.EventId, context.CancellationToken);
     }
 
     private async Task SendAsync(SmsSendEvent sendEvent, SmsMessage message, CancellationToken cancellationToken)
@@ -104,28 +91,6 @@ public sealed class SmsSendConsumer(
                 DateTimeOffset.UtcNow,
                 cancellationToken);
         }
-    }
-
-    private async Task<bool> IsProcessedAsync(Guid eventId, CancellationToken cancellationToken)
-    {
-        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsSendConsumer.Consume.02.sql");
-        using var connection = connectionFactory.CreateConnection();
-
-        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
-            sql,
-            new { EventId = eventId },
-            cancellationToken: cancellationToken)) != 0;
-    }
-
-    private async Task MarkProcessedAsync(Guid eventId, CancellationToken cancellationToken)
-    {
-        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsSendConsumer.MarkProcessedAsync.01.sql");
-        using var connection = connectionFactory.CreateConnection();
-
-        await connection.ExecuteAsync(new CommandDefinition(
-            sql,
-            new { EventId = eventId },
-            cancellationToken: cancellationToken));
     }
 
     private static bool IsScheduledMessageEvent(SmsSendEvent sendEvent) =>
