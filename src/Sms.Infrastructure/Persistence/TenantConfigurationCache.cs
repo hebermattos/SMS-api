@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Sms.Application.Administration;
 using Sms.Application.Auth;
 using Sms.Application.Providers;
-using Sms.Infrastructure.Caching;
 
 namespace Sms.Infrastructure.Persistence;
 
@@ -19,7 +18,6 @@ public sealed record TenantConfigurationSnapshot(
 public sealed class TenantConfigurationCache(
     SqlConnectionFactory connectionFactory,
     IDistributedCache cache,
-    CacheOptions cacheOptions,
     ILogger<TenantConfigurationCache> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -135,8 +133,6 @@ public sealed class TenantConfigurationCache(
 
     private async Task<string?> GetStringAsync(string key, CancellationToken cancellationToken)
     {
-        if (!cacheOptions.Enabled) return null;
-
         try
         {
             return await cache.GetStringAsync(key, cancellationToken);
@@ -154,8 +150,6 @@ public sealed class TenantConfigurationCache(
 
     private async Task SetStringAsync(string key, string value, CancellationToken cancellationToken)
     {
-        if (!cacheOptions.Enabled) return;
-
         try
         {
             await cache.SetStringAsync(key, value, cancellationToken);
@@ -172,8 +166,6 @@ public sealed class TenantConfigurationCache(
 
     private async Task RemoveAsync(string key, CancellationToken cancellationToken)
     {
-        if (!cacheOptions.Enabled) return;
-
         try
         {
             await cache.RemoveAsync(key, cancellationToken);
