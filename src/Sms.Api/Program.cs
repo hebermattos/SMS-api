@@ -47,6 +47,7 @@ if (string.IsNullOrWhiteSpace(jwt.Key) || jwt.Key.Length < 32) throw new Invalid
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<PortalExceptionFilter>();
 builder.Services.AddEndpointsApiExplorer();
