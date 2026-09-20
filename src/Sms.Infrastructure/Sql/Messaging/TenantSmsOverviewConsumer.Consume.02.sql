@@ -17,6 +17,7 @@ INSERT INTO UserSmsOverview
 SELECT
     @TenantId,
     @UserId,
+    CAST(@OccurredAtUtc AT TIME ZONE 'UTC' AS date),
     CASE WHEN @OutboundDelta > 0 THEN @OutboundDelta ELSE 0 END,
     @DeliveredDelta,
     @FailedDelta,
