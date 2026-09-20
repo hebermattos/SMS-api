@@ -22,8 +22,12 @@ public sealed record ResetAdministratorPasswordRequest(string Password);
 public sealed class AdministrationController(AdministrationService service, AdministratorAuthenticationService administrators) : ControllerBase
 {
     [HttpGet("administrators")]
-    public async Task<IActionResult> ListAdministrators(CancellationToken cancellationToken) =>
-        Ok(await administrators.ListAsync(cancellationToken));
+    public async Task<IActionResult> ListAdministrators(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
+    {
+        if (skip < 0) return BadRequest(new { error = "skip must be zero or greater." });
+        take = Math.Clamp(take, 1, 200);
+        return Ok((await administrators.ListAsync(cancellationToken)).Skip(skip).Take(take));
+    }
 
     [HttpPost("administrators")]
     public async Task<IActionResult> CreateAdministrator(CreateAdministratorRequest request, CancellationToken cancellationToken)
@@ -47,7 +51,7 @@ public sealed class AdministrationController(AdministrationService service, Admi
     }
 
     [HttpGet("tenants")]
-    public async Task<IActionResult> ListTenants(int skip = 0, int take = 25, CancellationToken cancellationToken = default) =>
+    public async Task<IActionResult> ListTenants(int skip = 0, int take = 20, CancellationToken cancellationToken = default) =>
         Ok(await service.ListTenantsAsync(skip, take, cancellationToken));
 
     [HttpGet("tenants/{tenantId:guid}")]
@@ -65,7 +69,7 @@ public sealed class AdministrationController(AdministrationService service, Admi
     public IActionResult TimeZones() => Ok(AdministrationService.TimeZones);
 
     [HttpGet("tenants/{tenantId:guid}/clients")]
-    public async Task<IActionResult> Clients(Guid tenantId, int skip = 0, int take = 25, CancellationToken cancellationToken = default) =>
+    public async Task<IActionResult> Clients(Guid tenantId, int skip = 0, int take = 20, CancellationToken cancellationToken = default) =>
         Ok(await service.ListClientsAsync(tenantId, skip, take, cancellationToken));
 
     [HttpPost("tenants/{tenantId:guid}/clients")]
