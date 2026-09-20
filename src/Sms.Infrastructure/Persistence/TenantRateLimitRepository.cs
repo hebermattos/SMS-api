@@ -11,7 +11,7 @@ public sealed class TenantRateLimitRepository(SqlConnectionFactory connections) 
         using var connection = connections.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<TenantRateLimitSettings>(
             new CommandDefinition(sql, new { TenantId = tenantId }, cancellationToken: cancellationToken))
-            ?? new TenantRateLimitSettings(600, 60, 20);
+            ?? new TenantRateLimitSettings(120, 10, 6);
     }
 
     public async Task SaveAsync(Guid tenantId, TenantRateLimitSettings settings, CancellationToken cancellationToken = default)
