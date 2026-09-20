@@ -48,7 +48,7 @@ public sealed class TwilioSmsProvider(
         {
             throw new TransientSmsProviderException("Twilio is temporarily unavailable.", exception);
         }
-        using (response)
+        using var responseScope = response;
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
