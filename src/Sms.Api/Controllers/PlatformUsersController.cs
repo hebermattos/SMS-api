@@ -15,8 +15,12 @@ public sealed record PortalUserPasswordRequest(string Password);
 public sealed class PlatformUsersController(PortalUserManagementService users) : ControllerBase
 {
     [HttpGet]
-    public Task<IReadOnlyList<PortalUserSummary>> List(CancellationToken cancellationToken) =>
-        users.ListPlatformUsersAsync(cancellationToken);
+    public async Task<IReadOnlyList<PortalUserSummary>> List(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
+    {
+        if (skip < 0) throw new ArgumentException("Invalid pagination.");
+        take = Math.Clamp(take, 1, 200);
+        return (await users.ListPlatformUsersAsync(cancellationToken)).Skip(skip).Take(take).ToList();
+    }
 
     [HttpPost]
     public async Task<IActionResult> Create(
