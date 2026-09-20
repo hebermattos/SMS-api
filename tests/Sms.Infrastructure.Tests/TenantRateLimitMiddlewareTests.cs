@@ -11,7 +11,7 @@ public sealed class TenantRateLimitMiddlewareTests
     public async Task InvokeAsync_WithoutTenantClaim_BypassesRateLimit()
     {
         var nextCalls = 0;
-        var repository = new Repository(new TenantRateLimitSettings(1, 1));
+        var repository = new Repository(new TenantRateLimitSettings(1, 1, 20));
         var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
         var context = new DefaultHttpContext();
 
@@ -26,7 +26,7 @@ public sealed class TenantRateLimitMiddlewareTests
     {
         var tenantId = Guid.NewGuid();
         var nextCalls = 0;
-        var repository = new Repository(new TenantRateLimitSettings(1, 10));
+        var repository = new Repository(new TenantRateLimitSettings(1, 10, 20));
         var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
 
         var first = Context(tenantId, HttpMethods.Get, "/api/v1/reports");
@@ -48,7 +48,7 @@ public sealed class TenantRateLimitMiddlewareTests
     {
         var tenantId = Guid.NewGuid();
         var nextCalls = 0;
-        var repository = new Repository(new TenantRateLimitSettings(100, 1));
+        var repository = new Repository(new TenantRateLimitSettings(100, 1, 20));
         var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
 
         await middleware.InvokeAsync(Context(tenantId, HttpMethods.Post, path), repository);
@@ -62,11 +62,11 @@ public sealed class TenantRateLimitMiddlewareTests
     [Theory]
     [InlineData("/api/v1/message-assistant/improve")]
     [InlineData("/api/v1/message-assistant/validate")]
-    public async Task InvokeAsync_AiRoutes_AllowOneRequestEveryThreeSeconds(string path)
+    public async Task InvokeAsync_AiRoutes_UseConfiguredOllamaLimit(string path)
     {
         var tenantId = Guid.NewGuid();
         var nextCalls = 0;
-        var repository = new Repository(new TenantRateLimitSettings(100, 100));
+        var repository = new Repository(new TenantRateLimitSettings(100, 100, 1));
         var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
 
         await middleware.InvokeAsync(Context(tenantId, HttpMethods.Post, path), repository);
@@ -75,7 +75,7 @@ public sealed class TenantRateLimitMiddlewareTests
 
         Assert.Equal(1, nextCalls);
         Assert.Equal(StatusCodes.Status429TooManyRequests, blocked.Response.StatusCode);
-        Assert.Equal("3", blocked.Response.Headers.RetryAfter);
+        Assert.Equal("60", blocked.Response.Headers.RetryAfter);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class TenantRateLimitMiddlewareTests
     {
         var tenantId = Guid.NewGuid();
         var nextCalls = 0;
-        var repository = new Repository(new TenantRateLimitSettings(2, 0));
+        var repository = new Repository(new TenantRateLimitSettings(2, 0, 20));
         var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
 
         await middleware.InvokeAsync(Context(tenantId, HttpMethods.Get, "/api/v1/messages"), repository);
