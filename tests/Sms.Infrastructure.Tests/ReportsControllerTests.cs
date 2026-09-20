@@ -57,8 +57,8 @@ public sealed class ReportsControllerTests
         public SmsReportFilter? Filter { get; private set; }
         public Task<SmsReportSummary> GetTenantSummaryAsync(Guid tenantId, SmsReportFilter filter, CancellationToken cancellationToken = default)
         { TenantId = tenantId; Filter = filter; return Task.FromResult(new SmsReportSummary(0,0,0,0,0,0,0,0,0,[])); }
-        public Task<IReadOnlyList<PlatformSmsReportSummary>> GetPlatformSummaryAsync(SmsReportFilter filter, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<PlatformSmsReportSummary>>([]);
+        public Task<PlatformSmsReportSummary> GetPlatformSummaryAsync(SmsReportFilter filter, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new PlatformSmsReportSummary(0, 0, 0, 0, 0, 0, 0, []));
         public Task<IReadOnlyList<UserSmsReportSummary>> GetUserSummaryAsync(Guid tenantId, CancellationToken cancellationToken = default)
         { UserTenantId = tenantId; return Task.FromResult<IReadOnlyList<UserSmsReportSummary>>([]); }
     }
