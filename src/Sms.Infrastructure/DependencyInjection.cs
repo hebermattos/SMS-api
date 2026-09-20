@@ -26,6 +26,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var retryOptions = configuration.GetSection("SmsRetry").Get<SmsRetryOptions>() ?? new SmsRetryOptions();
+        retryOptions.Validate();
+        services.AddSingleton(retryOptions);
+
         var cacheOptions = CacheOptions.From(configuration);
         services.AddSingleton(cacheOptions);
 
@@ -87,7 +91,15 @@ public static class DependencyInjection
                 {
                     endpoint.PrefetchCount = 1;
                     endpoint.ConcurrentMessageLimit = 1;
-                    endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
+                    endpoint.UseMessageRetry(retry =>
+                    {
+                        retry.Handle<TransientSmsProviderException>();
+                        retry.Exponential(
+                            retryOptions.MaxAttempts,
+                            TimeSpan.FromSeconds(retryOptions.InitialIntervalSeconds),
+                            TimeSpan.FromSeconds(retryOptions.InitialIntervalSeconds * Math.Pow(2, Math.Max(0, retryOptions.MaxAttempts - 1))),
+                            TimeSpan.FromSeconds(retryOptions.InitialIntervalSeconds));
+                    });
                     endpoint.ConfigureConsumer<SmsSendConsumer>(context);
                 });
                 rabbit.ReceiveEndpoint(rabbitMq.ReportingQueue, endpoint =>
