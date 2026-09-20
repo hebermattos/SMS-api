@@ -5,6 +5,7 @@ using Sms.Api.Controllers;
 using Sms.Application.Administration;
 using Sms.Application.Common;
 using Sms.Application.Auth;
+using Sms.Application.Messages;
 
 namespace Sms.Infrastructure.Tests;
 
@@ -15,7 +16,7 @@ public sealed class AdministrationControllerTests
     {
         var attribute = Assert.Single(typeof(AdministrationController).GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>());
         Assert.Equal(PortalSecurity.AdminPolicy, attribute.Policy);
-        var repo = new AdministrationFakeRepository(); var controller = new AdministrationController(AdministrationServiceTests.Service(repo), new AdministratorAuthenticationService(new AdministratorRepositoryFake()));
+        var repo = new AdministrationFakeRepository(); var controller = new AdministrationController(AdministrationServiceTests.Service(repo), new AdministratorAuthenticationService(new AdministratorRepositoryFake()), new AiSettingsFake(), new SmsRetryOptions());
         Assert.IsType<OkObjectResult>(await controller.ListTenants());
         Assert.IsType<OkObjectResult>(await controller.GetTenant(repo.Tenant.Id, default));
         Assert.IsType<NoContentResult>(await controller.UpdateTenant(repo.Tenant.Id, new("Company", "UTC", false), default));
@@ -27,6 +28,12 @@ public sealed class AdministrationControllerTests
         Assert.IsType<OkObjectResult>(await controller.Providers(repo.Tenant.Id, default));
         Assert.IsType<NoContentResult>(await controller.SaveProvider(repo.Tenant.Id, "Twilio", new("account", "+15550000001", true, true, "secret", null), default));
         Assert.Equal(repo.Tenant.Id, repo.SavedProvider!.TenantId);
+    }
+
+    private sealed class AiSettingsFake : ITenantAiSettingsRepository
+    {
+        public Task<TenantAiSettings> GetAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(new TenantAiSettings("Improve", "Validate"));
+        public Task SaveAsync(Guid tenantId, TenantAiSettings settings, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class AdministratorRepositoryFake : IAdministratorRepository
