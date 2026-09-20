@@ -1,7 +1,7 @@
 namespace Sms.Domain.Messages;
 
 public enum SmsDirection { Outbound = 1, Inbound = 2 }
-public enum SmsStatus { Queued = 1, Sent = 2, Delivered = 3, Failed = 4, Received = 5, Scheduled = 6, PublishFailed = 7 }
+public enum SmsStatus { Queued = 1, Sent = 2, Delivered = 3, Failed = 4, Received = 5, Scheduled = 6, NotQueued = 7 }
 
 public sealed class SmsMessage
 {
