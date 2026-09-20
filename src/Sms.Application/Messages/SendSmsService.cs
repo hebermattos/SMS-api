@@ -1,6 +1,7 @@
+using Sms.Application.Auth;
 using Sms.Application.Common;
-using Sms.Domain.Messages;
 using Sms.Application.OptOut;
+using Sms.Domain.Messages;
 
 namespace Sms.Application.Messages;
 
@@ -11,12 +12,22 @@ public sealed class SendSmsService(
     ISmsSendEventPublisher eventPublisher,
     OptOutService optOut,
     ITenantTimeZoneProvider timeZones,
+    IPortalUserRepository users,
     TimeProvider clock)
 {
     public async Task<SendSmsResult> SendAsync(SendSmsRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.To)) throw new ArgumentException("Destination phone number is required.");
         if (string.IsNullOrWhiteSpace(request.Body)) throw new ArgumentException("Message body is required.");
+
+        if (request.UserId.HasValue)
+        {
+            var user = await users.GetActiveByIdAsync(request.UserId.Value, cancellationToken);
+            if (user is null
+                || user.Context != "tenant"
+                || user.TenantId != tenantContext.TenantId)
+                throw new ArgumentException("UserId must identify an active user in the authenticated tenant.");
+        }
 
         await optOut.EnsureCanSendAsync(tenantContext.TenantId, request.To, cancellationToken);
 
@@ -28,6 +39,7 @@ public sealed class SendSmsService(
         {
             Id = Guid.NewGuid(),
             TenantId = tenantContext.TenantId,
+            UserId = request.UserId,
             From = request.From ?? string.Empty,
             To = request.To.Trim(),
             Body = request.Body,
