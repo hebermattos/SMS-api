@@ -30,8 +30,8 @@ public sealed class UtilityCoverageTests
     {
         var entries = new Dictionary<string, HealthReportEntry>
         {
-            ["redis"] = new(HealthStatus.Healthy, "cache ok", TimeSpan.FromMilliseconds(2), null, ["z", "a"]),
-            ["database"] = new(HealthStatus.Degraded, "db slow", TimeSpan.FromMilliseconds(3), null, ["sql"])
+            ["redis"] = new(HealthStatus.Healthy, "cache ok", TimeSpan.FromMilliseconds(2), null, new Dictionary<string, object>(), ["z", "a"]),
+            ["database"] = new(HealthStatus.Degraded, "db slow", TimeSpan.FromMilliseconds(3), null, new Dictionary<string, object>(), ["sql"])
         };
         var report = new HealthReport(entries, TimeSpan.FromMilliseconds(5));
         var context = new DefaultHttpContext();
