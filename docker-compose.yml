@@ -103,6 +103,28 @@ services:
           psql -v ON_ERROR_STOP=1 -d sms_api_reporting -f /database/reporting-schema.sql
         fi
 
+  postgres-backup:
+    image: postgres:17-alpine
+    mem_reservation: 64m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./database/backup.sh:/backup.sh:ro
+      - postgres-backups:/backups
+    environment:
+      PGHOST: "postgres"
+      PGPORT: "5432"
+      PGUSER: "${POSTGRES_USER:-sms}"
+      PGPASSWORD: "${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      PGDATABASE: "sms_api"
+      BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-86400}"
+      BACKUP_RETENTION_DAYS: "${BACKUP_RETENTION_DAYS:-7}"
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    restart: unless-stopped
+
   provider-init:
     mem_reservation: 128m
     build:
@@ -175,3 +197,4 @@ services:
 volumes:
   postgres-data:
   clickstack-data:
+  postgres-backups:
