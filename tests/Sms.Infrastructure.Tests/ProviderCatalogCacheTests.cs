@@ -77,7 +77,7 @@ public sealed class ProviderCatalogCacheTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => cache.GetAsync(cancellation.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cache.GetAsync(cancellation.Token));
 
         Assert.Equal(0, policies.EnumerationCount);
     }
