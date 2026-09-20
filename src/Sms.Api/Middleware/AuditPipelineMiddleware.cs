@@ -5,7 +5,8 @@ namespace Sms.Api.Middleware;
 public sealed record AuditPipelineContext(
     HttpContext HttpContext,
     ControllerActionDescriptor? Action,
-    bool Failed);
+    bool Failed,
+    long StartedTimestamp);
 
 public interface IAuditPipelineStep
 {
@@ -17,6 +18,7 @@ public sealed class AuditPipelineMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext context, IEnumerable<IAuditPipelineStep> steps)
     {
         var action = context.GetEndpoint()?.Metadata.GetMetadata<ControllerActionDescriptor>();
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         var failed = false;
 
         try
@@ -30,7 +32,7 @@ public sealed class AuditPipelineMiddleware(RequestDelegate next)
         }
         finally
         {
-            var auditContext = new AuditPipelineContext(context, action, failed);
+            var auditContext = new AuditPipelineContext(context, action, failed, started);
             foreach (var step in steps)
                 await step.AuditAsync(auditContext);
         }
