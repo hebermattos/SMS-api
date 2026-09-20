@@ -1,4 +1,3 @@
-using Dapper;
 using MassTransit;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -8,7 +7,7 @@ using Sms.Infrastructure.Persistence;
 namespace Sms.Infrastructure.Messaging;
 
 public sealed class FailedSmsPublishRetryWorker(
-    SqlConnectionFactory connectionFactory,
+    IFailedSmsPublishSource source,
     IBus bus,
     ILogger<FailedSmsPublishRetryWorker> logger) : BackgroundService
 {
@@ -34,11 +33,7 @@ public sealed class FailedSmsPublishRetryWorker(
 
     internal async Task<int> PublishBatchAsync(CancellationToken cancellationToken = default)
     {
-        using var connection = connectionFactory.CreateConnection();
-        var rows = await connection.QueryAsync<FailedPublishMessage>(new CommandDefinition(
-            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishRetryWorker.PublishBatchAsync.01.sql"),
-            new { PublishFailed = SmsStatus.PublishFailed },
-            cancellationToken: cancellationToken));
+        var rows = await source.GetPendingAsync(cancellationToken);
 
         var published = 0;
         foreach (var row in rows)
@@ -62,6 +57,4 @@ public sealed class FailedSmsPublishRetryWorker(
 
         return published;
     }
-
-    private sealed record FailedPublishMessage(Guid MessageId, Guid TenantId);
 }
