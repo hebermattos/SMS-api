@@ -15,7 +15,7 @@ namespace Sms.Api.Controllers;
 public sealed class OptOutsController(ITenantContext tenant, OptOutService optOuts) : ControllerBase
 {
     [HttpGet]
-    public Task<IReadOnlyList<BlockedNumber>> List(int skip = 0, int take = 50, CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<BlockedNumber>> List(int skip = 0, int take = 20, CancellationToken cancellationToken = default) =>
         optOuts.ListAsync(tenant.TenantId, skip, take, cancellationToken);
 
     [HttpPost]

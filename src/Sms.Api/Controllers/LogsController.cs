@@ -15,7 +15,7 @@ public sealed class LogsController(ITenantContext tenantContext, ILogEntryReposi
         [FromQuery] DateTimeOffset? from = null,
         [FromQuery] DateTimeOffset? to = null,
         [FromQuery] int skip = 0,
-        [FromQuery] int take = 50,
+        [FromQuery] int take = 20,
         CancellationToken cancellationToken = default)
     {
         if (skip < 0) return BadRequest(new { error = "skip must be zero or greater." });
