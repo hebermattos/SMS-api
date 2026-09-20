@@ -1,0 +1,58 @@
+using System.Net.Http.Json;
+using System.Text.Json;
+using Sms.Application.Messages;
+
+namespace Sms.Infrastructure.Providers;
+
+public sealed class OllamaMessageAssistant(HttpClient client) : IMessageAssistant
+{
+    private const string Model = "qwen2.5:0.5b";
+
+    public Task<MessageAssistantResult> ImproveAsync(string message, CancellationToken cancellationToken = default) =>
+        AskAsync("Improve this SMS. Keep the meaning, make it concise and professional, preserve every {{variableName}} exactly, do not add facts. Return only the improved SMS.", message, cancellationToken);
+
+    public Task<MessageAssistantResult> ValidateAsync(string message, CancellationToken cancellationToken = default) =>
+        AskAsync("Validate this SMS for clarity, spelling, ambiguous wording and broken {{variableName}} placeholders. Do not judge legal compliance. Return JSON only: {\"isValid\":true,\"issues\":[\"...\"]}.", message, cancellationToken);
+
+    private async Task<MessageAssistantResult> AskAsync(string instruction, string message, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(message)) throw new ArgumentException("Message is required.");
+        if (message.Length > 4000) throw new ArgumentException("Message cannot exceed 4000 characters.");
+
+        using var response = await client.PostAsJsonAsync("api/generate", new
+        {
+            model = Model,
+            prompt = $"{instruction}\n\nSMS:\n{message}",
+            stream = false,
+            options = new { temperature = 0.2 }
+        }, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<OllamaResponse>(cancellationToken) ??
+                     throw new InvalidOperationException("Ollama returned an empty response.");
+
+        if (!instruction.StartsWith("Validate", StringComparison.Ordinal))
+            return new MessageAssistantResult(result.Response.Trim(), Array.Empty<string>(), true);
+
+        try
+        {
+            var json = ExtractJson(result.Response);
+            var validation = JsonSerializer.Deserialize<ValidationResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return new MessageAssistantResult(message, validation?.Issues ?? Array.Empty<string>(), validation?.IsValid ?? false);
+        }
+        catch (JsonException)
+        {
+            return new MessageAssistantResult(message, new[] { "The local AI could not return a valid validation result." }, false);
+        }
+    }
+
+    private static string ExtractJson(string value)
+    {
+        var start = value.IndexOf('{');
+        var end = value.LastIndexOf('}');
+        if (start < 0 || end < start) throw new JsonException();
+        return value[start..(end + 1)];
+    }
+
+    private sealed record OllamaResponse(string Response);
+    private sealed record ValidationResponse(bool IsValid, string[] Issues);
+}

@@ -12,6 +12,28 @@ services:
       timeout: 5s
       retries: 20
 
+  ollama:
+    image: ollama/ollama:0.12.3
+    mem_reservation: 768m
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  ollama-init:
+    image: ollama/ollama:0.12.3
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: "http://ollama:11434"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull qwen2.5:0.5b"]
+
   redis:
     image: redis:7.4-alpine
     mem_reservation: 64m
@@ -155,6 +177,8 @@ services:
         condition: service_healthy
       clickstack:
         condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
@@ -166,6 +190,7 @@ services:
       Jwt__Key: "${JWT_KEY:-local-development-jwt-key-change-me-1234567890}"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
       Sms__PublicBaseUrl: "${SMS_PUBLIC_BASE_URL:-https://localhost:8080}"
+      Ollama__BaseUrl: "http://ollama:11434/"
       RabbitMq__Host: "rabbitmq"
       RabbitMq__Port: "5672"
       RabbitMq__ManagementPort: "15672"
@@ -199,3 +224,4 @@ volumes:
   postgres-data:
   clickstack-data:
   postgres-backups:
+  ollama-data:
