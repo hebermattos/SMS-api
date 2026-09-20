@@ -25,6 +25,10 @@ public sealed class ReportsController(ITenantContext tenantContext, ISmsReportRe
             new(range.From, range.To, status, direction, NormalizeProvider(provider)), cancellationToken);
     }
 
-    [HttpGet(\"sms/users\")]\n    public Task<IReadOnlyList<UserSmsReportSummary>> SmsByUser(CancellationToken cancellationToken) =>\n        reports.GetUserSummaryAsync(tenantContext.TenantId, cancellationToken);\n\n    private static string? NormalizeProvider(string? provider) =>
+    [HttpGet("sms/users")]
+    public Task<IReadOnlyList<UserSmsReportSummary>> SmsByUser(CancellationToken cancellationToken) =>
+        reports.GetUserSummaryAsync(tenantContext.TenantId, cancellationToken);
+
+    private static string? NormalizeProvider(string? provider) =>
         string.IsNullOrWhiteSpace(provider) ? null : provider.Trim();
 }
