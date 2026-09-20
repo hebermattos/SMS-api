@@ -12,7 +12,7 @@ public sealed class AlertEvaluationOutboxPublisher(
     ILogger<AlertEvaluationOutboxPublisher> logger) : BackgroundService
 {
     private static readonly TimeSpan ActiveDelay = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan MaxIdleDelay = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan MaxIdleDelay = TimeSpan.FromMinutes(1);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
