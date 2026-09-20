@@ -328,7 +328,7 @@ CREATE TABLE TenantSmsOverviewOutbox
 );
 CREATE INDEX IX_TenantSmsOverviewOutbox_Pending
     ON TenantSmsOverviewOutbox(SequenceNumber)
-    INCLUDE (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+    INCLUDE (EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
     WHERE PublishedAtUtc IS NULL;
 
 CREATE OR REPLACE FUNCTION enqueue_alert_evaluation()
