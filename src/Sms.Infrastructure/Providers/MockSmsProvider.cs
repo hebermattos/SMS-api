@@ -1,4 +1,5 @@
 using Sms.Application.Messages;
+using Sms.Domain.Messages;
 
 namespace Sms.Infrastructure.Providers;
 
@@ -10,7 +11,7 @@ public sealed class MockSmsProvider : ISmsProvider
     public Task<ProviderSendResult> SendAsync(string from, string to, string body, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var statuses = new[] { "queued", "sent", "delivered", "failed" };
+        var statuses = new[] { SmsStatus.Queued, SmsStatus.Sent, SmsStatus.Delivered, SmsStatus.Failed };
         var status = statuses[Random.Shared.Next(statuses.Length)];
         return Task.FromResult(new ProviderSendResult($"mock-{Guid.NewGuid():N}", status));
     }
