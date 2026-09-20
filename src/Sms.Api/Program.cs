@@ -20,6 +20,7 @@ using Sms.Application;
 using Sms.Application.Common;
 using Sms.Infrastructure;
 using Sms.Infrastructure.Observability;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddSimpleConsole(options =>
@@ -94,6 +95,10 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis")
+    ?? throw new InvalidOperationException("Connection string 'Redis' is required for distributed rate limiting.");
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+builder.Services.AddSingleton<IRateLimitCounter, RedisRateLimitCounter>();
 builder.Services.AddDependencyHealthChecks(builder.Configuration);
 
 var app = builder.Build();
