@@ -51,6 +51,19 @@ public sealed class SmsSendConsumer(
             return;
         }
 
+        var claimed = await repository.TryClaimQueuedAsync(
+            sendEvent.TenantId,
+            sendEvent.MessageId,
+            DateTimeOffset.UtcNow,
+            context.CancellationToken);
+
+        if (!claimed)
+        {
+            await MarkProcessedAsync(sendEvent.EventId, context.CancellationToken);
+            return;
+        }
+
+        message.QueueStatus = SmsQueueStatus.Processing;
         await SendAsync(sendEvent, message, context.CancellationToken);
         await MarkProcessedAsync(sendEvent.EventId, context.CancellationToken);
     }
