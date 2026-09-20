@@ -59,6 +59,39 @@ public sealed class TenantRateLimitMiddlewareTests
         Assert.Equal(StatusCodes.Status429TooManyRequests, blocked.Response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("/api/v1/message-assistant/improve")]
+    [InlineData("/api/v1/message-assistant/validate")]
+    public async Task InvokeAsync_AiRoutes_AllowOneRequestEveryThreeSeconds(string path)
+    {
+        var tenantId = Guid.NewGuid();
+        var nextCalls = 0;
+        var repository = new Repository(new TenantRateLimitSettings(100, 100));
+        var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
+
+        await middleware.InvokeAsync(Context(tenantId, HttpMethods.Post, path), repository);
+        var blocked = Context(tenantId, HttpMethods.Post, path);
+        await middleware.InvokeAsync(blocked, repository);
+
+        Assert.Equal(1, nextCalls);
+        Assert.Equal(StatusCodes.Status429TooManyRequests, blocked.Response.StatusCode);
+        Assert.Equal("3", blocked.Response.Headers.RetryAfter);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_AiRequest_UsesSeparateBucketFromApiRequests()
+    {
+        var tenantId = Guid.NewGuid();
+        var nextCalls = 0;
+        var repository = new Repository(new TenantRateLimitSettings(1, 100));
+        var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
+
+        await middleware.InvokeAsync(Context(tenantId, HttpMethods.Post, "/api/v1/message-assistant/improve"), repository);
+        await middleware.InvokeAsync(Context(tenantId, HttpMethods.Get, "/api/v1/reports"), repository);
+
+        Assert.Equal(2, nextCalls);
+    }
+
     [Fact]
     public async Task InvokeAsync_NonPostMessagesRoute_UsesApiLimit()
     {
