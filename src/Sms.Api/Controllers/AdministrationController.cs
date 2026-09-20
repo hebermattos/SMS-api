@@ -21,8 +21,16 @@ public sealed record ResetAdministratorPasswordRequest(string Password);
 [ServiceFilter(typeof(PortalExceptionFilter))]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/admin")]
-public sealed class AdministrationController(AdministrationService service, AdministratorAuthenticationService administrators, Sms.Application.Messages.ITenantAiSettingsRepository aiSettings) : ControllerBase
+public sealed class AdministrationController(AdministrationService service, AdministratorAuthenticationService administrators, Sms.Application.Messages.ITenantAiSettingsRepository aiSettings, Sms.Application.Messages.SmsRetryOptions retryOptions) : ControllerBase
 {
+    [HttpGet("sms-retry")]
+    public IActionResult GetSmsRetry() => Ok(new
+    {
+        retryOptions.MaxAttempts,
+        retryOptions.InitialIntervalSeconds,
+        Strategy = "Exponential"
+    });
+
     [HttpGet("administrators")]
     public async Task<IActionResult> ListAdministrators(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
     {
