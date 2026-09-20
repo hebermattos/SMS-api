@@ -13,8 +13,12 @@ namespace Sms.Api.Controllers;
 public sealed class AlertsController(ITenantContext tenant, AlertService alerts) : ControllerBase
 {
     [HttpGet("rules")]
-    public Task<IReadOnlyList<AlertRule>> Rules(CancellationToken cancellationToken) =>
-        alerts.ListRulesAsync(tenant.TenantId, cancellationToken);
+    public async Task<IReadOnlyList<AlertRule>> Rules(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
+    {
+        if (skip < 0) throw new ArgumentException("Invalid pagination.");
+        take = Math.Clamp(take, 1, 200);
+        return (await alerts.ListRulesAsync(tenant.TenantId, cancellationToken)).Skip(skip).Take(take).ToList();
+    }
 
     [HttpPost("rules")]
     public async Task<IActionResult> CreateRule(SaveAlertRule request, CancellationToken cancellationToken)
@@ -39,7 +43,7 @@ public sealed class AlertsController(ITenantContext tenant, AlertService alerts)
 
     [HttpGet]
     public Task<IReadOnlyList<AlertNotification>> List(
-        bool unreadOnly = false, int skip = 0, int take = 50, CancellationToken cancellationToken = default) =>
+        bool unreadOnly = false, int skip = 0, int take = 20, CancellationToken cancellationToken = default) =>
         alerts.ListAlertsAsync(tenant.TenantId, unreadOnly, skip, Math.Clamp(take, 1, 200), cancellationToken);
 
     [HttpPost("{id:guid}/read")]
