@@ -14,7 +14,6 @@ public sealed class ProviderCatalogCacheTests
         var policies = new CountingPolicies();
         var cache = new ProviderCatalogCache(
             distributedCache,
-            new CacheOptions(true),
             policies,
             NullLogger<ProviderCatalogCache>.Instance);
 
@@ -38,8 +37,7 @@ public sealed class ProviderCatalogCacheTests
     {
         var policies = new CountingPolicies();
         var cache = new ProviderCatalogCache(
-            new TenantConfigurationCacheTestFactory.TestDistributedCache(),
-            new CacheOptions(false),
+            new DisabledDistributedCacheProxy(),
             policies,
             NullLogger<ProviderCatalogCache>.Instance);
 
