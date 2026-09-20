@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;\nusing System.Security.Claims;\nusing Sms.Api.Auth;
 using Sms.Application.Common;
 using Sms.Application.Messages;
 
@@ -13,7 +13,7 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
     [HttpPost]
     public async Task<IActionResult> Send([FromBody] SendSmsRequest request, CancellationToken cancellationToken)
     {
-        var result = await sendSmsService.SendAsync(request, cancellationToken);
+        var principal = HttpContext?.User;\n        if (principal is not null\n            && principal.HasClaim(PortalSecurity.ContextClaim, PortalSecurity.TenantContext)\n            && Guid.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub"), out var portalUserId))\n            request = request with { UserId = portalUserId };\n\n        var result = await sendSmsService.SendAsync(request, cancellationToken);
         if (result.ScheduledAt.HasValue)
             result = result with { ScheduledAt = TimeZoneInfo.ConvertTime(result.ScheduledAt.Value, await Zone(cancellationToken)) };
         return AcceptedAtAction(nameof(GetById), new { id = result.Id }, result);
@@ -55,7 +55,7 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
 
     private static object ToResponse(Sms.Domain.Messages.SmsMessage message, TimeZoneInfo zone) => new
     {
-        message.Id, message.TenantId, message.From, message.To, message.Body, message.Provider,
+        message.Id, message.TenantId, message.UserId, message.From, message.To, message.Body, message.Provider,
         message.ProviderMessageId, message.Direction, message.Status,
         CreatedAt = TimeZoneInfo.ConvertTime(message.CreatedAt, zone),
         ScheduledAt = message.ScheduledAtUtc.HasValue ? (DateTimeOffset?)TimeZoneInfo.ConvertTime(message.ScheduledAtUtc.Value, zone) : null,

@@ -1,3 +1,4 @@
+using Sms.Application.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Sms.Api.Controllers;
 using Sms.Application.Common;
@@ -82,9 +83,15 @@ public sealed class MessagesControllerTests
     {
         var context=new TenantContext(tenantId);
         var timeZones=new TimeZones(zone ?? TimeZoneInfo.Utc);
-        var service=new SendSmsService(context,repo,new Resolver(),new Publisher(),new(new TestOptOutRepository()),timeZones,clock ?? TimeProvider.System);
+        var service=new SendSmsService(context,repo,new Resolver(),new Publisher(),new(new TestOptOutRepository()),timeZones,new FakeUsers(),clock ?? TimeProvider.System);
         return new MessagesController(context,repo,service,timeZones);
     }
+    private sealed class FakeUsers : IPortalUserRepository
+    {
+        public Task<PortalUserAccount?> GetActiveByUsernameAsync(string username, string context, string? tenantCode, CancellationToken cancellationToken = default) => Task.FromResult<PortalUserAccount?>(null);
+        public Task<PortalUserAccount?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult<PortalUserAccount?>(null);
+    }
+
     private sealed record TenantContext(Guid TenantId):ITenantContext;
     private sealed class Resolver:ISmsProviderResolver { public ISmsProvider Resolve(string? provider=null)=>new Provider(); }
     private sealed class Provider:ISmsProvider

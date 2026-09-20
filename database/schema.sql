@@ -55,7 +55,7 @@ CREATE UNIQUE INDEX UX_PortalUsers_PlatformUsername
     ON PortalUsers(Username) WHERE Context = 'platform';
 CREATE UNIQUE INDEX UX_PortalUsers_TenantUsername
     ON PortalUsers(TenantId, Username) WHERE Context = 'tenant';
-CREATE INDEX IX_PortalUsers_TenantId ON PortalUsers(TenantId) WHERE TenantId IS NOT NULL;
+CREATE INDEX IX_PortalUsers_TenantId ON PortalUsers(TenantId) WHERE TenantId IS NOT NULL;\nCREATE UNIQUE INDEX UX_PortalUsers_TenantId_Id ON PortalUsers(TenantId, Id) WHERE TenantId IS NOT NULL;
 
 CREATE TABLE TenantRateLimits
 (
@@ -110,7 +110,7 @@ CREATE TABLE SmsMessages
         OR Status <> 6
     )
 );
-CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON SmsMessages(TenantId, CreatedAt DESC, Id DESC);
+CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON SmsMessages(TenantId, CreatedAt DESC, Id DESC);\nCREATE INDEX IX_SmsMessages_Tenant_User_CreatedAt ON SmsMessages(TenantId, UserId, CreatedAt DESC, Id DESC) WHERE UserId IS NOT NULL;
 CREATE INDEX IX_SmsMessages_CreatedAt ON SmsMessages(CreatedAt DESC, Id DESC)
     INCLUDE (TenantId, Provider, Direction, Status);
 CREATE INDEX IX_SmsMessages_Scheduled ON SmsMessages(ScheduledAtUtc, Id)
