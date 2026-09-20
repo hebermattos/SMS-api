@@ -148,7 +148,7 @@ public sealed class AdministrationServiceTests
     }
 
     internal static AdministrationService Service(AdministrationFakeRepository repository) =>
-        new(repository, repository, [new TwilioSettingsPolicy(), new BandwidthSettingsPolicy()], new TestProviderCatalogCache());
+        new(repository, repository, [new TwilioSettingsPolicy(), new BandwidthSettingsPolicy()], new TestProviderCatalogCache(), repository);
 
     internal sealed class TestProviderCatalogCache : IProviderCatalogCache
     {
@@ -160,7 +160,7 @@ public sealed class AdministrationServiceTests
     }
 }
 
-internal sealed class AdministrationFakeRepository : IAdministrationRepository, ITenantSmsProviderRepository
+internal sealed class AdministrationFakeRepository : IAdministrationRepository, ITenantSmsProviderRepository, ITenantRateLimitRepository
 {
     public TenantSummary Tenant { get; set; } = new(Guid.NewGuid(), "Company", "UTC", true, DateTimeOffset.UtcNow);
     public Guid ClientId { get; } = Guid.NewGuid();
@@ -182,4 +182,6 @@ internal sealed class AdministrationFakeRepository : IAdministrationRepository, 
     public Task<TenantSmsProviderConfiguration?> GetAsync(Guid tenant, string provider, CancellationToken c = default) => throw new NotSupportedException();
     public Task<TenantSmsProviderConfiguration?> GetDefaultAsync(Guid tenant, CancellationToken c = default) => throw new NotSupportedException();
     public Task<TenantSmsProviderConfiguration?> GetByAccountAndNumberAsync(string provider, string account, string number, CancellationToken c = default) => throw new NotSupportedException();
+    public Task<TenantRateLimitSettings> GetAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(new TenantRateLimitSettings(600, 60));
+    public Task SaveAsync(Guid tenantId, TenantRateLimitSettings settings, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

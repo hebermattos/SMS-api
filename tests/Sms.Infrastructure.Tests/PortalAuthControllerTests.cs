@@ -56,10 +56,20 @@ public sealed class PortalAuthControllerTests
 
     private PortalAuthController Controller(Users users, AdminRepository repository, AdministratorAuthenticationService? authentication = null)
     {
-        return new(users, authentication ?? new AdministratorAuthenticationService(repository), tokens)
+        return new(users, authentication ?? new AdministratorAuthenticationService(repository), CreateRefreshTokens(users, repository))
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
+    }
+
+    private RefreshTokenService CreateRefreshTokens(IPortalUserRepository users, IAdministratorRepository administrators) =>
+        new(new RefreshTokens(), tokens, users, administrators,
+            Options.Create(new JwtOptions { Key = "local-test-key-at-least-32-characters", Issuer = "test", Audience = "test" }));
+
+    private sealed class RefreshTokens : IRefreshTokenRepository
+    {
+        public Task CreateAsync(RefreshTokenSession session, byte[] tokenHash, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<RefreshTokenSession?> RotateAsync(byte[] currentTokenHash, byte[] replacementTokenHash, Guid replacementId, DateTimeOffset replacementExpiresAt, CancellationToken cancellationToken = default) => Task.FromResult<RefreshTokenSession?>(null);
     }
 
     private static PortalUserAccount Account(string context, string role)
