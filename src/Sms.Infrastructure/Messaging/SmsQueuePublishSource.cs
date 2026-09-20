@@ -19,7 +19,7 @@ public sealed class SmsQueuePublishSource(SqlConnectionFactory connectionFactory
     {
         using var connection = connectionFactory.CreateConnection();
         var rows = await connection.QueryAsync<SmsQueuePublishMessage>(new CommandDefinition(
-            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishRetryWorker.PublishBatchAsync.01.sql"),
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsQueuePublisherWorker.PublishBatchAsync.01.sql"),
             new { NotQueued = SmsQueueStatus.NotQueued },
             cancellationToken: cancellationToken));
 
