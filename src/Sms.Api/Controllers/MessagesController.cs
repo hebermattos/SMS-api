@@ -13,7 +13,7 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
     [HttpPost]
     public async Task<IActionResult> Send([FromBody] SendSmsRequest request, CancellationToken cancellationToken)
     {
-        if (User.HasClaim(PortalSecurity.ContextClaim, PortalSecurity.TenantContext)\n            && Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out var portalUserId))\n            request = request with { UserId = portalUserId };\n\n        var result = await sendSmsService.SendAsync(request, cancellationToken);
+        var principal = HttpContext?.User;\n        if (principal is not null\n            && principal.HasClaim(PortalSecurity.ContextClaim, PortalSecurity.TenantContext)\n            && Guid.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub"), out var portalUserId))\n            request = request with { UserId = portalUserId };\n\n        var result = await sendSmsService.SendAsync(request, cancellationToken);
         if (result.ScheduledAt.HasValue)
             result = result with { ScheduledAt = TimeZoneInfo.ConvertTime(result.ScheduledAt.Value, await Zone(cancellationToken)) };
         return AcceptedAtAction(nameof(GetById), new { id = result.Id }, result);
