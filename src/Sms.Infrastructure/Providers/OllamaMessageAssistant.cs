@@ -36,8 +36,8 @@ public sealed class OllamaMessageAssistant(HttpClient client, ITenantAiSettingsR
         try
         {
             var json = ExtractJson(result.Response);
-            var validation = JsonSerializer.Deserialize<ValidationResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            return new MessageAssistantResult(message, validation?.Issues ?? Array.Empty<string>(), validation?.IsValid ?? false);
+            var validationResult = JsonSerializer.Deserialize<ValidationResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return new MessageAssistantResult(message, validationResult?.Issues ?? Array.Empty<string>(), validationResult?.IsValid ?? false);
         }
         catch (JsonException)
         {
