@@ -7,7 +7,8 @@ using Sms.Application.Providers;
 namespace Sms.Application.Administration;
 
 public sealed class AdministrationService(IAdministrationRepository repository,
-    ITenantSmsProviderRepository providers, IEnumerable<IProviderSettingsPolicy> policies, IProviderCatalogCache providerCatalogCache)
+    ITenantSmsProviderRepository providers, IEnumerable<IProviderSettingsPolicy> policies, IProviderCatalogCache providerCatalogCache,
+    ITenantRateLimitRepository rateLimits)
 {
     public Task<IReadOnlyList<ProviderDefinition>> GetProviderCatalogAsync(CancellationToken cancellationToken = default) =>
         providerCatalogCache.GetAsync(cancellationToken);
@@ -32,6 +33,20 @@ public sealed class AdministrationService(IAdministrationRepository repository,
     }
 
     public static IReadOnlyList<string> TimeZones => TimeZoneCatalog.Ids;
+
+    public async Task<TenantRateLimitSettings> GetRateLimitsAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        await GetTenantAsync(tenantId, cancellationToken);
+        return await rateLimits.GetAsync(tenantId, cancellationToken);
+    }
+
+    public async Task UpdateRateLimitsAsync(Guid tenantId, TenantRateLimitSettings settings, CancellationToken cancellationToken)
+    {
+        await GetTenantAsync(tenantId, cancellationToken);
+        if (settings.RequestsPerMinute is < 1 or > 100000 || settings.SmsPerMinute is < 1 or > 100000)
+            throw new ArgumentException("Rate limits must be between 1 and 100000 requests per minute.");
+        await rateLimits.SaveAsync(tenantId, settings, cancellationToken);
+    }
 
     public async Task<IReadOnlyList<ClientSummary>> ListClientsAsync(Guid tenantId, int skip, int take, CancellationToken cancellationToken)
     {
