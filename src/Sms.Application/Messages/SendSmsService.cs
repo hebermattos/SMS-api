@@ -1,4 +1,3 @@
-using Sms.Application.Auth;
 using Sms.Application.Common;
 using Sms.Application.OptOut;
 using Sms.Domain.Messages;
@@ -43,5 +42,4 @@ public sealed class SendSmsService(
             await eventPublisher.PublishAsync(message.TenantId, message.Id, cancellationToken);
         return new SendSmsResult(message.Id, provider.Name, null, status.ToString(), scheduledAtUtc);
     }
-
 }
