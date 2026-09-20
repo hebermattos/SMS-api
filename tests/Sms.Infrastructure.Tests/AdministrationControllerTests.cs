@@ -28,6 +28,17 @@ public sealed class AdministrationControllerTests
         Assert.IsType<OkObjectResult>(await controller.Providers(repo.Tenant.Id, default));
         Assert.IsType<NoContentResult>(await controller.SaveProvider(repo.Tenant.Id, "Twilio", new("account", "+15550000001", true, true, "secret", null), default));
         Assert.Equal(repo.Tenant.Id, repo.SavedProvider!.TenantId);
+        Assert.IsType<OkObjectResult>(controller.GetSmsRetry());
+        Assert.IsType<OkObjectResult>(await controller.ListAdministrators());
+        Assert.IsType<BadRequestObjectResult>(await controller.ListAdministrators(-1));
+        Assert.IsType<OkObjectResult>(await controller.GetRateLimits(repo.Tenant.Id, default));
+        Assert.IsType<NoContentResult>(await controller.UpdateRateLimits(repo.Tenant.Id, new(100, 20), default));
+        Assert.IsType<OkObjectResult>(await controller.GetAiSettings(repo.Tenant.Id, default));
+        Assert.IsType<BadRequestObjectResult>(await controller.UpdateAiSettings(repo.Tenant.Id, new("", "Validate"), default));
+        Assert.IsType<BadRequestObjectResult>(await controller.UpdateAiSettings(repo.Tenant.Id, new("Improve", ""), default));
+        Assert.IsType<BadRequestObjectResult>(await controller.UpdateAiSettings(repo.Tenant.Id, new(new string('x', 8001), "Validate"), default));
+        Assert.IsType<NoContentResult>(await controller.UpdateAiSettings(repo.Tenant.Id, new(" Improve ", " Validate "), default));
+        Assert.IsType<OkObjectResult>(controller.TimeZones());
     }
 
     private sealed class AiSettingsFake : ITenantAiSettingsRepository
