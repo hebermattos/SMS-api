@@ -46,7 +46,7 @@ public sealed class FailedSmsPublishRetryWorker(
             try
             {
                 await bus.Publish(
-                    new SmsSendEvent(row.MessageId, row.TenantId, row.MessageId),
+                    new SmsSendEvent(Guid.NewGuid(), row.TenantId, row.MessageId),
                     cancellationToken);
                 published++;
             }
