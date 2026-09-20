@@ -358,7 +358,7 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     INSERT INTO TenantSmsOverviewOutbox
-        (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+        (EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
     VALUES
         (
             gen_random_uuid(),
@@ -385,7 +385,7 @@ AS $$
 BEGIN
     IF NEW.Direction IS DISTINCT FROM OLD.Direction OR NEW.Status IS DISTINCT FROM OLD.Status THEN
         INSERT INTO TenantSmsOverviewOutbox
-            (EventId, TenantId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+            (EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
         VALUES
             (
                 gen_random_uuid(),
