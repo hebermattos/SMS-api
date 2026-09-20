@@ -1,8 +1,8 @@
 export type PortalRole = 'admin' | 'tenant';
 export type PortalContext = 'platform' | 'tenant';
 export type PortalPermissionRole = 'user' | 'administrator';
-export interface TokenResponse { access_token: string; refresh_token: string; token_type: string; expires_in: number; }
-export interface PortalSession { token: string; refreshToken: string; identity: string; role: PortalRole; context: PortalContext; permissionRole: PortalPermissionRole; }
+export interface TokenResponse { access_token: string; refresh_token?: string; token_type: string; expires_in: number; }
+export interface PortalSession { token: string; refreshToken?: string; identity: string; role: PortalRole; context: PortalContext; permissionRole: PortalPermissionRole; }
 export interface Tenant { id: string; name: string; timeZoneId: string; isActive: boolean; createdAt: string; }
 export interface Client { id: string; clientId: string; isActive: boolean; createdAt: string; }
 export interface Administrator { id: string; username: string; isActive: boolean; createdAt: string; }
