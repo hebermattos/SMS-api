@@ -50,7 +50,7 @@ public sealed class BandwidthSmsProvider(
 
             var result = await response.Content.ReadFromJsonAsync<BandwidthMessageResponse>(cancellationToken: cancellationToken);
             if (string.IsNullOrWhiteSpace(result?.Id)) throw new InvalidOperationException("Bandwidth response did not include a message id.");
-            return new ProviderSendResult(result.Id, SmsStatus.Queued);
+            return new ProviderSendResult(result.Id, SmsStatus.Pending);
         }
 
     }
