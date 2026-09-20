@@ -15,7 +15,7 @@ import { MessageTemplate } from '../core/models';
         <h2>{{ editing.id ? 'Edit template' : 'New template' }}</h2>
         <label>Name<input [(ngModel)]="editing.name" maxlength="120" placeholder="Appointment reminder"></label>
         <label>Message<textarea [(ngModel)]="editing.body" maxlength="4000" rows="6" placeholder="Hello {{ '{{firstName}}' }}, your appointment is on {{ '{{date}}' }}."></textarea></label>
-        <p class="muted">Variables use <code>{{ '{{variableName}}' }}</code>. Values are supplied when the template is rendered.</p>
+        <p class="muted">Variables use <code>{{ '{{variableName}}' }}</code>. System variables: <code>{{ '{{recipientName}}' }}</code>, <code>{{ '{{recipientPhone}}' }}</code>, <code>{{ '{{tenantName}}' }}</code>. Other variables are custom and supplied when rendering or sending.</p>
         <div class="actions"><button class="primary" (click)="save()">Save template</button><button (click)="editing = null">Cancel</button></div>
         @if (error) { <p class="error">{{ error }}</p> }
       </section>
