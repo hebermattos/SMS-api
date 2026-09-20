@@ -36,12 +36,24 @@ public sealed class BandwidthSmsProvider(
         using var request = new HttpRequestMessage(HttpMethod.Post, $"api/v2/users/{Uri.EscapeDataString(settings.AccountId)}/messages");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = JsonContent.Create(new { to = new[] { to }, from = sender, text = body, applicationId = settings.ApplicationId });
-        using var response = await messagingClient.SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Bandwidth returned HTTP {(int)response.StatusCode}.");
+        HttpResponseMessage response;
+        try { response = await messagingClient.SendAsync(request, cancellationToken); }
+        catch (HttpRequestException exception) { throw new TransientSmsProviderException("Bandwidth is temporarily unavailable.", exception); }
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                var statusCode = (int)response.StatusCode;
+                if (statusCode == 429 || statusCode >= 500)
+                    throw new TransientSmsProviderException($"Bandwidth temporarily returned HTTP {statusCode}.");
+                throw new HttpRequestException($"Bandwidth returned HTTP {statusCode}.");
+            }
 
-        var result = await response.Content.ReadFromJsonAsync<BandwidthMessageResponse>(cancellationToken: cancellationToken);
-        if (string.IsNullOrWhiteSpace(result?.Id)) throw new InvalidOperationException("Bandwidth response did not include a message id.");
-        return new ProviderSendResult(result.Id, "queued");
+            var result = await response.Content.ReadFromJsonAsync<BandwidthMessageResponse>(cancellationToken: cancellationToken);
+            if (string.IsNullOrWhiteSpace(result?.Id)) throw new InvalidOperationException("Bandwidth response did not include a message id.");
+            return new ProviderSendResult(result.Id, "queued");
+        }
+
     }
 
     private async Task<string> GetAccessTokenAsync(string clientId, string clientSecret, CancellationToken cancellationToken)

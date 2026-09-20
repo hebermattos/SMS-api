@@ -77,6 +77,10 @@ public sealed class SmsSendConsumer(
         {
             throw;
         }
+        catch (TransientSmsProviderException)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             logger.LogError(exception, "SMS provider rejected queued message {MessageId}.", sendEvent.MessageId);
