@@ -69,20 +69,9 @@ services:
     environment:
       HYPERDX_USERNAME: "${HYPERDX_USERNAME:-HyperDX}"
       HYPERDX_PASSWORD: "${HYPERDX_PASSWORD:-HyperDX}"
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        set -eu
-        PASSWORD_HASH="$(caddy hash-password --plaintext "$HYPERDX_PASSWORD")"
-        cat > /tmp/Caddyfile <<EOF
-        :8080 {
-          basic_auth {
-            $HYPERDX_USERNAME $PASSWORD_HASH
-          }
-          reverse_proxy clickstack:8080
-        }
-        EOF
-        exec caddy run --config /tmp/Caddyfile --adapter caddyfile
+    volumes:
+      - ./docker/hyperdx-auth-entrypoint.sh:/usr/local/bin/hyperdx-auth-entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/hyperdx-auth-entrypoint.sh"]
     ports: ["8081:8080"]
 
   backup-init:
