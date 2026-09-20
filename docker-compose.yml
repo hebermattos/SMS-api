@@ -61,10 +61,20 @@ services:
       retries: 20
       start_period: 10s
 
+  backup-init:
+    image: alpine:3.22
+    user: "0:0"
+    volumes:
+      - ${POSTGRES_BACKUP_PATH:-./backups}:/backups
+    command: ["/bin/sh", "-c", "mkdir -p /backups/base /backups/wal && chown -R 70:70 /backups && chmod -R 770 /backups"]
+
   postgres:
     image: postgres:17-alpine
     mem_reservation: 128m
     mem_limit: 256m
+    depends_on:
+      backup-init:
+        condition: service_completed_successfully
     command:
       - postgres
       - -c
@@ -73,6 +83,14 @@ services:
       - work_mem=1MB
       - -c
       - maintenance_work_mem=16MB
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_timeout=${WAL_ARCHIVE_TIMEOUT_SECONDS:-60}s
+      - -c
+      - archive_command=test ! -f /backups/wal/%f && cp %p /backups/wal/%f
     environment:
       POSTGRES_USER: "${POSTGRES_USER:-sms}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
@@ -80,6 +98,7 @@ services:
     ports: ["5432:5432"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ${POSTGRES_BACKUP_PATH:-./backups}:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d postgres"]
       interval: 5s
@@ -135,13 +154,13 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./database/backup.sh:/backup.sh:ro
-      - postgres-backups:/backups
+      - ${POSTGRES_BACKUP_PATH:-./backups}:/backups
     environment:
       PGHOST: "postgres"
       PGPORT: "5432"
       PGUSER: "${POSTGRES_USER:-sms}"
       PGPASSWORD: "${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
-      PGDATABASE: "sms_api"
+      PGDATABASE: "postgres"
       BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-86400}"
       BACKUP_RETENTION_DAYS: "${BACKUP_RETENTION_DAYS:-7}"
     entrypoint: ["/bin/sh", "/backup.sh"]
@@ -223,5 +242,4 @@ services:
 volumes:
   postgres-data:
   clickstack-data:
-  postgres-backups:
   ollama-data:
