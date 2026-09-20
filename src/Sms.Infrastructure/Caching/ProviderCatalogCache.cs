@@ -7,7 +7,6 @@ namespace Sms.Infrastructure.Caching;
 
 public sealed class ProviderCatalogCache(
     IDistributedCache cache,
-    CacheOptions cacheOptions,
     IEnumerable<IProviderSettingsPolicy> policies,
     ILogger<ProviderCatalogCache> logger) : IProviderCatalogCache
 {
@@ -16,43 +15,37 @@ public sealed class ProviderCatalogCache(
 
     public async Task<IReadOnlyList<ProviderDefinition>> GetAsync(CancellationToken cancellationToken = default)
     {
-        if (cacheOptions.Enabled)
+        try
         {
-            try
+            var cached = await cache.GetStringAsync(CacheKey, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(cached))
             {
-                var cached = await cache.GetStringAsync(CacheKey, cancellationToken);
-                if (!string.IsNullOrWhiteSpace(cached))
-                {
-                    var definitions = JsonSerializer.Deserialize<ProviderDefinition[]>(cached, JsonOptions);
-                    if (definitions is not null) return definitions;
-                }
+                var definitions = JsonSerializer.Deserialize<ProviderDefinition[]>(cached, JsonOptions);
+                if (definitions is not null) return definitions;
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Unable to read provider catalog cache.");
-            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Unable to read provider catalog cache.");
         }
 
         var catalog = policies.Select(policy => policy.Definition).ToArray();
 
-        if (cacheOptions.Enabled)
+        try
         {
-            try
-            {
-                await cache.SetStringAsync(CacheKey, JsonSerializer.Serialize(catalog, JsonOptions), cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Unable to write provider catalog cache.");
-            }
+            await cache.SetStringAsync(CacheKey, JsonSerializer.Serialize(catalog, JsonOptions), cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Unable to write provider catalog cache.");
         }
 
         return catalog;
