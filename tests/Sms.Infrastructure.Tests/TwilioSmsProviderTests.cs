@@ -19,7 +19,7 @@ public sealed class TwilioSmsProviderTests
         var result = await provider.SendAsync("", "+15550000002", "hello");
 
         Assert.Equal("SM123", result.ProviderMessageId);
-        Assert.Equal(SmsStatus.Queued, result.Status);
+        Assert.Equal(SmsStatus.Pending, result.Status);
         Assert.Contains("Accounts/AC123/Messages.json", handler.RequestUri);
         Assert.Contains("From=%2B15550000001", handler.Body);
         Assert.Contains("To=%2B15550000002", handler.Body);
