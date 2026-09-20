@@ -292,7 +292,8 @@ services:
         condition: service_started
     volumes:
       - ./docker/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
-    ports: ["8080:8080"]
+    ports: ["8080:8080", "127.0.0.1:8404:8404"]
+    stop_grace_period: 30s
     restart: unless-stopped
 
   worker:
