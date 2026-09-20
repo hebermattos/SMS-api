@@ -173,6 +173,8 @@ public sealed class SendSmsServiceTests
         public Task<IReadOnlyList<SmsStatusHistory>> GetStatusHistoryAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SmsStatusHistory>>([]);
         public Task InsertInboundIfNotExistsAsync(SmsMessage message, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<bool> TryQueueScheduledAsync(Guid tenantId, Guid id, DateTimeOffset updatedAt, CancellationToken cancellationToken = default) => Task.FromResult(false);
+
+        public Task<bool> TryClaimQueuedAsync(Guid t, Guid i, DateTimeOffset u, CancellationToken c = default) => Task.FromResult(false);
         public Task UpdateStatusByProviderMessageIdAsync(Guid tenantId, string provider, string providerMessageId, SmsStatus status, DateTimeOffset updatedAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

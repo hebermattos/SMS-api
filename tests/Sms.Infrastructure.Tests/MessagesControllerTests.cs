@@ -112,6 +112,8 @@ public sealed class MessagesControllerTests
         public Task InsertAsync(SmsMessage m,CancellationToken c=default){Inserted=m;return Task.CompletedTask;}
         public Task InsertInboundIfNotExistsAsync(SmsMessage m,CancellationToken c=default)=>Task.CompletedTask;
         public Task<bool> TryQueueScheduledAsync(Guid t,Guid i,DateTimeOffset u,CancellationToken c=default)=>Task.FromResult(false);
+
+        public Task<bool> TryClaimQueuedAsync(Guid t, Guid i, DateTimeOffset u, CancellationToken c = default) => Task.FromResult(false);
         public Task UpdateQueueStatusAsync(Guid t,Guid i,SmsQueueStatus s,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
         public Task UpdateStatusAsync(Guid t,Guid i,SmsStatus s,string? p,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
         public Task UpdateStatusByProviderMessageIdAsync(Guid t,string p,string id,SmsStatus s,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;

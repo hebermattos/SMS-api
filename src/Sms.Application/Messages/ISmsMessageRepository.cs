@@ -10,6 +10,7 @@ public interface ISmsMessageRepository
     Task InsertAsync(SmsMessage message, CancellationToken cancellationToken = default);
     Task InsertInboundIfNotExistsAsync(SmsMessage message, CancellationToken cancellationToken = default);
     Task<bool> TryQueueScheduledAsync(Guid tenantId, Guid id, DateTimeOffset updatedAt, CancellationToken cancellationToken = default);
+    Task<bool> TryClaimQueuedAsync(Guid tenantId, Guid id, DateTimeOffset updatedAt, CancellationToken cancellationToken = default);
     Task UpdateQueueStatusAsync(Guid tenantId, Guid id, SmsQueueStatus queueStatus, DateTimeOffset updatedAt, CancellationToken cancellationToken = default);
     Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default);
     Task UpdateStatusByProviderMessageIdAsync(Guid tenantId, string provider, string providerMessageId, SmsStatus status, DateTimeOffset updatedAt, CancellationToken cancellationToken = default);
