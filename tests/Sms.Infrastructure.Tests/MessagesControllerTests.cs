@@ -83,7 +83,7 @@ public sealed class MessagesControllerTests
     {
         var context=new TenantContext(tenantId);
         var timeZones=new TimeZones(zone ?? TimeZoneInfo.Utc);
-        var service=new SendSmsService(context,repo,new Resolver(),new Publisher(),new(new TestOptOutRepository()),timeZones,new FakeUsers(),clock ?? TimeProvider.System);
+        var service=new SendSmsService(context,repo,new Resolver(),new Publisher(),new(new TestOptOutRepository()),new SendSmsValidator(context,timeZones,new FakeUsers()),clock ?? TimeProvider.System);
         return new MessagesController(context,repo,service,timeZones);
     }
     private sealed class FakeUsers : IPortalUserRepository
@@ -98,7 +98,7 @@ public sealed class MessagesControllerTests
     {
         public string Name=>"Twilio";
         public Task<ProviderSendResult> SendAsync(string from,string to,string body,CancellationToken cancellationToken=default)=>
-            Task.FromResult(new ProviderSendResult("unused","sent"));
+            Task.FromResult(new ProviderSendResult("unused",SmsStatus.Sent));
     }
     private sealed class Publisher:ISmsSendEventPublisher { public Task PublishAsync(Guid tenantId,Guid messageId,CancellationToken cancellationToken=default)=>Task.CompletedTask; }
     private sealed record TimeZones(TimeZoneInfo Zone):ITenantTimeZoneProvider { public Task<TimeZoneInfo> GetAsync(Guid tenantId,CancellationToken cancellationToken=default)=>Task.FromResult(Zone); }
