@@ -1,6 +1,7 @@
 using MassTransit;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Sms.Application.Messages;
 using Sms.Domain.Messages;
 using Sms.Infrastructure.Persistence;
 
@@ -8,6 +9,7 @@ namespace Sms.Infrastructure.Messaging;
 
 public sealed class FailedSmsPublishRetryWorker(
     IFailedSmsPublishSource source,
+    ISmsMessageRepository repository,
     IBus bus,
     ILogger<FailedSmsPublishRetryWorker> logger) : BackgroundService
 {
@@ -42,6 +44,13 @@ public sealed class FailedSmsPublishRetryWorker(
             {
                 await bus.Publish(
                     new SmsSendEvent(Guid.NewGuid(), row.TenantId, row.MessageId),
+                    cancellationToken);
+                await repository.UpdateStatusAsync(
+                    row.TenantId,
+                    row.MessageId,
+                    SmsStatus.Queued,
+                    null,
+                    DateTimeOffset.UtcNow,
                     cancellationToken);
                 published++;
             }
