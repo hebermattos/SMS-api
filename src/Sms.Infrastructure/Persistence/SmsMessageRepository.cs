@@ -50,8 +50,15 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
         using var connection = connectionFactory.CreateConnection();
         return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
             Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/SmsMessageRepository.TryQueueScheduledAsync.08.sql"),
-            new { TenantId = tenantId, Id = id, Scheduled = SmsStatus.Scheduled, Queued = SmsStatus.Queued, UpdatedAt = updatedAt },
+            new { TenantId = tenantId, Id = id, Scheduled = SmsQueueStatus.Scheduled, Queued = SmsQueueStatus.Queued, UpdatedAt = updatedAt },
             cancellationToken: cancellationToken)) != 0;
+    }
+
+    public async Task UpdateQueueStatusAsync(Guid tenantId, Guid id, SmsQueueStatus queueStatus, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
+    {
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/SmsMessageRepository.UpdateQueueStatusAsync.09.sql");
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(sql, new { TenantId = tenantId, Id = id, QueueStatus = queueStatus, UpdatedAt = updatedAt }, cancellationToken: cancellationToken));
     }
 
     public async Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
@@ -68,7 +75,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
         await connection.ExecuteAsync(new CommandDefinition(sql, new
         {
             TenantId = tenantId, Provider = provider, ProviderMessageId = providerMessageId, Status = status, UpdatedAt = updatedAt,
-            Queued = SmsStatus.Queued, Sent = SmsStatus.Sent, Delivered = SmsStatus.Delivered, Failed = SmsStatus.Failed
+            Pending = SmsStatus.Pending, Sent = SmsStatus.Sent, Delivered = SmsStatus.Delivered, Failed = SmsStatus.Failed
         }, cancellationToken: cancellationToken));
     }
 
@@ -83,6 +90,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
         message.Provider,
         message.ProviderMessageId,
         message.Direction,
+        message.QueueStatus,
         message.Status,
         message.CreatedAt,
         message.ScheduledAtUtc,
@@ -100,6 +108,7 @@ public sealed class SmsMessageRepository(SqlConnectionFactory connectionFactory,
         Provider = message.Provider,
         ProviderMessageId = message.ProviderMessageId,
         Direction = message.Direction,
+        QueueStatus = message.QueueStatus,
         Status = message.Status,
         CreatedAt = message.CreatedAt,
         ScheduledAtUtc = message.ScheduledAtUtc,
