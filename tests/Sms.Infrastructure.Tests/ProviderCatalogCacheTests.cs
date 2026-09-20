@@ -47,6 +47,80 @@ public sealed class ProviderCatalogCacheTests
         Assert.Equal(2, policies.EnumerationCount);
     }
 
+
+    [Fact]
+    public async Task GetAsync_WhenCachedJsonIsInvalid_FallsBackToPolicies()
+    {
+        var distributedCache = new TenantConfigurationCacheTestFactory.TestDistributedCache();
+        await distributedCache.SetStringAsync("provider-catalog", "{invalid-json");
+        var policies = new CountingPolicies();
+        var cache = new ProviderCatalogCache(
+            distributedCache,
+            policies,
+            NullLogger<ProviderCatalogCache>.Instance);
+
+        var result = await cache.GetAsync();
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(1, policies.EnumerationCount);
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenCancellationIsRequested_PropagatesCancellation()
+    {
+        var policies = new CountingPolicies();
+        var cache = new ProviderCatalogCache(
+            new CancellingDistributedCache(),
+            policies,
+            NullLogger<ProviderCatalogCache>.Instance);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => cache.GetAsync(cancellation.Token));
+
+        Assert.Equal(0, policies.EnumerationCount);
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenCacheWriteFails_ReturnsPolicyCatalog()
+    {
+        var policies = new CountingPolicies();
+        var cache = new ProviderCatalogCache(
+            new WriteFailingDistributedCache(),
+            policies,
+            NullLogger<ProviderCatalogCache>.Instance);
+
+        var result = await cache.GetAsync();
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(1, policies.EnumerationCount);
+    }
+
+
+    private sealed class CancellingDistributedCache : Microsoft.Extensions.Caching.Distributed.IDistributedCache
+    {
+        public byte[]? Get(string key) => null;
+        public Task<byte[]?> GetAsync(string key, CancellationToken token = default) => Task.FromCanceled<byte[]?>(token);
+        public void Refresh(string key) { }
+        public Task RefreshAsync(string key, CancellationToken token = default) => Task.CompletedTask;
+        public void Remove(string key) { }
+        public Task RemoveAsync(string key, CancellationToken token = default) => Task.CompletedTask;
+        public void Set(string key, byte[] value, Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions options) { }
+        public Task SetAsync(string key, byte[] value, Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions options, CancellationToken token = default) => Task.CompletedTask;
+    }
+
+    private sealed class WriteFailingDistributedCache : Microsoft.Extensions.Caching.Distributed.IDistributedCache
+    {
+        public byte[]? Get(string key) => null;
+        public Task<byte[]?> GetAsync(string key, CancellationToken token = default) => Task.FromResult<byte[]?>(null);
+        public void Refresh(string key) { }
+        public Task RefreshAsync(string key, CancellationToken token = default) => Task.CompletedTask;
+        public void Remove(string key) { }
+        public Task RemoveAsync(string key, CancellationToken token = default) => Task.CompletedTask;
+        public void Set(string key, byte[] value, Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions options) => throw new InvalidOperationException("cache unavailable");
+        public Task SetAsync(string key, byte[] value, Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions options, CancellationToken token = default) => throw new InvalidOperationException("cache unavailable");
+    }
+
     private sealed class CountingPolicies : IEnumerable<IProviderSettingsPolicy>
     {
         public int EnumerationCount { get; private set; }
