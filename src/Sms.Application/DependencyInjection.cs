@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<ReceiveSmsWebhookService>();
         services.AddScoped<TenantProvisioningService>();
         services.AddScoped<AlertService>();
+        services.AddScoped<AlertRuleFactory>();
         services.AddScoped<OptOutService>();
         return services;
     }
