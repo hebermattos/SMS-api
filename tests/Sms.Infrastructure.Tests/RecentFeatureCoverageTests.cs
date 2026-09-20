@@ -121,6 +121,33 @@ public sealed class RecentFeatureCoverageTests
     }
 
     [Fact]
+    public async Task OllamaAssistant_CoversValidationEdgeCases()
+    {
+        var settings = new AiSettings();
+        var handler = new OllamaHandler();
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://ollama/") };
+        var assistant = new OllamaMessageAssistant(client, settings);
+
+        handler.Response = JsonSerializer.Serialize(new { response = "{\"isValid\":true,\"issues\":null}" });
+        var valid = await assistant.ValidateAsync(settings.TenantId, "hello");
+        Assert.True(valid.IsValid);
+        Assert.Empty(valid.Issues);
+
+        handler.Response = JsonSerializer.Serialize(new { response = "{}" });
+        var missingFields = await assistant.ValidateAsync(settings.TenantId, "hello");
+        Assert.False(missingFields.IsValid);
+        Assert.Empty(missingFields.Issues);
+
+        handler.Response = JsonSerializer.Serialize(new { response = "no braces" });
+        var invalid = await assistant.ValidateAsync(settings.TenantId, "hello");
+        Assert.False(invalid.IsValid);
+        Assert.Single(invalid.Issues);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => assistant.ValidateAsync(settings.TenantId, "   "));
+        await Assert.ThrowsAsync<ArgumentException>(() => assistant.ValidateAsync(settings.TenantId, new string('x', 4001)));
+    }
+
+    [Fact]
     public async Task OllamaAssistant_PropagatesHttpAndEmptyResponseFailures()
     {
         var handler = new OllamaHandler { StatusCode = HttpStatusCode.ServiceUnavailable };
