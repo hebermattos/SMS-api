@@ -24,7 +24,7 @@ namespace Sms.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool registerConsumers = false)
     {
         var retryOptions = configuration.GetSection("SmsRetry").Get<SmsRetryOptions>() ?? new SmsRetryOptions();
         retryOptions.Validate();
@@ -67,6 +67,19 @@ public static class DependencyInjection
         });
         services.AddMassTransit(bus =>
         {
+            if (!registerConsumers)
+            {
+                bus.UsingRabbitMq((_, rabbit) =>
+                {
+                    rabbit.Host(rabbitMq.Host, (ushort)rabbitMq.Port, rabbitMq.VirtualHost, host =>
+                    {
+                        host.Username(rabbitMq.User);
+                        host.Password(rabbitMq.Password);
+                    });
+                });
+                return;
+            }
+
             bus.AddConsumer<AlertEvaluationConsumer>();
             bus.AddConsumer<SmsSendConsumer>();
             bus.AddConsumer<TenantSmsOverviewConsumer>();
