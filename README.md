@@ -68,6 +68,7 @@ Docker Compose defines soft memory reservations for each service:
 | ClickStack | 512 MB |
 | UI | 32 MB |
 | Database initialization | 128 MB |
+| PostgreSQL backup | 64 MB |
 | Provider initialization | 128 MB |
 | Webhook tests | 256 MB |
 
@@ -170,6 +171,33 @@ Fresh databases are initialized from:
 - `database/schema.sql` — application data
 - `database/logs-schema.sql` — tenant activity and platform error logs
 - `database/reporting-schema.sql` — reporting projections
+
+### Automatic backup
+
+Docker Compose automatically creates a compressed PostgreSQL custom-format backup of the `sms_api` database every 24 hours. Backups are stored in the persistent `postgres-backups` Docker volume and backups older than 7 days are removed automatically.
+
+The defaults can be changed with:
+
+```text
+BACKUP_INTERVAL_SECONDS=86400
+BACKUP_RETENTION_DAYS=7
+```
+
+The backup container uses `pg_dump --format=custom`, writes to a temporary file, and renames it only after a successful dump so incomplete files are not treated as valid backups.
+
+List the backups:
+
+```bash
+docker compose exec postgres-backup ls -lh /backups
+```
+
+Restore a backup into an existing empty database:
+
+```bash
+docker compose exec postgres-backup pg_restore --clean --if-exists --no-owner --no-acl --dbname=sms_api /backups/<backup-file>.dump
+```
+
+The Docker volume protects backups from normal container recreation, but it is still on the same Docker host. Production deployments should additionally copy backups to independent/off-site storage.
 
 All dates are stored in UTC. Each tenant has an IANA time zone used for display, filters, and scheduled delivery.
 
