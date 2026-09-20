@@ -23,7 +23,7 @@ public sealed class RedisRateLimitCounter(IConnectionMultiplexer redis) : IRateL
         var result = await redis.GetDatabase().ScriptEvaluateAsync(
             Script,
             [new RedisKey(key)],
-            [new RedisValue((long)window.TotalMilliseconds)]);
+            [new RedisValue(((long)window.TotalMilliseconds).ToString(System.Globalization.CultureInfo.InvariantCulture))]);
         return (long)result;
     }
 }
