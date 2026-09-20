@@ -92,7 +92,7 @@ Swagger documents the complete API surface.
 
 ## Local AI message assistant
 
-Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints.
+Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints. AI assistant requests use a dedicated per-tenant rate-limit bucket: one request every 3 seconds. Exceeding the limit returns HTTP `429` with `Retry-After: 3`.
 
 Ollama model initialization runs independently from the API startup. A slow or failed model pull does not prevent the API from starting; AI assistance becomes available after `ollama-init` successfully downloads the model.
 
