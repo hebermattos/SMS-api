@@ -11,7 +11,7 @@ public sealed class TenantRateLimitRepository(SqlConnectionFactory connections) 
         using var connection = connections.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<TenantRateLimitSettings>(
             new CommandDefinition(sql, new { TenantId = tenantId }, cancellationToken: cancellationToken))
-            ?? new TenantRateLimitSettings(600, 60);
+            ?? new TenantRateLimitSettings(600, 60, 20);
     }
 
     public async Task SaveAsync(Guid tenantId, TenantRateLimitSettings settings, CancellationToken cancellationToken = default)
@@ -22,7 +22,8 @@ public sealed class TenantRateLimitRepository(SqlConnectionFactory connections) 
         {
             TenantId = tenantId,
             settings.RequestsPerMinute,
-            settings.SmsPerMinute
+            settings.SmsPerMinute,
+            settings.OllamaRequestsPerMinute
         }, cancellationToken: cancellationToken));
     }
 }
