@@ -1,4 +1,4 @@
-SELECT Id, TenantId, Username, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive
+SELECT Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive
 FROM PortalUsers u
 WHERE u.Id=@Id
   AND u.IsActive
