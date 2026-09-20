@@ -9,4 +9,4 @@ SELECT
 FROM UserSmsOverview r
 JOIN PortalUsers u ON u.TenantId=r.TenantId AND u.Id=r.UserId
 WHERE r.TenantId=@TenantId
-ORDER BY r.TotalMessages DESC, u.Username, r.UserId;
+ORDER BY r.ReportDate DESC, r.TotalMessages DESC, u.Username, r.UserId;
