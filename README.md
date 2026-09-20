@@ -79,6 +79,7 @@ These values are resource reservations, not hard memory limits. Docker may allow
 ### Tenant
 
 - Send and schedule SMS messages.
+- Create reusable message templates with `{{variableName}}` variables. System variables include `{{recipientName}}`, `{{recipientPhone}}`, and `{{tenantName}}`; custom variables can be supplied by API, CSV, or UI workflows.
 - Query message and status history.
 - Reports and overview dashboards.
 - Configurable alert rules and in-UI alerts.

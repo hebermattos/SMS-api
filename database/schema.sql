@@ -65,6 +65,18 @@ CREATE TABLE TenantRateLimits
     UpdatedAt TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE MessageTemplates
+(
+    Id UUID PRIMARY KEY,
+    TenantId UUID NOT NULL REFERENCES Tenants(Id) ON DELETE CASCADE,
+    Name VARCHAR(120) NOT NULL,
+    Body VARCHAR(4000) NOT NULL,
+    CreatedAt TIMESTAMPTZ NOT NULL,
+    UpdatedAt TIMESTAMPTZ NULL,
+    UNIQUE (TenantId, Name)
+);
+CREATE INDEX IX_MessageTemplates_Tenant_Name ON MessageTemplates(TenantId, Name, Id);
+
 CREATE TABLE SmsMessages
 (
     Id UUID PRIMARY KEY,

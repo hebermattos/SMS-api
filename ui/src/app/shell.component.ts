@@ -20,6 +20,7 @@ import { IconComponent } from './shared/icon.component';
           <a routerLink="/app" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}"><sms-icon name="grid"/>Overview</a>
           <a routerLink="/app/messages" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}"><sms-icon name="message"/>Messages</a>
           <a routerLink="/app/send" routerLinkActive="active"><sms-icon name="send"/>Send SMS</a>
+          <a routerLink="/app/templates" routerLinkActive="active"><sms-icon name="message"/>Templates</a>
           <a routerLink="/app/users" routerLinkActive="active"><sms-icon name="users"/>Users</a>
           <a routerLink="/app/reports" routerLinkActive="active"><sms-icon name="grid"/>Reports</a>
           <a routerLink="/app/alerts" routerLinkActive="active"><sms-icon name="alert"/>Alerts</a>
