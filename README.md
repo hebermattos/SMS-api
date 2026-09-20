@@ -37,6 +37,7 @@ Local services:
 | --- | --- |
 | UI | `http://localhost:4200` |
 | API (HAProxy → 2 API instances) | `http://localhost:8080` |
+| HAProxy stats | `http://localhost:8404/stats` | Local-only backend health, sessions, requests, and errors |
 | Swagger | `http://localhost:8080/swagger` |
 | Health | `http://localhost:8080/health` |
 | HyperDX | `http://localhost:8081` |
@@ -282,6 +283,7 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 ![SMS API Docker Compose architecture](docs/images/sms-api-architecture-v2.svg)
 
 Docker Compose runs two independent API instances behind HAProxy. HAProxy exposes `http://localhost:8080`, distributes requests using round-robin, and actively checks each API through `GET /health`; unhealthy instances are removed from rotation automatically.
+HAProxy exposes local-only runtime statistics on `http://localhost:8404/stats`. API containers use a 30-second Docker stop grace period so ASP.NET Core can stop accepting new work and finish in-flight requests during shutdown.
 
 The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, RabbitMQ handles asynchronous messaging between the API and the independently deployed Worker, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from both processes and persists them in the ClickHouse instance bundled with ClickStack.
 
