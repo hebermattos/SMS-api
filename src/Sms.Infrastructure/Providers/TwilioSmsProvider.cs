@@ -39,10 +39,24 @@ public sealed class TwilioSmsProvider(
             ["StatusCallback"] = webhookUrls.GetUrl("api/v1/webhooks/twilio/status").ToString()
         });
 
-        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        HttpResponseMessage response;
+        try
+        {
+            response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new TransientSmsProviderException("Twilio is temporarily unavailable.", exception);
+        }
+        using (response)
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"Twilio send failed with HTTP {(int)response.StatusCode}.");
+        {
+            var statusCode = (int)response.StatusCode;
+            if (statusCode == 429 || statusCode >= 500)
+                throw new TransientSmsProviderException($"Twilio send temporarily failed with HTTP {statusCode}.");
+            throw new HttpRequestException($"Twilio send failed with HTTP {statusCode}.");
+        }
 
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
