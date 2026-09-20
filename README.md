@@ -98,9 +98,9 @@ Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended f
 
 Ollama model initialization runs independently from the API startup. A slow or failed model pull does not prevent the API from starting; AI assistance becomes available after `ollama-init` successfully downloads the model.
 
-The improve operation makes SMS text shorter and clearer while instructing the model to preserve template variables exactly. Validation checks clarity, spelling, ambiguous wording, and malformed template placeholders. It does not make legal/compliance decisions.
+The tenant UI exposes a single **AI tips** action for SMS messages and templates. It uses the validation endpoint to review clarity, spelling, tone, length, ambiguous wording, and malformed template placeholders, then returns concise improvement suggestions without automatically rewriting the user's text. It does not make legal/compliance decisions.
 
-SMS/template content sent to these endpoints stays inside the local Ollama deployment. AI output should be treated as a suggestion and reviewed before sending. Platform administrators can configure separate improve and validation prompts for each tenant from the company settings screen. The tenant UI exposes a single AI action that returns suggestions for improving SMS and template text.
+The backend keeps both `/improve` and `/validate` endpoints available for API compatibility, but the tenant UI uses only `/validate`. SMS/template content sent to the assistant stays inside the local Ollama deployment. AI output is advisory and should be reviewed before sending. Platform administrators can configure the tenant AI prompts from the company settings screen; the validation prompt controls the AI tips experience.
 
 ## Messaging
 
