@@ -87,6 +87,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddDependencyHealthChecks(builder.Configuration);
 builder.Services.AddHostedService<Sms.Infrastructure.Messaging.AlertEvaluationOutboxPublisher>();
 builder.Services.AddHostedService<Sms.Infrastructure.Messaging.ScheduledSmsPublisher>();
+builder.Services.AddHostedService<Sms.Infrastructure.Messaging.FailedSmsPublishRetryWorker>();
 
 var app = builder.Build();
 app.UseSwaggerDocumentation();
