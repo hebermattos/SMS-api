@@ -5,7 +5,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, finalize, switchMap, tap } from 'rxjs';
-import { Tenant, Client, IssuedSecret, ProviderConfig, ProviderDefinition } from '../core/models';
+import { Tenant, Client, IssuedSecret, ProviderConfig, ProviderDefinition, TenantRateLimitSettings } from '../core/models';
 import { errorMessage } from '../core/api';
 import { IconComponent } from '../shared/icon.component';
 import { SecretComponent } from '../shared/secret.component';
@@ -18,19 +18,30 @@ export class TenantDetailComponent {
   readonly tenant = signal<Tenant | null>(null); readonly clients = signal<Client[]>([]); readonly providers = signal<ProviderConfig[]>([]); readonly catalog = signal<ProviderDefinition[]>([]);
   readonly tab = signal<'settings' | 'clients' | 'providers'>('clients'); readonly loading = signal(false); readonly busy = signal(false); readonly error = signal(''); readonly success = signal('');
   readonly secret = signal<IssuedSecret | null>(null); readonly page = signal(0); readonly hasNext = signal(false); readonly editingProvider = signal<ProviderDefinition | null>(null); readonly existingProvider = signal<ProviderConfig | null>(null);
-  tenantName = ''; timeZoneId = 'UTC'; clientId = ''; accountId = ''; fromNumber = ''; apiSecret = ''; providerActive = true; providerDefault = false; settings: Record<string, string> = {};
+  tenantName = ''; timeZoneId = 'UTC'; requestsPerMinute = 600; smsPerMinute = 60; clientId = ''; accountId = ''; fromNumber = ''; apiSecret = ''; providerActive = true; providerDefault = false; settings: Record<string, string> = {};
 
   constructor() { this.load(); }
   load() {
     this.loading.set(true); this.error.set('');
-    forkJoin({ tenant: this.http.get<Tenant>(this.base), clients: this.http.get<Client[]>(`${this.base}/clients?take=21`), providers: this.http.get<ProviderConfig[]>(`${this.base}/providers`), catalog: this.http.get<ProviderDefinition[]>('/api/v1/admin/providers/catalog') })
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({ next: data => { this.tenant.set(data.tenant); this.tenantName = data.tenant.name; this.timeZoneId = data.tenant.timeZoneId; this.clients.set(data.clients.slice(0,20)); this.hasNext.set(data.clients.length > 20); this.page.set(0); this.providers.set(data.providers); this.catalog.set(data.catalog); }, error: error => this.error.set(errorMessage(error)) });
+    forkJoin({ tenant: this.http.get<Tenant>(this.base), clients: this.http.get<Client[]>(`${this.base}/clients?take=21`), providers: this.http.get<ProviderConfig[]>(`${this.base}/providers`), catalog: this.http.get<ProviderDefinition[]>('/api/v1/admin/providers/catalog'), rateLimits: this.http.get<TenantRateLimitSettings>(`${this.base}/rate-limits`) })
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({ next: data => { this.tenant.set(data.tenant); this.tenantName = data.tenant.name; this.timeZoneId = data.tenant.timeZoneId; this.clients.set(data.clients.slice(0,20)); this.hasNext.set(data.clients.length > 20); this.page.set(0); this.providers.set(data.providers); this.catalog.set(data.catalog); this.requestsPerMinute = data.rateLimits.requestsPerMinute; this.smsPerMinute = data.rateLimits.smsPerMinute; }, error: error => this.error.set(errorMessage(error)) });
   }
   changeTab(tab: 'settings' | 'clients' | 'providers') { if (this.busy()) return; this.tab.set(tab); this.error.set(''); this.success.set(''); this.closeProvider(); }
   updateTenant(isActive = this.tenant()?.isActive ?? true) {
     const tenant = this.tenant(); if (!tenant || this.busy() || !this.tenantName.trim()) return;
     if (tenant.isActive && !isActive && !confirm("Suspend this company's access? API clients and active sessions will lose access. Data will be preserved.")) return;
     this.start(); this.http.put<void>(this.base, { name: this.tenantName.trim(), timeZoneId: this.timeZoneId.trim(), isActive }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({ next: () => { this.tenant.set({ ...tenant, name: this.tenantName.trim(), timeZoneId: this.timeZoneId.trim(), isActive }); this.success.set('Company updated.'); }, error: error => this.error.set(errorMessage(error)) });
+  }
+  saveRateLimits() {
+    if (this.busy()) return;
+    this.start();
+    this.http.put<void>(`${this.base}/rate-limits`, {
+      requestsPerMinute: this.requestsPerMinute,
+      smsPerMinute: this.smsPerMinute
+    }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({
+      next: () => this.success.set('Rate limits updated.'),
+      error: error => this.error.set(errorMessage(error))
+    });
   }
   loadClients(page = this.page()) {
     this.start(); this.http.get<Client[]>(`${this.base}/clients`, { params: { skip: page * 20, take: 21 } }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.busy.set(false))).subscribe({ next: rows => { this.clients.set(rows.slice(0,20)); this.hasNext.set(rows.length > 20); this.page.set(page); }, error: error => this.error.set(errorMessage(error)) });
