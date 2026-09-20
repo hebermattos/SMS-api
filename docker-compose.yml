@@ -244,6 +244,40 @@ services:
       OTEL_SERVICE_NAME: "sms-api"
     ports: ["8080:8080"]
 
+  worker:
+    mem_reservation: 256m
+    build:
+      context: .
+      dockerfile: src/Sms.Worker/Dockerfile
+    depends_on:
+      provider-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickstack:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__LogsPostgres: "Host=postgres;Port=5432;Database=sms_api_logs;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__ReportingPostgres: "Host=postgres;Port=5432;Database=sms_api_reporting;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__Redis: "redis:6379"
+      Cache__Enabled: "${CACHE_ENABLED:-true}"
+      Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
+      Ollama__BaseUrl: "http://ollama:11434/"
+      RabbitMq__Host: "rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__ManagementPort: "15672"
+      RabbitMq__User: "${RABBITMQ_USER:-sms}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_SERVICE_NAME: "sms-worker"
+    restart: unless-stopped
+
   webhook-tests:
     profiles: [tests]
     mem_reservation: 256m
