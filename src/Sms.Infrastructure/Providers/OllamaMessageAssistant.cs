@@ -11,8 +11,8 @@ public sealed class OllamaMessageAssistant(HttpClient client, ITenantAiSettingsR
     public async Task<MessageAssistantResult> ImproveAsync(Guid tenantId, string message, CancellationToken cancellationToken = default) =>
         await AskAsync((await settings.GetAsync(tenantId, cancellationToken)).ImprovePrompt, message, false, cancellationToken);
 
-    public Task<MessageAssistantResult> ValidateAsync(string message, CancellationToken cancellationToken = default) =>
-        AskAsync("Validate this SMS for clarity, spelling, ambiguous wording and broken {{variableName}} placeholders. Do not judge legal compliance. Return JSON only: {\"isValid\":true,\"issues\":[\"...\"]}.", message, cancellationToken);
+    public async Task<MessageAssistantResult> ValidateAsync(Guid tenantId, string message, CancellationToken cancellationToken = default) =>
+        await AskAsync((await settings.GetAsync(tenantId, cancellationToken)).ValidatePrompt, message, true, cancellationToken);
 
     private async Task<MessageAssistantResult> AskAsync(string instruction, string message, bool validation, CancellationToken cancellationToken)
     {
