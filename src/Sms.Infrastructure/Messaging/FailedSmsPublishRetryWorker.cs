@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace Sms.Infrastructure.Messaging;
 
 public sealed class SmsQueuePublisherWorker(
-    IFailedSmsPublishSource source,
+    ISmsQueuePublishSource source,
     IBus bus,
     ILogger<SmsQueuePublisherWorker> logger) : BackgroundService
 {
