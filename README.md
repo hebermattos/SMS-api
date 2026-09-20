@@ -80,7 +80,7 @@ These values are resource reservations, not hard memory limits. Docker may allow
 
 ### Tenant
 
-- Send and schedule SMS messages.
+- Send and schedule SMS messages. Outbound messages may be associated with a tenant user; portal sends are associated automatically, while API clients may supply an optional `userId`.
 - Use the local AI assistant to improve and validate SMS/template text without sending message content to a hosted AI service.
 - Create reusable message templates with `{{variableName}}` variables. System variables include `{{recipientName}}`, `{{recipientPhone}}`, and `{{tenantName}}`; custom variables can be supplied by API, CSV, or UI workflows.
 - Query message and status history.
@@ -117,7 +117,7 @@ Tenant configuration is also cached in Redis. Tenant metadata, time zone, API-cl
 
 Immediate messages are queued through RabbitMQ/MassTransit. Scheduled messages are stored in UTC and queued when due.
 
-To schedule a message, send `scheduledAt` as a local date/time without an offset. The API converts it using the tenant IANA time zone.
+To schedule a message, send `scheduledAt` as a local date/time without an offset. The API converts it using the tenant IANA time zone. API clients may also send an optional `userId`; when provided, it must identify an active user in the authenticated tenant.
 
 ```json
 {
