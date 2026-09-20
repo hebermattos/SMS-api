@@ -2,14 +2,13 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
 using Sms.Infrastructure.Persistence;
-using Sms.Infrastructure.Caching;
 
 namespace Sms.Infrastructure.Tests;
 
 internal static class TenantConfigurationCacheTestFactory
 {
     public static TenantConfigurationCache Create(SqlConnectionFactory connectionFactory) =>
-        new(connectionFactory, new TestDistributedCache(), new CacheOptions(true), NullLogger<TenantConfigurationCache>.Instance);
+        new(connectionFactory, new TestDistributedCache(), NullLogger<TenantConfigurationCache>.Instance);
 
     internal sealed class TestDistributedCache : IDistributedCache
     {

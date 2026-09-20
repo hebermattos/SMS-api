@@ -124,15 +124,12 @@ public sealed class TenantConfigurationCacheTests
             [new ClientSummary(Guid.NewGuid(), "client-one", true, DateTimeOffset.UtcNow)],
             [new TenantSmsProviderConfiguration(tenantId, "Twilio", "account", "secret", "+15550000001", true, true)]);
 
-        var distributed = new RecordingDistributedCache();
-        var cache = Create(distributed, enabled: false);
+        var cache = Create(new DisabledDistributedCacheProxy());
 
         await cache.InvalidateAsync(tenantId, previous);
-
-        Assert.Empty(distributed.RemovedKeys);
     }
 
-    private static TenantConfigurationCache Create(IDistributedCache cache, bool enabled = true)
+    private static TenantConfigurationCache Create(IDistributedCache cache)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -144,7 +141,6 @@ public sealed class TenantConfigurationCacheTests
         return new TenantConfigurationCache(
             new SqlConnectionFactory(configuration),
             cache,
-            new CacheOptions(enabled),
             NullLogger<TenantConfigurationCache>.Instance);
     }
 

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace Sms.Infrastructure.Caching;
 
-internal sealed class DisabledDistributedCache : IDistributedCache
+internal sealed class DisabledDistributedCacheProxy : IDistributedCache
 {
     public byte[]? Get(string key) => null;
 
