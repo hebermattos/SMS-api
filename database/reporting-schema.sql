@@ -28,8 +28,8 @@ CREATE TABLE UserSmsOverview
     Failed BIGINT NOT NULL DEFAULT 0,
     Pending BIGINT NOT NULL DEFAULT 0,
     UpdatedAtUtc TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (TenantId, UserId)
+    PRIMARY KEY (TenantId, UserId, ReportDate)
 );
 
 CREATE INDEX IX_UserSmsOverview_Tenant_Total
-    ON UserSmsOverview(TenantId, TotalMessages DESC, UserId);
+    ON UserSmsOverview(TenantId, ReportDate DESC, TotalMessages DESC, UserId);
