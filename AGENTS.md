@@ -14,10 +14,24 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
   - `Sms.Domain`: domain models and enums with no infrastructure dependencies.
   - `Sms.Application`: use cases and provider-independent interfaces.
   - `Sms.Infrastructure`: Dapper repositories, encryption, observability, and provider integrations.
-  - `Sms.Api`: HTTP endpoints, authentication, authorization, middleware, and composition root.
+  - `Sms.Api`: HTTP endpoints, authentication, authorization, middleware, and API composition root.
+  - `Sms.Worker`: independently deployable background-process host for RabbitMQ consumers, queue publishing, scheduling, retries, alerts, and messaging monitoring.
 - Keep controllers thin. Business rules belong in application services; external API and database details belong in infrastructure.
 - Use asynchronous APIs for HTTP and database I/O and propagate `CancellationToken`.
 - Keep the implementation as simple and readable as possible. Avoid unnecessary abstractions and complexity.
+
+## Messaging and background processing
+
+- Keep HTTP request handling in `Sms.Api` and background execution in `Sms.Worker`; the API and Worker must remain independently deployable and scalable.
+- RabbitMQ messages for SMS sending carry message identity, not the full SMS payload. Consumers load the current message from PostgreSQL before sending.
+- Publish an SMS send event only when the persisted `SmsQueueStatus` is `Queued`.
+- Before calling an SMS provider, the consumer must atomically claim the persisted message from `Queued` to `Processing`. If the claim fails, do not send. This is the primary concurrency/idempotency guard against duplicate sends.
+- Keep transport state (`SmsQueueStatus`) separate from provider/delivery state (`SmsStatus`). Do not add queue lifecycle values such as `Queued` or `Scheduled` to `SmsStatus`.
+- Scheduled messages remain persisted in UTC until due, then transition to `Queued` through an atomic database operation before publication.
+- RabbitMQ delivery is at-least-once. Consumers and callbacks must therefore remain idempotent; never rely on a broker message being delivered exactly once.
+- Keep provider calls outside database transactions. Use persisted state transitions and retryable background processing rather than attempting a distributed transaction between PostgreSQL and RabbitMQ.
+- Background polling must be bounded and configurable where appropriate; avoid tight polling loops and unnecessary database scans.
+- Keep RabbitMQ-specific transport concerns out of core application use cases.
 
 ## SMS providers
 
@@ -118,6 +132,6 @@ When Codex is being used through an IDE integration:
 
 ## Current known gaps
 
-- Administrator MFA, self-service password recovery, and an administrator-account management UI are not implemented yet. Accounts are created through trusted provisioning.
+- MFA and self-service password recovery are not implemented yet.
 
 Treat these as separate future PRs. Do not silently implement them as part of an unrelated task.
