@@ -310,14 +310,6 @@ CREATE TABLE AlertEvaluationInbox
 CREATE INDEX IX_AlertEvaluationInbox_ProcessedAtUtc
     ON AlertEvaluationInbox(ProcessedAtUtc, EventId);
 
-CREATE TABLE SmsSendInbox
-(
-    EventId UUID PRIMARY KEY,
-    ProcessedAtUtc TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IX_SmsSendInbox_ProcessedAtUtc
-    ON SmsSendInbox(ProcessedAtUtc, EventId);
-
 CREATE TABLE TenantSmsOverviewOutbox
 (
     SequenceNumber BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
