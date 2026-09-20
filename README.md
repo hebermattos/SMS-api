@@ -287,6 +287,9 @@ tests                    Unit and integration tests
 - [ ] Self-service password recovery.
 - [ ] Session management and token revocation.
 - [ ] Configurable password and lockout policies.
+- [ ] Login history and active-session visibility.
+- [ ] Optional IP allowlists for API clients.
+- [ ] API credential rotation and expiration policies.
 
 ### Operations
 
@@ -294,6 +297,12 @@ tests                    Unit and integration tests
 - [ ] Alert retry history and dead-letter handling.
 - [ ] Operational dashboards for queues, backlog, provider latency, and failures.
 - [ ] Configurable data retention.
+- [ ] Backup verification and restore drills.
+- [ ] Off-site backup storage.
+- [ ] Backup failure notifications.
+- [ ] RabbitMQ queue monitoring and dead-letter management.
+- [ ] PostgreSQL health, storage, and slow-query monitoring.
+- [ ] Tenant usage quotas and consumption dashboards.
 
 ### Messaging
 
@@ -301,6 +310,16 @@ tests                    Unit and integration tests
 - [ ] Bulk sends with validation, progress, cancellation, and per-recipient results.
 - [x] Tenant message templates with system and custom variables.
 - [ ] Inbound auto-replies and routing rules.
+- [ ] Use templates directly from the Send SMS screen.
+- [ ] Template variables populated from bulk CSV columns.
+- [ ] Template preview with sample variable values.
+- [ ] Template duplication and version history.
+- [ ] Message drafts.
+- [ ] Recurring scheduled messages.
+- [ ] Conversation view grouped by phone number.
+- [ ] Search and filtering by recipient, provider, status, and date.
+- [ ] Delivery retry policies for retryable provider failures.
+- [ ] Per-tenant sending windows and quiet hours.
 
 ### Extensibility
 
@@ -308,3 +327,25 @@ tests                    Unit and integration tests
 - [ ] Provider health and cost reporting.
 - [ ] Provider extension guide and contract tests.
 - [ ] Additional provider implementation.
+- [ ] Weighted provider routing.
+- [ ] Per-tenant provider priority.
+- [ ] Provider-specific rate-limit awareness.
+- [ ] Webhook signing guide for new providers.
+
+### Compliance and governance
+
+- [ ] Configurable opt-out keywords.
+- [ ] Consent tracking and audit history.
+- [ ] Tenant-configurable message retention.
+- [ ] Data export for a tenant.
+- [ ] Tenant data deletion workflow.
+- [ ] Audit export for compliance reviews.
+
+### Developer experience
+
+- [ ] Public API documentation with request and response examples.
+- [ ] Webhook integration examples.
+- [ ] API client examples for C#, JavaScript, and curl.
+- [ ] Sandbox mode for integration testing.
+- [ ] Idempotency keys for send requests.
+- [ ] API versioning and deprecation policy.
