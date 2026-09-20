@@ -8,7 +8,7 @@ namespace Sms.Infrastructure.Tests;
 public sealed class SendSmsServiceTests
 {
     [Fact]
-    public async Task SendAsync_PersistsQueuedMessageWithoutCallingProvider()
+    public async Task SendAsync_PersistsNotQueuedMessageThenMarksItQueuedAfterPublishing()
     {
         var tenantId = Guid.NewGuid();
         var repository = new FakeRepository();
@@ -24,13 +24,14 @@ public sealed class SendSmsServiceTests
         Assert.NotNull(repository.Inserted);
         Assert.Equal(tenantId, repository.Inserted!.TenantId);
         Assert.Equal("+15551234567", repository.Inserted.To);
-        Assert.Equal(SmsStatus.Queued, repository.Inserted.Status);
+        Assert.Equal(SmsStatus.NotQueued, repository.Inserted.Status);
+        Assert.Equal(SmsStatus.Queued, repository.UpdatedStatus);
         Assert.Equal(0, provider.SendCalls);
         Assert.Equal((tenantId, repository.Inserted.Id), publisher.Published);
     }
 
     [Fact]
-    public async Task SendAsync_MarksMessagePublishFailedWhenQueuePublishFails()
+    public async Task SendAsync_LeavesMessageNotQueuedWhenQueuePublishFails()
     {
         var tenantId = Guid.NewGuid();
         var repository = new FakeRepository();
@@ -41,8 +42,9 @@ public sealed class SendSmsServiceTests
             service.SendAsync(new SendSmsRequest("+15551234567", "hello")));
 
         Assert.NotNull(repository.Inserted);
-        Assert.Equal(SmsStatus.PublishFailed, repository.UpdatedStatus);
-        Assert.Equal(repository.Inserted!.Id, repository.UpdatedMessageId);
+        Assert.Equal(SmsStatus.NotQueued, repository.Inserted!.Status);
+        Assert.Null(repository.UpdatedStatus);
+        Assert.Null(repository.UpdatedMessageId);
     }
 
     [Theory]

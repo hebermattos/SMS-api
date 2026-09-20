@@ -45,7 +45,7 @@ public sealed class SmsSendConsumer(
             message.Status = SmsStatus.Queued;
         }
 
-        if (message.Status is not (SmsStatus.Queued or SmsStatus.PublishFailed))
+        if (message.Status != SmsStatus.Queued)
         {
             await MarkProcessedAsync(sendEvent.EventId, context.CancellationToken);
             return;

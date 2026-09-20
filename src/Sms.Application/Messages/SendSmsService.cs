@@ -21,7 +21,7 @@ public sealed class SendSmsService(
         await optOut.EnsureCanSendAsync(tenantContext.TenantId, request.To, cancellationToken);
 
         var provider = providerResolver.Resolve(request.Provider);
-        var status = scheduledAtUtc.HasValue ? SmsStatus.Scheduled : SmsStatus.Queued;
+        var status = scheduledAtUtc.HasValue ? SmsStatus.Scheduled : SmsStatus.NotQueued;
         var message = new SmsMessage
         {
             Id = Guid.NewGuid(),
@@ -40,25 +40,15 @@ public sealed class SendSmsService(
         await repository.InsertAsync(message, cancellationToken);
         if (!scheduledAtUtc.HasValue)
         {
-            try
-            {
-                await eventPublisher.PublishAsync(message.TenantId, message.Id, cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch
-            {
-                await repository.UpdateStatusAsync(
-                    message.TenantId,
-                    message.Id,
-                    SmsStatus.PublishFailed,
-                    null,
-                    clock.GetUtcNow(),
-                    cancellationToken);
-                throw;
-            }
+            await eventPublisher.PublishAsync(message.TenantId, message.Id, cancellationToken);
+            await repository.UpdateStatusAsync(
+                message.TenantId,
+                message.Id,
+                SmsStatus.Queued,
+                null,
+                clock.GetUtcNow(),
+                cancellationToken);
+            status = SmsStatus.Queued;
         }
 
         return new SendSmsResult(message.Id, provider.Name, null, status.ToString(), scheduledAtUtc);
