@@ -182,6 +182,6 @@ internal sealed class AdministrationFakeRepository : IAdministrationRepository, 
     public Task<TenantSmsProviderConfiguration?> GetAsync(Guid tenant, string provider, CancellationToken c = default) => throw new NotSupportedException();
     public Task<TenantSmsProviderConfiguration?> GetDefaultAsync(Guid tenant, CancellationToken c = default) => throw new NotSupportedException();
     public Task<TenantSmsProviderConfiguration?> GetByAccountAndNumberAsync(string provider, string account, string number, CancellationToken c = default) => throw new NotSupportedException();
-    public Task<TenantRateLimitSettings> GetAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(new TenantRateLimitSettings(600, 60));
+    public Task<TenantRateLimitSettings> GetAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(new TenantRateLimitSettings(600, 60, 20));
     public Task SaveAsync(Guid tenantId, TenantRateLimitSettings settings, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
