@@ -16,6 +16,7 @@ Multi-tenant REST API for sending, receiving, scheduling, tracking, and querying
 - RabbitMQ + MassTransit
 - Redis
 - OpenTelemetry + ClickStack (ClickHouse)
+- Ollama + Qwen2.5 0.5B for local message assistance
 - Docker Compose for local testing
 
 ## Quick start
@@ -64,6 +65,7 @@ Docker Compose defines soft memory reservations for each service:
 | PostgreSQL | 128 MB reserved / 256 MB limit |
 | RabbitMQ | 256 MB |
 | Redis | 64 MB |
+| Ollama | 768 MB |
 | API | 256 MB |
 | ClickStack | 512 MB |
 | UI | 32 MB |
@@ -79,6 +81,7 @@ These values are resource reservations, not hard memory limits. Docker may allow
 ### Tenant
 
 - Send and schedule SMS messages.
+- Use the local AI assistant to improve and validate SMS/template text without sending message content to a hosted AI service.
 - Create reusable message templates with `{{variableName}}` variables. System variables include `{{recipientName}}`, `{{recipientPhone}}`, and `{{tenantName}}`; custom variables can be supplied by API, CSV, or UI workflows.
 - Query message and status history.
 - Reports and overview dashboards.
@@ -94,6 +97,14 @@ These values are resource reservations, not hard memory limits. Docker may allow
 - View platform reports and system logs.
 
 Swagger documents the complete API surface.
+
+## Local AI message assistant
+
+Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints.
+
+The improve operation makes SMS text shorter and clearer while instructing the model to preserve template variables exactly. Validation checks clarity, spelling, ambiguous wording, and malformed template placeholders. It does not make legal/compliance decisions.
+
+SMS/template content sent to these endpoints stays inside the local Ollama deployment. AI output should be treated as a suggestion and reviewed before sending.
 
 ## Messaging
 
@@ -324,6 +335,7 @@ Metrics include the `rabbitmq.queue` attribute for filtering. The monitored queu
 - [ ] Use templates directly from the Send SMS screen.
 - [ ] Template variables populated from bulk CSV columns.
 - [ ] Template preview with sample variable values.
+- [x] Local AI assistance for message/template improvement and validation.
 - [ ] Template duplication and version history.
 - [ ] Message drafts.
 - [ ] Recurring scheduled messages.
