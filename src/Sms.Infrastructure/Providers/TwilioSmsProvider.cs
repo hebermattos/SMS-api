@@ -74,6 +74,6 @@ public sealed class TwilioSmsProvider(
         "sent" => SmsStatus.Sent,
         "delivered" => SmsStatus.Delivered,
         "failed" or "undelivered" or "canceled" => SmsStatus.Failed,
-        _ => SmsStatus.Queued
+        _ => SmsStatus.Pending
     };
 }
