@@ -1,169 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1100" viewBox="0 0 1400 1100">
-  <defs>
-    <style>
-      .title{font:700 34px Arial,sans-serif;fill:#10224d}
-      .sub{font:18px Arial,sans-serif;fill:#4b5f87}
-      .h{font:700 20px Arial,sans-serif;fill:#163765}
-      .t{font:700 17px Arial,sans-serif;fill:#17264d}
-      .s{font:14px Arial,sans-serif;fill:#53627d}
-      .mini{font:12px Arial,sans-serif;fill:#53627d}
-      .flow{font:700 14px Arial,sans-serif;fill:#2453a6}
-      .box{rx:12;ry:12;stroke-width:2}
-      .line{stroke:#2166d1;stroke-width:3;fill:none;marker-end:url(#arrow)}
-      .dash{stroke:#2166d1;stroke-width:2.5;fill:none;stroke-dasharray:8 7;marker-end:url(#arrow)}
-      .health{stroke:#1f8a70;stroke-width:2.5;fill:none;stroke-dasharray:7 6;marker-end:url(#greenArrow)}
-    </style>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L0,6 L9,3 z" fill="#2166d1"/>
-    </marker>
-    <marker id="greenArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L0,6 L9,3 z" fill="#1f8a70"/>
-    </marker>
-  </defs>
-
-  <rect width="1400" height="1100" fill="#ffffff"/>
-  <text x="700" y="48" text-anchor="middle" class="title">SMS API Architecture</text>
-  <text x="700" y="78" text-anchor="middle" class="sub">Multi-tenant SMS platform with REST API, Angular, PostgreSQL, RabbitMQ, Redis, providers, and OpenTelemetry</text>
-
-  <rect x="25" y="105" width="1050" height="175" fill="#eef8ff" stroke="#8fc7f8" class="box"/>
-  <text x="45" y="135" class="h">Clients / Users</text>
-
-  <rect x="50" y="155" width="190" height="85" fill="#f7fbff" stroke="#76a9e8" class="box"/>
-  <text x="145" y="185" text-anchor="middle" class="t">Platform Administrators</text>
-  <text x="145" y="210" text-anchor="middle" class="s">Manage tenants and platform</text>
-
-  <rect x="270" y="155" width="210" height="85" fill="#f6fffb" stroke="#67bca9" class="box"/>
-  <text x="375" y="185" text-anchor="middle" class="t">Tenant Users / Admins</text>
-  <text x="375" y="210" text-anchor="middle" class="s">Manage tenant data and SMS</text>
-
-  <rect x="520" y="145" width="245" height="105" fill="#fff1f5" stroke="#ef6a8d" class="box"/>
-  <text x="642" y="182" text-anchor="middle" class="t">Angular Admin UI</text>
-  <text x="642" y="207" text-anchor="middle" class="s">Web administration portal</text>
-
-  <rect x="820" y="155" width="220" height="85" fill="#f5f1ff" stroke="#8c72df" class="box"/>
-  <text x="930" y="185" text-anchor="middle" class="t">API Clients</text>
-  <text x="930" y="210" text-anchor="middle" class="s">External integrations</text>
-
-  <path d="M240 197 H520" class="line"/>
-  <path d="M480 197 H520" class="line"/>
-  <text x="370" y="266" class="flow">1 Authenticate</text>
-  <text x="610" y="266" class="flow">2 Send or schedule SMS</text>
-
-  <rect x="25" y="305" width="1050" height="150" fill="#eff7ff" stroke="#8cbff3" class="box"/>
-  <text x="45" y="335" class="h">Application Entry Layer</text>
-  <rect x="220" y="345" width="740" height="85" fill="#eaf3ff" stroke="#2e6ed2" class="box"/>
-  <text x="590" y="377" text-anchor="middle" class="t">ASP.NET Core REST API (.NET 8)</text>
-  <text x="590" y="404" text-anchor="middle" class="s">JWT Authentication • Authorization + Tenant Isolation • Swagger • /health • Rate Limiting</text>
-  <path d="M642 250 V345" class="line"/>
-  <path d="M930 240 V345" class="line"/>
-
-  <rect x="25" y="480" width="1050" height="180" fill="#effcf2" stroke="#82c996" class="box"/>
-  <text x="45" y="510" class="h">Internal Architecture</text>
-
-  <rect x="55" y="535" width="205" height="85" fill="#edf6ff" stroke="#5798df" class="box"/>
-  <text x="157" y="567" text-anchor="middle" class="t">Sms.Api</text>
-  <text x="157" y="592" text-anchor="middle" class="s">Controllers / Middleware</text>
-
-  <rect x="300" y="535" width="205" height="85" fill="#fff7e6" stroke="#e7a23a" class="box"/>
-  <text x="402" y="567" text-anchor="middle" class="t">Sms.Application</text>
-  <text x="402" y="592" text-anchor="middle" class="s">Use Cases / Contracts</text>
-
-  <rect x="545" y="535" width="180" height="85" fill="#f6f1ff" stroke="#9273d6" class="box"/>
-  <text x="635" y="567" text-anchor="middle" class="t">Sms.Domain</text>
-  <text x="635" y="592" text-anchor="middle" class="s">Core Models</text>
-
-  <rect x="765" y="525" width="275" height="105" fill="#edfbff" stroke="#57a9c4" class="box"/>
-  <text x="902" y="557" text-anchor="middle" class="t">Sms.Infrastructure</text>
-  <text x="902" y="582" text-anchor="middle" class="s">Dapper, Providers, Security, Messaging</text>
-  <text x="902" y="608" text-anchor="middle" class="mini">SQL resources • Redis cache integration</text>
-
-  <path d="M260 577 H300" class="line"/>
-  <path d="M505 577 H545" class="line"/>
-  <path d="M725 577 H765" class="line"/>
-  <path d="M590 430 V535" class="line"/>
-
-  <rect x="25" y="685" width="1050" height="150" fill="#fff1f6" stroke="#ed8cac" class="box"/>
-  <text x="45" y="715" class="h">Messaging / Background Processing</text>
-  <rect x="325" y="715" width="455" height="55" fill="#ffe9ef" stroke="#e36688" class="box"/>
-  <text x="552" y="749" text-anchor="middle" class="t">RabbitMQ + MassTransit</text>
-  <path d="M902 630 V715" class="line"/>
-  <text x="800" y="692" class="flow">3 Publish async event</text>
-
-  <rect x="65" y="785" width="170" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
-  <text x="150" y="809" text-anchor="middle" class="mini">SmsSendConsumer</text>
-  <rect x="255" y="785" width="185" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
-  <text x="347" y="809" text-anchor="middle" class="mini">AlertEvaluationConsumer</text>
-  <rect x="460" y="785" width="210" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
-  <text x="565" y="809" text-anchor="middle" class="mini">TenantSmsOverviewConsumer</text>
-  <rect x="690" y="785" width="175" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
-  <text x="777" y="809" text-anchor="middle" class="mini">ScheduledSmsPublisher</text>
-  <rect x="885" y="785" width="165" height="38" fill="#f8fbff" stroke="#6ba0dd" class="box"/>
-  <text x="967" y="809" text-anchor="middle" class="mini">Outbox Publishers</text>
-
-  <rect x="25" y="860" width="1050" height="170" fill="#f7f3ff" stroke="#aa91df" class="box"/>
-  <text x="45" y="890" class="h">Data &amp; Cache Layer</text>
-
-  <rect x="55" y="910" width="225" height="90" fill="#eef5ff" stroke="#5c8fd5" class="box"/>
-  <text x="167" y="938" text-anchor="middle" class="t">SmsApi</text>
-  <text x="167" y="962" text-anchor="middle" class="mini">Tenants, users, messages,</text>
-  <text x="167" y="980" text-anchor="middle" class="mini">providers, alerts</text>
-
-  <rect x="300" y="910" width="225" height="90" fill="#f5efff" stroke="#8f74cf" class="box"/>
-  <text x="412" y="938" text-anchor="middle" class="t">SmsApiLogs</text>
-  <text x="412" y="962" text-anchor="middle" class="mini">Activity, errors,</text>
-  <text x="412" y="980" text-anchor="middle" class="mini">traces, metrics</text>
-
-  <rect x="545" y="910" width="225" height="90" fill="#effcf6" stroke="#5fae83" class="box"/>
-  <text x="657" y="938" text-anchor="middle" class="t">SmsApiReporting</text>
-  <text x="657" y="962" text-anchor="middle" class="mini">Tenant overview</text>
-  <text x="657" y="980" text-anchor="middle" class="mini">and reporting inbox</text>
-
-  <rect x="790" y="910" width="225" height="90" fill="#fff8e8" stroke="#d7a33d" class="box"/>
-  <text x="902" y="938" text-anchor="middle" class="t">Redis</text>
-  <text x="902" y="962" text-anchor="middle" class="mini">OAuth + tenant configuration cache</text>
-  <text x="902" y="980" text-anchor="middle" class="mini">OAuth TTL • config invalidated on change</text>
-
-  <path d="M565 823 V910" class="dash"/>
-  <path d="M902 630 V910" class="dash"/>
-
-  <rect x="1100" y="105" width="275" height="250" fill="#fbfdff" stroke="#a5bdd8" class="box"/>
-  <text x="1120" y="135" class="h">Security &amp; Observability</text>
-  <text x="1125" y="175" class="t">AES-256-GCM</text>
-  <text x="1125" y="198" class="s">SMS content + provider secrets</text>
-  <text x="1125" y="235" class="t">PBKDF2-SHA256</text>
-  <text x="1125" y="258" class="s">Passwords + client secrets</text>
-  <text x="1125" y="295" class="t">OpenTelemetry</text>
-  <text x="1125" y="318" class="s">Logs, traces, metrics</text>
-  <text x="1125" y="345" class="t">UTC + tenant time zones</text>
-
-  <rect x="1100" y="390" width="275" height="220" fill="#f1fff4" stroke="#84c999" class="box"/>
-  <text x="1120" y="420" class="h">External SMS Providers</text>
-  <rect x="1130" y="450" width="215" height="55" fill="#fff2f5" stroke="#eb6b89" class="box"/>
-  <text x="1237" y="484" text-anchor="middle" class="t">Twilio</text>
-  <rect x="1130" y="525" width="215" height="55" fill="#eef9ff" stroke="#57a7db" class="box"/>
-  <text x="1237" y="559" text-anchor="middle" class="t">Bandwidth</text>
-  <text x="1237" y="600" text-anchor="middle" class="mini">Provider logic behind ISmsProvider</text>
-
-  <path d="M960 385 H1130 V477" class="line"/>
-  <text x="1020" y="370" class="flow">4 Provider delivery</text>
-  <path d="M1130 552 H1060 V410 H960" class="dash"/>
-  <text x="1085" y="635" class="flow">5 Webhooks / delivery status</text>
-
-  <rect x="1100" y="645" width="275" height="230" fill="#effbf7" stroke="#6eb69d" class="box"/>
-  <text x="1120" y="675" class="h">Health Checks</text>
-  <text x="1125" y="710" class="t">GET /health</text>
-  <text x="1125" y="737" class="s">SQL: application, logs, reporting</text>
-  <text x="1125" y="762" class="s">Redis • RabbitMQ</text>
-  <text x="1125" y="787" class="s">Twilio • Bandwidth</text>
-  <text x="1125" y="822" class="mini">503: SmsApi DB or RabbitMQ unhealthy</text>
-  <text x="1125" y="844" class="mini">200 + Degraded: other dependencies</text>
-  <path d="M960 405 H1080 V720 H1100" class="health"/>
-
-  <rect x="1100" y="900" width="275" height="130" fill="#fbfdff" stroke="#a5bdd8" class="box"/>
-  <text x="1120" y="930" class="h">Main Flows</text>
-  <text x="1125" y="962" class="s">1 Authenticate • 2 Send / schedule</text>
-  <text x="1125" y="986" class="s">3 Queue • 4 Provider delivery</text>
-  <text x="1125" y="1010" class="s">5 Webhooks • 6 Logs / reports</text>
-
-  <text x="700" y="1080" text-anchor="middle" class="flow">Scalable • Secure • Multi-tenant • Event-driven • Observable</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<defs><style>
+.title{font:700 36px Arial,sans-serif;fill:#102a56}.sub{font:20px Arial,sans-serif;fill:#64748b}.h{font:700 20px Arial,sans-serif;fill:#102a56}.t{font:700 18px Arial,sans-serif;fill:#102a56}.s{font:15px Arial,sans-serif;fill:#334155}.mini{font:13px Arial,sans-serif;fill:#475569}.box{rx:12;ry:12;stroke-width:2}.group{rx:12;ry:12;fill:#fff;stroke:#64748b;stroke-width:1.5;stroke-dasharray:8 7}.line{stroke:#102a56;stroke-width:2.3;fill:none;marker-end:url(#a)}.dash{stroke:#64748b;stroke-width:2;fill:none;stroke-dasharray:7 6;marker-end:url(#g)}
+</style><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#102a56"/></marker><marker id="g" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#64748b"/></marker></defs>
+<rect width="1600" height="1000" fill="#fff"/><text x="800" y="50" text-anchor="middle" class="title">SMS API – Docker Compose Architecture</text><text x="800" y="82" text-anchor="middle" class="sub">Local development environment with all required services</text>
+<rect x="30" y="130" width="270" height="135" fill="#eef6ff" stroke="#1683e8" class="box"/><text x="165" y="175" text-anchor="middle" class="h">Web UI</text><text x="165" y="202" text-anchor="middle" class="s">Angular + Nginx</text><text x="165" y="235" text-anchor="middle" class="s">http://localhost:4200</text>
+<rect x="565" y="125" width="355" height="145" fill="#eef6ff" stroke="#1683e8" class="box"/><text x="742" y="170" text-anchor="middle" class="h">SMS API</text><text x="742" y="198" text-anchor="middle" class="s">ASP.NET Core / .NET 8</text><text x="742" y="232" text-anchor="middle" class="s">http://localhost:8080</text>
+<path d="M300 197H565" class="line"/><text x="432" y="182" text-anchor="middle" class="mini">HTTP (REST + JWT)</text>
+<rect x="1180" y="105" width="380" height="225" class="group"/><text x="1370" y="137" text-anchor="middle" class="h">External SMS Providers</text><rect x="1210" y="160" width="320" height="62" fill="#fff" stroke="#aaa" class="box"/><text x="1370" y="198" text-anchor="middle" class="t">Twilio</text><rect x="1210" y="240" width="320" height="62" fill="#fff" stroke="#aaa" class="box"/><text x="1370" y="278" text-anchor="middle" class="t">Bandwidth</text><path d="M920 170H1210" class="line"/><text x="1065" y="155" text-anchor="middle" class="mini">Send SMS</text><path d="M1210 272H1080V220H920" class="line"/><text x="1050" y="250" text-anchor="middle" class="mini">Receive webhooks</text>
+<rect x="360" y="350" width="225" height="125" fill="#effdf3" stroke="#16a34a" class="box"/><text x="472" y="397" text-anchor="middle" class="h">Redis</text><text x="472" y="425" text-anchor="middle" class="s">Cache</text><text x="472" y="455" text-anchor="middle" class="s">localhost:6379</text>
+<rect x="625" y="350" width="225" height="125" fill="#fff8e7" stroke="#f59e0b" class="box"/><text x="737" y="397" text-anchor="middle" class="h">RabbitMQ</text><text x="737" y="425" text-anchor="middle" class="s">Messaging</text><text x="737" y="455" text-anchor="middle" class="s">localhost:5672</text>
+<rect x="900" y="350" width="280" height="125" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="1040" y="397" text-anchor="middle" class="h">PostgreSQL 17</text><text x="1040" y="425" text-anchor="middle" class="s">Database server</text><text x="1040" y="455" text-anchor="middle" class="s">localhost:5432</text>
+<path d="M690 270V310H472V350" class="line"/><path d="M742 270V350" class="line"/><path d="M800 270V310H1040V350" class="line"/>
+<rect x="30" y="510" width="500" height="250" class="group"/><text x="50" y="542" class="h">Initialization</text><rect x="50" y="565" width="215" height="165" fill="#f1fbff" stroke="#38bdf8" class="box"/><text x="157" y="605" text-anchor="middle" class="t">db-init</text><text x="157" y="635" text-anchor="middle" class="s">Creates databases,</text><text x="157" y="657" text-anchor="middle" class="s">schemas and sample tenant</text><text x="157" y="700" text-anchor="middle" class="mini">Runs after PostgreSQL is healthy</text><rect x="285" y="565" width="220" height="165" fill="#f7f1ff" stroke="#8b5cf6" class="box"/><text x="395" y="605" text-anchor="middle" class="t">provider-init</text><text x="395" y="635" text-anchor="middle" class="s">Configures platform admin</text><text x="395" y="657" text-anchor="middle" class="s">and initial SMS providers</text><text x="395" y="700" text-anchor="middle" class="mini">Runs after db-init</text>
+<rect x="565" y="510" width="615" height="250" class="group"/><text x="585" y="542" class="h">PostgreSQL Databases</text><rect x="595" y="585" width="165" height="120" fill="#eef5ff" stroke="#2563eb" class="box"/><text x="677" y="625" text-anchor="middle" class="t">sms_api</text><text x="677" y="652" text-anchor="middle" class="mini">Application data</text><rect x="785" y="585" width="165" height="120" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="867" y="625" text-anchor="middle" class="t">sms_api_logs</text><text x="867" y="652" text-anchor="middle" class="mini">Logs, traces, metrics</text><rect x="975" y="585" width="175" height="120" fill="#effcf3" stroke="#16a34a" class="box"/><text x="1062" y="625" text-anchor="middle" class="t">sms_api_reporting</text><text x="1062" y="652" text-anchor="middle" class="mini">Reports and aggregates</text><path d="M1040 475V540H677V585" class="line"/><path d="M1040 540H867V585" class="line"/><path d="M1040 540H1062V585" class="line"/>
+<path d="M265 645H285" class="dash"/><path d="M530 645H595" class="dash"/>
+<rect x="30" y="795" width="335" height="160" class="group"/><text x="50" y="827" class="h">Optional</text><rect x="55" y="850" width="285" height="80" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="197" y="882" text-anchor="middle" class="t">webhook-tests</text><text x="197" y="908" text-anchor="middle" class="mini">Docker profile: tests</text>
+<rect x="630" y="800" width="485" height="135" class="group"/><text x="650" y="832" class="h">Persistent Storage</text><rect x="720" y="850" width="305" height="60" fill="#f8fafc" stroke="#64748b" class="box"/><text x="872" y="878" text-anchor="middle" class="t">Docker volume: postgres-data</text><text x="872" y="900" text-anchor="middle" class="mini">PostgreSQL persistent data</text><path d="M1040 475V800H872V850" class="dash"/>
+<rect x="1210" y="510" width="350" height="390" class="group"/><text x="1230" y="542" class="h">Legend</text><rect x="1240" y="575" width="28" height="20" fill="#eef6ff" stroke="#1683e8"/><text x="1285" y="591" class="s">Application service</text><rect x="1240" y="615" width="28" height="20" fill="#effdf3" stroke="#16a34a"/><text x="1285" y="631" class="s">Cache</text><rect x="1240" y="655" width="28" height="20" fill="#fff8e7" stroke="#f59e0b"/><text x="1285" y="671" class="s">Message broker</text><rect x="1240" y="695" width="28" height="20" fill="#fff0f2" stroke="#ef476f"/><text x="1285" y="711" class="s">Database service</text><rect x="1240" y="735" width="28" height="20" fill="#f7f1ff" stroke="#8b5cf6"/><text x="1285" y="751" class="s">Initialization / tools</text><line x1="1240" y1="800" x2="1290" y2="800" class="line"/><text x="1310" y="806" class="s">Service connection</text><line x1="1240" y1="845" x2="1290" y2="845" class="dash"/><text x="1310" y="851" class="s">Initialization flow</text>
 </svg>
