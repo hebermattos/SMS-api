@@ -48,8 +48,6 @@ services:
     image: docker.io/clickhouse/clickstack-local:2.21.0
     mem_reservation: 512m
     ports:
-      - "4317:4317"
-      - "4318:4318"
       - "18123:8123"
     volumes:
       - clickstack-data:/var/lib/clickhouse
@@ -60,14 +58,25 @@ services:
       retries: 20
       start_period: 10s
 
+  otel-collector:
+    image: clickhouse/clickhouse-otel-collector:latest
+    mem_reservation: 128m
+    depends_on:
+      clickstack:
+        condition: service_healthy
+    environment:
+      OPAMP_SERVER_URL: ""
+      CLICKHOUSE_ENDPOINT: "http://clickstack:8123"
+      CLICKHOUSE_USER: "default"
+      CLICKHOUSE_PASSWORD: ""
+      CLICKHOUSE_DATABASE: "default"
+
   hyperdx-auth:
     image: caddy:2.10-alpine
     mem_reservation: 32m
     depends_on:
       clickstack:
         condition: service_healthy
-      otel-collector:
-        condition: service_started
     environment:
       HYPERDX_USERNAME: "${HYPERDX_USERNAME:-HyperDX}"
       HYPERDX_PASSWORD: "${HYPERDX_PASSWORD:-HyperDX}"
@@ -211,6 +220,8 @@ services:
         condition: service_healthy
       clickstack:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
