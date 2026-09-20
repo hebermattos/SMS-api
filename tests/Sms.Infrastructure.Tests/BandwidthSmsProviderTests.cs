@@ -19,7 +19,7 @@ public sealed class BandwidthSmsProviderTests
         var provider=Create(tenant,messaging,oauth,Config(tenant));
         var result=await provider.SendAsync("", "+15550000002", "hello");
         Assert.Equal("m1",result.ProviderMessageId);
-        Assert.Equal(SmsStatus.Queued,result.Status);
+        Assert.Equal(SmsStatus.Pending,result.Status);
         Assert.Equal("Bearer",messaging.Scheme);
         Assert.Contains("\"applicationId\":\"app-1\"",messaging.Body);
         Assert.Equal("Basic",oauth.Scheme);

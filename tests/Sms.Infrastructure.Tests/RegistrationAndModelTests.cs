@@ -105,7 +105,7 @@ public sealed class RegistrationAndModelTests
         var result = await provider.SendAsync("+15550000000", "+15550000001", "test");
 
         Assert.StartsWith("mock-", result.ProviderMessageId);
-        Assert.Contains(result.Status, new[] { SmsStatus.Queued, SmsStatus.Sent, SmsStatus.Delivered, SmsStatus.Failed });
+        Assert.Contains(result.Status, new[] { SmsStatus.Pending, SmsStatus.Sent, SmsStatus.Delivered, SmsStatus.Failed });
     }
 
     [Fact]

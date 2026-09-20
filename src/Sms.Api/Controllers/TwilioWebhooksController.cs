@@ -37,7 +37,7 @@ public sealed class TwilioWebhooksController(
         {
             Id = Guid.NewGuid(), TenantId = config.TenantId, From = from, To = to,
             Body = body, Provider = "Twilio", ProviderMessageId = sid,
-            Direction = SmsDirection.Inbound, Status = SmsStatus.Received, CreatedAt = DateTimeOffset.UtcNow
+            Direction = SmsDirection.Inbound, QueueStatus = SmsQueueStatus.Queued, Status = SmsStatus.Received, CreatedAt = DateTimeOffset.UtcNow
         }, cancellationToken);
 
         return Content("<Response></Response>", "application/xml");
@@ -76,6 +76,6 @@ public sealed class TwilioWebhooksController(
         "sent" => SmsStatus.Sent,
         "delivered" => SmsStatus.Delivered,
         "failed" or "undelivered" => SmsStatus.Failed,
-        _ => SmsStatus.Queued
+        _ => SmsStatus.Pending
     };
 }

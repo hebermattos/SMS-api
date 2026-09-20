@@ -74,7 +74,7 @@ public sealed class MessagesControllerTests
 
         var accepted=Assert.IsType<AcceptedAtActionResult>(action);
         var result=Assert.IsType<SendSmsResult>(accepted.Value);
-        Assert.Equal(nameof(SmsStatus.Scheduled),result.Status);
+        Assert.Equal(nameof(SmsQueueStatus.Scheduled),result.Status);
         Assert.Equal(new DateTimeOffset(2026,1,1,10,0,0,TimeSpan.FromHours(-3)),result.ScheduledAt);
         Assert.Equal(new DateTimeOffset(2026,1,1,13,0,0,TimeSpan.Zero),repo.Inserted!.ScheduledAtUtc);
     }
@@ -112,6 +112,7 @@ public sealed class MessagesControllerTests
         public Task InsertAsync(SmsMessage m,CancellationToken c=default){Inserted=m;return Task.CompletedTask;}
         public Task InsertInboundIfNotExistsAsync(SmsMessage m,CancellationToken c=default)=>Task.CompletedTask;
         public Task<bool> TryQueueScheduledAsync(Guid t,Guid i,DateTimeOffset u,CancellationToken c=default)=>Task.FromResult(false);
+        public Task UpdateQueueStatusAsync(Guid t,Guid i,SmsQueueStatus s,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
         public Task UpdateStatusAsync(Guid t,Guid i,SmsStatus s,string? p,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
         public Task UpdateStatusByProviderMessageIdAsync(Guid t,string p,string id,SmsStatus s,DateTimeOffset u,CancellationToken c=default)=>Task.CompletedTask;
     }

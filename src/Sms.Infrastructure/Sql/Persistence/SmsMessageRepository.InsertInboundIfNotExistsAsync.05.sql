@@ -1,9 +1,9 @@
 WITH inserted_message AS
 (
     INSERT INTO SmsMessages
-        (Id, TenantId, "From", "To", Body, Provider, ProviderMessageId, Direction, Status, CreatedAt, ScheduledAtUtc, UpdatedAt)
+        (Id, TenantId, "From", "To", Body, Provider, ProviderMessageId, Direction, QueueStatus, Status, CreatedAt, ScheduledAtUtc, UpdatedAt)
     VALUES
-        (@Id, @TenantId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @Status, @CreatedAt, @ScheduledAtUtc, @UpdatedAt)
+        (@Id, @TenantId, @From, @To, @Body, @Provider, @ProviderMessageId, @Direction, @QueueStatus, @Status, @CreatedAt, @ScheduledAtUtc, @UpdatedAt)
     ON CONFLICT (TenantId, Provider, ProviderMessageId)
         WHERE ProviderMessageId IS NOT NULL
     DO NOTHING

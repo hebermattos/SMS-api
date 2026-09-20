@@ -90,9 +90,9 @@ public sealed class BandwidthWebhookSqlTests
                 await Receive(payload, SmsDirection.Outbound);
             }
             Assert.Equal(SmsStatus.Delivered, (await messages.GetByIdAsync(tenant, outbound.Id))!.Status);
-            Assert.Equal(new[] { SmsStatus.Queued, SmsStatus.Sent, SmsStatus.Delivered },
+            Assert.Equal(new[] { SmsStatus.Pending, SmsStatus.Sent, SmsStatus.Delivered },
                 (await messages.GetStatusHistoryAsync(tenant, outbound.Id)).Select(x => x.Status).OrderBy(x => x));
-            Assert.Equal(SmsStatus.Queued, (await messages.GetByIdAsync(otherTenant, other.Id))!.Status);
+            Assert.Equal(SmsStatus.Pending, (await messages.GetByIdAsync(otherTenant, other.Id))!.Status);
             Assert.Single(await messages.GetStatusHistoryAsync(otherTenant, other.Id));
 
             var scheduled = new SmsMessage
@@ -100,15 +100,15 @@ public sealed class BandwidthWebhookSqlTests
                 Id = Guid.NewGuid(), TenantId = tenant, Provider = "Bandwidth",
                 From = "+15550000001", To = "+15550000002", Body = "scheduled test",
                 Direction = SmsDirection.Outbound,
-                Status = SmsStatus.Scheduled,
+                QueueStatus = SmsQueueStatus.Scheduled,
+                Status = SmsStatus.Pending,
                 CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-2),
                 ScheduledAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1)
             };
             await messages.InsertAsync(scheduled);
             Assert.True(await messages.TryQueueScheduledAsync(tenant, scheduled.Id, DateTimeOffset.UtcNow));
             Assert.False(await messages.TryQueueScheduledAsync(tenant, scheduled.Id, DateTimeOffset.UtcNow));
-            Assert.Equal(new[] { SmsStatus.Scheduled, SmsStatus.Queued },
-                (await messages.GetStatusHistoryAsync(tenant, scheduled.Id)).Select(x => x.Status));
+            Assert.Single(await messages.GetStatusHistoryAsync(tenant, scheduled.Id));
 
             var failed = Outbound(tenant, "outbound-failed");
             await messages.InsertAsync(failed);
@@ -151,6 +151,6 @@ public sealed class BandwidthWebhookSqlTests
     {
         Id = Guid.NewGuid(), TenantId = tenant, Provider = "Bandwidth", ProviderMessageId = providerId,
         From = "+15550000001", To = "+15550000002", Body = "test", Direction = SmsDirection.Outbound,
-        Status = SmsStatus.Queued, CreatedAt = DateTimeOffset.Parse("2026-09-17T11:00:00Z")
+        QueueStatus = SmsQueueStatus.Queued, Status = SmsStatus.Pending, CreatedAt = DateTimeOffset.Parse("2026-09-17T11:00:00Z")
     };
 }

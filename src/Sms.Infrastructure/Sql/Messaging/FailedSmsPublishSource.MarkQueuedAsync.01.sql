@@ -1,6 +1,6 @@
 UPDATE SmsMessages
-SET Status = @Queued,
+SET QueueStatus = @Queued,
     UpdatedAt = @UpdatedAt
 WHERE TenantId = @TenantId
   AND Id = @MessageId
-  AND Status = @NotQueued;
+  AND QueueStatus = @NotQueued;

@@ -42,10 +42,10 @@ public sealed class SmsSendConsumer(
             if (!queued)
                 return;
 
-            message.Status = SmsStatus.Queued;
+            message.QueueStatus = SmsQueueStatus.Queued;
         }
 
-        if (message.Status != SmsStatus.Queued)
+        if (message.QueueStatus != SmsQueueStatus.Queued)
         {
             await MarkProcessedAsync(sendEvent.EventId, context.CancellationToken);
             return;

@@ -64,7 +64,7 @@ public sealed class MessagesController(ITenantContext tenantContext, ISmsMessage
     private static object ToResponse(Sms.Domain.Messages.SmsMessage message, TimeZoneInfo zone) => new
     {
         message.Id, message.TenantId, message.UserId, message.From, message.To, message.Body, message.Provider,
-        message.ProviderMessageId, message.Direction, message.Status,
+        message.ProviderMessageId, message.Direction, message.QueueStatus, message.Status,
         CreatedAt = TimeZoneInfo.ConvertTime(message.CreatedAt, zone),
         ScheduledAt = message.ScheduledAtUtc.HasValue ? (DateTimeOffset?)TimeZoneInfo.ConvertTime(message.ScheduledAtUtc.Value, zone) : null,
         UpdatedAt = message.UpdatedAt.HasValue ? (DateTimeOffset?)TimeZoneInfo.ConvertTime(message.UpdatedAt.Value, zone) : null
