@@ -7,6 +7,7 @@ using Sms.Application.Messages;
 using Sms.Application.Providers;
 using Sms.Application.Tenants;
 using Sms.Domain.Tenants;
+using Sms.Domain.Messages;
 using Sms.Infrastructure;
 using Sms.Infrastructure.Providers;
 using Sms.Infrastructure.Caching;
@@ -27,6 +28,8 @@ public sealed class RegistrationAndModelTests
         Assert.Contains(services, x => x.ServiceType == typeof(ReceiveSmsWebhookService) && x.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(services, x => x.ServiceType == typeof(TenantProvisioningService) && x.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(services, x => x.ServiceType == typeof(AlertService) && x.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(services, x => x.ServiceType == typeof(SendSmsValidator) && x.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(services, x => x.ServiceType == typeof(AlertRuleFactory) && x.Lifetime == ServiceLifetime.Scoped);
     }
 
     [Fact]
@@ -102,7 +105,7 @@ public sealed class RegistrationAndModelTests
         var result = await provider.SendAsync("+15550000000", "+15550000001", "test");
 
         Assert.StartsWith("mock-", result.ProviderMessageId);
-        Assert.Contains(result.Status, new[] { "queued", "sent", "delivered", "failed" });
+        Assert.Contains(result.Status, new[] { SmsStatus.Queued, SmsStatus.Sent, SmsStatus.Delivered, SmsStatus.Failed });
     }
 
     [Fact]
