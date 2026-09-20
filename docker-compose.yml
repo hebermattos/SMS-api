@@ -22,6 +22,23 @@ services:
       timeout: 3s
       retries: 20
 
+  clickstack:
+    image: docker.io/clickhouse/clickstack-all-in-one:2.21.0
+    mem_reservation: 512m
+    ports:
+      - "8081:8080"
+      - "4317:4317"
+      - "4318:4318"
+      - "18123:8123"
+    volumes:
+      - clickstack-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
   postgres:
     image: postgres:17-alpine
     mem_reservation: 128m
@@ -113,6 +130,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      clickstack:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
@@ -128,6 +147,9 @@ services:
       RabbitMq__Port: "5672"
       RabbitMq__User: "${RABBITMQ_USER:-sms}"
       RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://clickstack:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "sms-api"
     ports: ["8080:8080"]
 
   webhook-tests:
@@ -151,3 +173,4 @@ services:
 
 volumes:
   postgres-data:
+  clickstack-data:
