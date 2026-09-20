@@ -57,6 +57,14 @@ CREATE UNIQUE INDEX UX_PortalUsers_TenantUsername
     ON PortalUsers(TenantId, Username) WHERE Context = 'tenant';
 CREATE INDEX IX_PortalUsers_TenantId ON PortalUsers(TenantId) WHERE TenantId IS NOT NULL;
 
+CREATE TABLE TenantRateLimits
+(
+    TenantId UUID PRIMARY KEY REFERENCES Tenants(Id) ON DELETE CASCADE,
+    RequestsPerMinute INTEGER NOT NULL DEFAULT 600 CHECK (RequestsPerMinute BETWEEN 1 AND 100000),
+    SmsPerMinute INTEGER NOT NULL DEFAULT 60 CHECK (SmsPerMinute BETWEEN 1 AND 100000),
+    UpdatedAt TIMESTAMPTZ NOT NULL
+);
+
 CREATE TABLE SmsMessages
 (
     Id UUID PRIMARY KEY,
