@@ -36,8 +36,7 @@ downloadCsv(){
     rows.push(['Provider','Total','Delivered','Failed','Delivery rate']);
     for(const provider of report.byProvider)rows.push([provider.provider,String(provider.totalMessages),String(provider.delivered),String(provider.failed),this.percent(provider.delivered,provider.totalMessages)+'%']);
   }
-  const csv='\uFEFF'+rows.map(row=>row.map(value=>this.csvValue(value)).join(',')).join('\r
-');
+  const csv='\\uFEFF'+rows.map(row=>row.map(value=>this.csvValue(value)).join(',')).join('\\r\\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob); const link=document.createElement('a');
   link.href=url; link.download='sms-report-'+new Date().toISOString().slice(0,10)+'.csv'; link.click(); URL.revokeObjectURL(url);
