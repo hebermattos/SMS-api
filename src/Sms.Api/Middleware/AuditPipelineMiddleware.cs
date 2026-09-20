@@ -1,0 +1,40 @@
+using Microsoft.AspNetCore.Mvc.Controllers;
+
+namespace Sms.Api.Middleware;
+
+public sealed record AuditPipelineContext(
+    HttpContext HttpContext,
+    ControllerActionDescriptor? Action,
+    bool Failed,
+    long StartedTimestamp);
+
+public interface IAuditPipelineStep
+{
+    Task AuditAsync(AuditPipelineContext context);
+}
+
+public sealed class AuditPipelineMiddleware(RequestDelegate next)
+{
+    public async Task InvokeAsync(HttpContext context, IEnumerable<IAuditPipelineStep> steps)
+    {
+        var action = context.GetEndpoint()?.Metadata.GetMetadata<ControllerActionDescriptor>();
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        var failed = false;
+
+        try
+        {
+            await next(context);
+        }
+        catch
+        {
+            failed = true;
+            throw;
+        }
+        finally
+        {
+            var auditContext = new AuditPipelineContext(context, action, failed, started);
+            foreach (var step in steps)
+                await step.AuditAsync(auditContext);
+        }
+    }
+}

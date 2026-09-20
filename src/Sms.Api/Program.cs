@@ -52,6 +52,9 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<PortalExceptionFilter>();
+builder.Services.AddScoped<IAuditPipelineStep, ClientLoginAuditMiddleware>();
+builder.Services.AddScoped<IAuditPipelineStep, PlatformAuditMiddleware>();
+builder.Services.AddScoped<IAuditPipelineStep, RequestAuditMiddleware>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddHttpContextAccessor();
@@ -92,12 +95,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 app.UseRouting();
-app.UseMiddleware<ClientLoginAuditMiddleware>();
-app.UseMiddleware<PlatformAuditMiddleware>();
+app.UseMiddleware<AuditPipelineMiddleware>();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<TenantRateLimitMiddleware>();
-app.UseMiddleware<RequestAuditMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 app.MapSwaggerRoot();
