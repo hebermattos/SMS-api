@@ -8,6 +8,9 @@ public sealed class TenantSmsOverviewOutboxPublisher(
     ITenantSmsOverviewEventPublisher eventPublisher,
     ILogger<TenantSmsOverviewOutboxPublisher> logger) : BackgroundService
 {
+    private static readonly TimeSpan ActiveDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan MaxIdleDelay = TimeSpan.FromSeconds(10);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -16,16 +19,20 @@ public sealed class TenantSmsOverviewOutboxPublisher(
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception) { logger.LogError(exception, "Failed to publish tenant SMS overview events."); }
 
-            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+            await Task.Delay(delay, stoppingToken);
         }
     }
 
-    public async Task PublishBatchAsync(CancellationToken cancellationToken = default)
+    public async Task<int> PublishBatchAsync(CancellationToken cancellationToken = default)
     {
+        var published = 0;
         foreach (var item in await outbox.GetPendingAsync(cancellationToken))
         {
             await eventPublisher.PublishAsync(item, cancellationToken);
             await outbox.MarkPublishedAsync(item.EventId, cancellationToken);
+            published++;
         }
+
+        return published;
     }
 }
