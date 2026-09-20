@@ -18,18 +18,22 @@ public sealed class TenantRateLimitMiddleware(RequestDelegate next)
         }
 
         var limits = await settings.GetAsync(tenantId, context.RequestAborted);
+        var aiRequest = context.Request.Path.StartsWithSegments("/api/v1/message-assistant");
         var smsRequest = context.Request.Method == HttpMethods.Post
             && (context.Request.Path.Equals("/api/v1/messages", StringComparison.OrdinalIgnoreCase)
                 || context.Request.Path.StartsWithSegments("/api/v1/messages/send")
                 || context.Request.Path.StartsWithSegments("/api/v1/messages/bulk"));
-        var limit = smsRequest ? limits.SmsPerMinute : limits.RequestsPerMinute;
-        var key = $"{tenantId:N}:{(smsRequest ? "sms" : "api")}";
+
+        var limit = aiRequest ? 1 : smsRequest ? limits.SmsPerMinute : limits.RequestsPerMinute;
+        var window = aiRequest ? TimeSpan.FromSeconds(3) : TimeSpan.FromMinutes(1);
+        var bucket = aiRequest ? "ai" : smsRequest ? "sms" : "api";
+        var key = $"{tenantId:N}:{bucket}";
         var now = DateTimeOffset.UtcNow;
         var counter = Counters.GetOrAdd(key, _ => new Counter(now));
 
         lock (counter)
         {
-            if (now - counter.StartedAt >= TimeSpan.FromMinutes(1))
+            if (now - counter.StartedAt >= window)
             {
                 counter.StartedAt = now;
                 counter.Count = 0;
@@ -39,7 +43,7 @@ public sealed class TenantRateLimitMiddleware(RequestDelegate next)
             if (counter.Count > limit)
             {
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                context.Response.Headers.RetryAfter = "60";
+                context.Response.Headers.RetryAfter = ((int)window.TotalSeconds).ToString();
                 return;
             }
         }
