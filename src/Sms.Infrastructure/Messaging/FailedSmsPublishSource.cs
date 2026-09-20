@@ -41,7 +41,7 @@ public sealed class FailedSmsPublishSource(SqlConnectionFactory connectionFactor
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(
             Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishSource.MarkNotQueuedAsync.01.sql"),
-            new { TenantId = tenantId, MessageId = messageId, Queued = SmsStatus.Queued, NotQueued = SmsStatus.NotQueued, UpdatedAt = DateTimeOffset.UtcNow },
+            new { TenantId = tenantId, MessageId = messageId, Queued = SmsQueueStatus.Queued, NotQueued = SmsQueueStatus.NotQueued, UpdatedAt = DateTimeOffset.UtcNow },
             cancellationToken: cancellationToken));
     }
 }
