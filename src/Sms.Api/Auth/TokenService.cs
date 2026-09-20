@@ -19,7 +19,7 @@ public sealed class TokenService(IOptions<JwtOptions> options)
                 new Claim(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext),
                 new Claim(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole)
             ],
-            expires: DateTime.UtcNow.AddMinutes(15), signingCredentials: SigningCredentials(settings));
+            expires: DateTime.UtcNow.AddMinutes(settings.ExpirationMinutes), signingCredentials: SigningCredentials(settings));
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 

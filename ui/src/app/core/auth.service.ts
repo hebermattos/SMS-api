@@ -10,6 +10,7 @@ export class AuthService implements OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private token: string | null = null;
+  private refreshToken: string | null = null;
   private expiresAt = 0;
   private timer?: ReturnType<typeof setTimeout>;
   readonly role = signal<PortalRole | null>(null);
@@ -23,9 +24,10 @@ export class AuthService implements OnDestroy {
       const saved = sessionStorage.getItem(this.storageKey);
       if (!saved) return;
       const session = JSON.parse(saved);
-      if (!session || typeof session.token !== 'string' || typeof session.identity !== 'string')
-        throw new Error('Invalid session.');
-      this.accept(session.token, session.identity, session.context ?? (session.role === 'admin' ? 'platform' : 'tenant'));
+      if (!session || typeof session.token !== 'string' || typeof session.identity !== 'string') throw new Error('Invalid session.');
+      this.refreshToken = session.refreshToken ?? null;
+      this.accept(session.token, session.refreshToken ?? null, session.identity,
+        session.context ?? (session.role === 'admin' ? 'platform' : 'tenant'));
     } catch {
       this.clearStoredSession();
     }
@@ -35,12 +37,12 @@ export class AuthService implements OnDestroy {
 
   loginTenant(clientId: string, clientSecret: string) {
     return this.http.post<TokenResponse>('/api/v1/auth/token', { clientId, clientSecret })
-      .pipe(tap(value => this.accept(value.access_token, clientId, 'tenant')));
+      .pipe(tap(value => this.accept(value.access_token, value.refresh_token ?? null, clientId, 'tenant')));
   }
 
   loginAdmin(username: string, password: string) {
     return this.http.post<TokenResponse>('/api/v1/admin/auth/token', { username, password })
-      .pipe(tap(value => this.accept(value.access_token, username, 'platform')));
+      .pipe(tap(value => this.accept(value.access_token, value.refresh_token ?? null, username, 'platform')));
   }
 
   loginPortal(username: string, password: string, context: PortalContext, tenantCode?: string) {
@@ -48,7 +50,7 @@ export class AuthService implements OnDestroy {
       ? { username, password, context, tenantCode }
       : { username, password, context };
     return this.http.post<TokenResponse>('/api/v1/portal/auth/token', request)
-      .pipe(tap(value => this.accept(value.access_token, username, context)));
+      .pipe(tap(value => this.accept(value.access_token, value.refresh_token ?? null, username, context)));
   }
 
   bearer(): string | null { return Date.now() < this.expiresAt ? this.token : null; }
@@ -57,6 +59,7 @@ export class AuthService implements OnDestroy {
     clearTimeout(this.timer);
     this.clearStoredSession();
     this.token = null;
+    this.refreshToken = null;
     this.expiresAt = 0;
     this.role.set(null);
     this.context.set(null);
@@ -66,7 +69,19 @@ export class AuthService implements OnDestroy {
     void this.router.navigateByUrl('/login');
   }
 
-  private accept(token: string, identity: string, fallbackContext: PortalContext = 'tenant') {
+  private refresh() {
+    if (!this.refreshToken || !this.context()) {
+      this.logout(true);
+      return;
+    }
+    const endpoint = this.role() === 'admin' ? '/api/v1/admin/auth/refresh' : '/api/v1/portal/auth/refresh';
+    this.http.post<TokenResponse>(endpoint, { refreshToken: this.refreshToken }).subscribe({
+      next: value => this.accept(value.access_token, value.refresh_token ?? null, this.identity(), this.context()!),
+      error: () => this.logout(true)
+    });
+  }
+
+  private accept(token: string, refreshToken: string | null, identity: string, fallbackContext: PortalContext = 'tenant') {
     if (token.split('.').length !== 3) throw new Error('Invalid session.');
     const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const claims = JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, '='))) as {
@@ -80,17 +95,19 @@ export class AuthService implements OnDestroy {
 
     clearTimeout(this.timer);
     this.token = token;
+    this.refreshToken = refreshToken;
     this.expiresAt = claims.exp * 1000;
     this.role.set(portalRole);
     this.context.set(context);
     this.permissionRole.set(permissionRole);
     this.identity.set(identity);
     this.expired.set(false);
-    this.timer = setTimeout(() => this.logout(true), this.expiresAt - Date.now());
+    this.timer = setTimeout(() => refreshToken ? this.refresh() : this.logout(true),
+      Math.max(1000, this.expiresAt - Date.now() - 60000));
 
     try {
       sessionStorage.setItem(this.storageKey, JSON.stringify({
-        token, identity, role: portalRole, context, permissionRole
+        token, refreshToken, identity, role: portalRole, context, permissionRole
       }));
     } catch {
       // Storage may be blocked; the current in-memory session still works.

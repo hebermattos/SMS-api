@@ -90,6 +90,7 @@ services:
           createdb sms_api
           psql -v ON_ERROR_STOP=1 -d sms_api -f /database/schema.sql
         fi
+        psql -v ON_ERROR_STOP=1 -d sms_api -f /database/refresh-tokens.sql
         psql -v ON_ERROR_STOP=1 -d sms_api -f /database/seeds/example_tenant.sql
 
         if ! database_exists "sms_api_logs"; then
