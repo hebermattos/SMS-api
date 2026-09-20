@@ -17,6 +17,7 @@ public sealed class TenantSmsOverviewMessagingTests
         Assert.Same(item, projection.Applied);
         Assert.Equal(item.EventId, projection.Applied!.EventId);
         Assert.Equal(item.TenantId, projection.Applied.TenantId);
+        Assert.Equal(item.UserId, projection.Applied.UserId);
         Assert.Equal(1, item.OutboundDelta);
         Assert.Equal(2, item.InboundDelta);
         Assert.Equal(3, item.DeliveredDelta);
@@ -54,7 +55,7 @@ public sealed class TenantSmsOverviewMessagingTests
     }
 
     private static TenantSmsOverviewEvent CreateEvent() => new(
-        Guid.NewGuid(), Guid.NewGuid(), 1, 2, 3, 4, 5, DateTimeOffset.UtcNow);
+        Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, 2, 3, 4, 5, DateTimeOffset.UtcNow);
 
     private sealed class Projection : ITenantSmsOverviewProjection
     {
