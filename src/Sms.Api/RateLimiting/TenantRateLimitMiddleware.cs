@@ -17,6 +17,13 @@ public sealed class TenantRateLimitMiddleware(RequestDelegate next)
             return;
         }
 
+        var login = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub");
+        if (string.IsNullOrWhiteSpace(login))
+        {
+            await next(context);
+            return;
+        }
+
         var limits = await settings.GetAsync(tenantId, context.RequestAborted);
         var aiRequest = context.Request.Path.StartsWithSegments("/api/v1/message-assistant");
         var smsRequest = context.Request.Method == HttpMethods.Post
@@ -27,7 +34,7 @@ public sealed class TenantRateLimitMiddleware(RequestDelegate next)
         var limit = aiRequest ? limits.OllamaRequestsPerMinute : smsRequest ? limits.SmsPerMinute : limits.RequestsPerMinute;
         var window = TimeSpan.FromMinutes(1);
         var bucket = aiRequest ? "ai" : smsRequest ? "sms" : "api";
-        var key = $"{tenantId:N}:{bucket}";
+        var key = $"{tenantId:N}:{login}:{bucket}";
         var now = DateTimeOffset.UtcNow;
         var counter = Counters.GetOrAdd(key, _ => new Counter(now));
 

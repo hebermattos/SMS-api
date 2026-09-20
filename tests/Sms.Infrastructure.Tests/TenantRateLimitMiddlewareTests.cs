@@ -93,6 +93,20 @@ public sealed class TenantRateLimitMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_DifferentLoginsInSameTenant_UseSeparateBuckets()
+    {
+        var tenantId = Guid.NewGuid();
+        var nextCalls = 0;
+        var repository = new Repository(new TenantRateLimitSettings(1, 100, 20));
+        var middleware = new TenantRateLimitMiddleware(_ => { nextCalls++; return Task.CompletedTask; });
+
+        await middleware.InvokeAsync(Context(tenantId, HttpMethods.Get, "/api/v1/reports", "user-1"), repository);
+        await middleware.InvokeAsync(Context(tenantId, HttpMethods.Get, "/api/v1/reports", "user-2"), repository);
+
+        Assert.Equal(2, nextCalls);
+    }
+
+    [Fact]
     public async Task InvokeAsync_NonPostMessagesRoute_UsesApiLimit()
     {
         var tenantId = Guid.NewGuid();
@@ -105,11 +119,14 @@ public sealed class TenantRateLimitMiddlewareTests
         Assert.Equal(1, nextCalls);
     }
 
-    private static DefaultHttpContext Context(Guid tenantId, string method, string path)
+    private static DefaultHttpContext Context(Guid tenantId, string method, string path, string login = "user-1")
     {
         var context = new DefaultHttpContext();
         context.User = new ClaimsPrincipal(new ClaimsIdentity(
-            [new Claim("tenant_id", tenantId.ToString())], "test"));
+            [
+                new Claim("tenant_id", tenantId.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, login)
+            ], "test"));
         context.Request.Method = method;
         context.Request.Path = path;
         return context;
