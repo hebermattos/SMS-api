@@ -73,29 +73,26 @@ public sealed class RegistrationAndModelTests
         services.AddInfrastructure(configuration);
 
         using var provider = services.BuildServiceProvider();
-        Assert.False(provider.GetRequiredService<CacheOptions>().Enabled);
-        Assert.NotNull(provider.GetRequiredService<IDistributedCache>());
+        Assert.IsType<DisabledDistributedCacheProxy>(provider.GetRequiredService<IDistributedCache>());
     }
 
     [Fact]
-    public void CacheOptions_DefaultsToEnabled()
+    public void CacheConfiguration_DefaultsToEnabled()
     {
-        var options = CacheOptions.From(new ConfigurationBuilder().Build());
-
-        Assert.True(options.Enabled);
+        Assert.True(CacheConfiguration.IsEnabled(new ConfigurationBuilder().Build()));
     }
 
     [Theory]
     [InlineData("false", false)]
     [InlineData("true", true)]
     [InlineData("invalid", true)]
-    public void CacheOptions_ParsesConfiguration(string value, bool expected)
+    public void CacheConfiguration_ParsesConfiguration(string value, bool expected)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Cache:Enabled"] = value })
             .Build();
 
-        Assert.Equal(expected, CacheOptions.From(configuration).Enabled);
+        Assert.Equal(expected, CacheConfiguration.IsEnabled(configuration));
     }
 
     [Fact]
