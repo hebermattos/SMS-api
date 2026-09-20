@@ -1,3 +1,5 @@
+using Sms.Domain.Messages;
+
 namespace Sms.Application.Messages;
 
 public sealed record SendSmsRequest(string To, string Body, string? From = null, string? Provider = null,
@@ -11,4 +13,4 @@ public interface ISmsProvider
     Task<ProviderSendResult> SendAsync(string from, string to, string body, CancellationToken cancellationToken = default);
 }
 
-public sealed record ProviderSendResult(string ProviderMessageId, string Status);
+public sealed record ProviderSendResult(string ProviderMessageId, SmsStatus Status);
