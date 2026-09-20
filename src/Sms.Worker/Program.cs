@@ -41,6 +41,7 @@ builder.Services.AddScoped<ITenantContext>(services => services.GetRequiredServi
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructureWorkers();
 
 builder.Services.AddHostedService<AlertEvaluationOutboxPublisher>();
 builder.Services.AddHostedService<ScheduledSmsPublisher>();
