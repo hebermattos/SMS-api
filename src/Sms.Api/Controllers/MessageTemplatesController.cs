@@ -52,7 +52,17 @@ public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTe
     {
         var item = await repository.GetAsync(tenant.TenantId, id, cancellationToken);
         if (item is null) return NotFound();
-        try\n        {\n            var overview = await portal.GetOverviewAsync(tenant.TenantId, cancellationToken);\n            var system = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)\n            {\n                ["recipientName"] = request.RecipientName ?? string.Empty,\n                ["recipientPhone"] = request.RecipientPhone ?? string.Empty,\n                ["tenantName"] = overview?.Name ?? string.Empty\n            };\n            return Ok(new { body = MessageTemplateRenderer.Render(item.Body, request.Variables, system) });\n        }
+        try
+        {
+            var overview = await portal.GetOverviewAsync(tenant.TenantId, cancellationToken);
+            var system = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["recipientName"] = request.RecipientName ?? string.Empty,
+                ["recipientPhone"] = request.RecipientPhone ?? string.Empty,
+                ["tenantName"] = overview?.Name ?? string.Empty
+            };
+            return Ok(new { body = MessageTemplateRenderer.Render(item.Body, request.Variables, system) });
+        }
         catch (ArgumentException ex) { return BadRequest(ex.Message); }
     }
 
