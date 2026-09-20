@@ -83,6 +83,8 @@ CREATE TABLE SmsMessages
 CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON SmsMessages(TenantId, CreatedAt DESC, Id DESC);
 CREATE INDEX IX_SmsMessages_Scheduled ON SmsMessages(ScheduledAtUtc, Id)
     INCLUDE (TenantId) WHERE Status = 6;
+CREATE INDEX IX_SmsMessages_QueuedScheduledRetry ON SmsMessages(UpdatedAt, ScheduledAtUtc, Id)
+    INCLUDE (TenantId) WHERE Status = 1 AND ScheduledAtUtc IS NOT NULL;
 CREATE UNIQUE INDEX UX_SmsMessages_Tenant_Provider_Message
     ON SmsMessages(TenantId, Provider, ProviderMessageId)
     WHERE ProviderMessageId IS NOT NULL;
