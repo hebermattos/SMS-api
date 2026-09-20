@@ -82,7 +82,7 @@ public sealed class ReportingSqlTests
             Assert.Equal((1L, 0L, 1L, 0L, 0L), counters);
 
             var userCounters = await reporting.QuerySingleAsync<(long TotalMessages, long Delivered, long Failed, long Pending)>(
-                "SELECT TotalMessages, Delivered, Failed, Pending FROM UserSmsOverview WHERE TenantId=@TenantId AND UserId=@UserId;",
+                "SELECT TotalMessages, Delivered, Failed, Pending FROM UserSmsOverview WHERE TenantId=@TenantId AND UserId=@UserId AND ReportDate=CURRENT_DATE;",
                 new { TenantId = tenantId, UserId = userId });
             Assert.Equal((1L, 1L, 0L, 0L), userCounters);
         }
