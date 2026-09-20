@@ -101,6 +101,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantPortalUserManagementRepository, TenantPortalUserManagementRepository>();
         services.AddScoped<IAdministratorRepository, AdministratorRepository>();
         services.AddScoped<IAdministrationRepository, AdministrationRepository>();
+        services.AddScoped<ITenantRateLimitRepository, TenantRateLimitRepository>();
         services.AddScoped<ITenantPortalRepository, TenantPortalRepository>();
         services.AddSingleton<IProviderSettingsPolicy, TwilioSettingsPolicy>();
         services.AddSingleton<IProviderSettingsPolicy, BandwidthSettingsPolicy>();
