@@ -40,7 +40,7 @@ builder.Services.AddScoped<IWorkerTenantContext>(services => services.GetRequire
 builder.Services.AddScoped<ITenantContext>(services => services.GetRequiredService<WorkerTenantContext>());
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, registerConsumers: true);
 builder.Services.AddInfrastructureWorkers();
 
 builder.Services.AddHostedService<AlertEvaluationOutboxPublisher>();
