@@ -13,11 +13,23 @@ public sealed class TenantSmsOverviewOutboxPublisher(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var delay = ActiveDelay;
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            try { await PublishBatchAsync(stoppingToken); }
+            try
+            {
+                var published = await PublishBatchAsync(stoppingToken);
+                delay = published > 0
+                    ? ActiveDelay
+                    : TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, MaxIdleDelay.TotalSeconds));
+            }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
-            catch (Exception exception) { logger.LogError(exception, "Failed to publish tenant SMS overview events."); }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Failed to publish tenant SMS overview events.");
+                delay = MaxIdleDelay;
+            }
 
             await Task.Delay(delay, stoppingToken);
         }
