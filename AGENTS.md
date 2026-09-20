@@ -64,7 +64,8 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 ## Observability and customer-visible logs
 
 - Use `ILogger<T>` and OpenTelemetry for structured logs, traces, and metrics.
-- Store operational logs in the separate database configured by `ConnectionStrings__LogsPostgres`; do not mix them with SMS application tables.
+- Store tenant user activity and error-level platform logs in the separate database configured by `ConnectionStrings__LogsPostgres`; do not mix them with SMS application tables.
+- Export technical OpenTelemetry logs, traces, and metrics over OTLP to ClickStack/ClickHouse. Do not persist traces or metrics in PostgreSQL.
 - Include safe correlation fields where available: `TenantId`, `MessageId`, `Provider`, `TraceId`, and `SpanId`.
 - Customer log access must be authenticated and filtered by the JWT tenant claim.
 - Tenant-less technical events are support-only and must not be returned by customer-facing endpoints.
