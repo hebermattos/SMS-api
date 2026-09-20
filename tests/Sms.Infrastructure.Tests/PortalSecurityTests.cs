@@ -80,7 +80,7 @@ public sealed class PortalSecurityTests
         Assert.Contains(token.Claims, x => x.Type == "admin_username" && x.Value == "admin");
         Assert.Contains(token.Claims, x => x.Type == PortalSecurity.AdminClaim && x.Value == "true");
         Assert.DoesNotContain(token.Claims, x => x.Type == "tenant_id");
-        Assert.InRange(token.ValidTo, DateTime.UtcNow.AddMinutes(14), DateTime.UtcNow.AddMinutes(16));
+        Assert.InRange(token.ValidTo, DateTime.UtcNow.AddMinutes(59), DateTime.UtcNow.AddMinutes(61));
     }
 
     [Theory]
