@@ -104,6 +104,8 @@ Swagger documents the complete API surface.
 
 Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints.
 
+Ollama model initialization runs independently from the API startup. A slow or failed model pull does not prevent the API from starting; AI assistance becomes available after `ollama-init` successfully downloads the model.
+
 The improve operation makes SMS text shorter and clearer while instructing the model to preserve template variables exactly. Validation checks clarity, spelling, ambiguous wording, and malformed template placeholders. It does not make legal/compliance decisions.
 
 SMS/template content sent to these endpoints stays inside the local Ollama deployment. AI output should be treated as a suggestion and reviewed before sending. Platform administrators can configure separate improve and validation prompts for each tenant from the company settings screen. Tenant users can use **Improve with AI** and **Validate** directly from Send SMS and the template editor.
