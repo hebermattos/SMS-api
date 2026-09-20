@@ -19,7 +19,7 @@ public sealed class SmsQueuePublishSource(SqlConnectionFactory connectionFactory
     {
         using var connection = connectionFactory.CreateConnection();
         var rows = await connection.QueryAsync<SmsQueuePublishMessage>(new CommandDefinition(
-            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsQueuePublishRetryWorker.PublishBatchAsync.01.sql"),
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishRetryWorker.PublishBatchAsync.01.sql"),
             new { NotQueued = SmsQueueStatus.NotQueued },
             cancellationToken: cancellationToken));
 
@@ -30,7 +30,7 @@ public sealed class SmsQueuePublishSource(SqlConnectionFactory connectionFactory
     {
         using var connection = connectionFactory.CreateConnection();
         var affected = await connection.ExecuteAsync(new CommandDefinition(
-            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsQueuePublishSource.MarkQueuedAsync.01.sql"),
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishSource.MarkQueuedAsync.01.sql"),
             new { TenantId = tenantId, MessageId = messageId, Queued = SmsQueueStatus.Queued, NotQueued = SmsQueueStatus.NotQueued, UpdatedAt = DateTimeOffset.UtcNow },
             cancellationToken: cancellationToken));
         return affected == 1;
@@ -40,7 +40,7 @@ public sealed class SmsQueuePublishSource(SqlConnectionFactory connectionFactory
     {
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(
-            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/SmsQueuePublishSource.MarkNotQueuedAsync.01.sql"),
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishSource.MarkNotQueuedAsync.01.sql"),
             new { TenantId = tenantId, MessageId = messageId, Queued = SmsQueueStatus.Queued, NotQueued = SmsQueueStatus.NotQueued, UpdatedAt = DateTimeOffset.UtcNow },
             cancellationToken: cancellationToken));
     }
