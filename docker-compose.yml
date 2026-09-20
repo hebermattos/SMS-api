@@ -206,7 +206,7 @@ services:
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
 
-  api:
+  api-1:
     mem_reservation: 256m
     build:
       context: .
@@ -242,7 +242,56 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
       OTEL_SERVICE_NAME: "sms-api"
+
+  api-2:
+    mem_reservation: 256m
+    build:
+      context: .
+      dockerfile: src/Sms.Api/Dockerfile
+    depends_on:
+      provider-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickstack:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__LogsPostgres: "Host=postgres;Port=5432;Database=sms_api_logs;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__ReportingPostgres: "Host=postgres;Port=5432;Database=sms_api_reporting;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__Redis: "redis:6379"
+      Cache__Enabled: "${CACHE_ENABLED:-true}"
+      Jwt__Key: "${JWT_KEY:-local-development-jwt-key-change-me-1234567890}"
+      Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
+      Sms__PublicBaseUrl: "${SMS_PUBLIC_BASE_URL:-https://localhost:8080}"
+      Ollama__BaseUrl: "http://ollama:11434/"
+      RabbitMq__Host: "rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__ManagementPort: "15672"
+      RabbitMq__User: "${RABBITMQ_USER:-sms}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_SERVICE_NAME: "sms-api"
+
+  haproxy:
+    image: haproxy:3.2-alpine
+    mem_reservation: 32m
+    depends_on:
+      api-1:
+        condition: service_started
+      api-2:
+        condition: service_started
+    volumes:
+      - ./docker/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports: ["8080:8080"]
+    restart: unless-stopped
 
   worker:
     mem_reservation: 256m
