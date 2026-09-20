@@ -21,7 +21,7 @@ describe('Provider administration', () => {
     http.expectOne('/api/v1/admin/tenants/tenant-1/clients?take=21').flush([]);
     http.expectOne('/api/v1/admin/tenants/tenant-1/providers').flush([provider]);
     http.expectOne('/api/v1/admin/providers/catalog').flush([definition]);
-    http.expectOne('/api/v1/admin/tenants/tenant-1/rate-limits').flush({ requestsPerMinute: 600, smsPerMinute: 60 });
+    http.expectOne('/api/v1/admin/tenants/tenant-1/rate-limits').flush({ requestsPerMinute: 600, smsPerMinute: 60, ollamaRequestsPerMinute: 20 });
     http.expectOne('/api/v1/admin/tenants/tenant-1/ai-settings').flush({ improvePrompt: 'Improve', validatePrompt: 'Validate' });
     return fixture;
   }
