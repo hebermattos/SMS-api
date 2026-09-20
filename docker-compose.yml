@@ -168,6 +168,7 @@ services:
       Sms__PublicBaseUrl: "${SMS_PUBLIC_BASE_URL:-https://localhost:8080}"
       RabbitMq__Host: "rabbitmq"
       RabbitMq__Port: "5672"
+      RabbitMq__ManagementPort: "15672"
       RabbitMq__User: "${RABBITMQ_USER:-sms}"
       RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://clickstack:4318"
