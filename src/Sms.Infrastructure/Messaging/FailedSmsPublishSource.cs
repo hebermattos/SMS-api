@@ -7,7 +7,8 @@ namespace Sms.Infrastructure.Messaging;
 public interface IFailedSmsPublishSource
 {
     Task<IReadOnlyList<FailedSmsPublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default);
-    Task MarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default);
+    Task<bool> TryMarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default);
+    Task MarkNotQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default);
 }
 
 public sealed record FailedSmsPublishMessage(Guid MessageId, Guid TenantId);
@@ -25,11 +26,21 @@ public sealed class FailedSmsPublishSource(SqlConnectionFactory connectionFactor
         return rows.AsList();
     }
 
-    public async Task MarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
+    public async Task<bool> TryMarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var affected = await connection.ExecuteAsync(new CommandDefinition(
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishSource.MarkQueuedAsync.01.sql"),
+            new { TenantId = tenantId, MessageId = messageId, Queued = SmsStatus.Queued, NotQueued = SmsStatus.NotQueued, UpdatedAt = DateTimeOffset.UtcNow },
+            cancellationToken: cancellationToken));
+        return affected == 1;
+    }
+
+    public async Task MarkNotQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
     {
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(
-            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishSource.MarkQueuedAsync.01.sql"),
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/FailedSmsPublishSource.MarkNotQueuedAsync.01.sql"),
             new { TenantId = tenantId, MessageId = messageId, Queued = SmsStatus.Queued, NotQueued = SmsStatus.NotQueued, UpdatedAt = DateTimeOffset.UtcNow },
             cancellationToken: cancellationToken));
     }
