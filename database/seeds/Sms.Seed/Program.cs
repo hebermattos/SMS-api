@@ -6,7 +6,6 @@ using Sms.Infrastructure.Persistence;
 using Sms.Infrastructure.Security;
 using Sms.Seed;
 using Sms.Application.Auth;
-using Sms.Infrastructure.Caching;
 
 var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 var connectionFactory = new SqlConnectionFactory(configuration);
@@ -34,7 +33,6 @@ Console.WriteLine("Initial platform administrator is configured. Existing passwo
 var configurationCache = new TenantConfigurationCache(
     connectionFactory,
     new SeedDistributedCache(),
-    CacheOptions.From(configuration),
     NullLogger<TenantConfigurationCache>.Instance);
 var providers = new TenantSmsProviderRepository(
     connectionFactory,
