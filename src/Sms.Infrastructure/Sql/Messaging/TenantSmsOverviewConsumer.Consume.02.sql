@@ -13,7 +13,7 @@ DO UPDATE SET
 
 
 INSERT INTO UserSmsOverview
-    (TenantId, UserId, TotalMessages, Delivered, Failed, Pending, UpdatedAtUtc)
+    (TenantId, UserId, ReportDate, TotalMessages, Delivered, Failed, Pending, UpdatedAtUtc)
 SELECT
     @TenantId,
     @UserId,
@@ -23,7 +23,7 @@ SELECT
     @PendingDelta,
     @OccurredAtUtc
 WHERE @UserId IS NOT NULL
-ON CONFLICT (TenantId, UserId)
+ON CONFLICT (TenantId, UserId, ReportDate)
 DO UPDATE SET
     TotalMessages=UserSmsOverview.TotalMessages + EXCLUDED.TotalMessages,
     Delivered=UserSmsOverview.Delivered + EXCLUDED.Delivered,
