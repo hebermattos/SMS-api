@@ -9,6 +9,8 @@ public sealed record IssuedTokens(string AccessToken, string RefreshToken, int E
 public sealed class RefreshTokenService(
     IRefreshTokenRepository repository,
     TokenService tokens,
+    IPortalUserRepository portalUsers,
+    IAdministratorRepository administrators,
     IOptions<JwtOptions> options)
 {
     public async Task<IssuedTokens> IssueAsync(
@@ -34,6 +36,19 @@ public sealed class RefreshTokenService(
         var session = await repository.RotateAsync(
             Hash(refreshToken), Hash(replacement), replacementId, replacementExpiresAt, cancellationToken);
         if (session is null) return null;
+
+        if (session.IsPlatformAdministrator)
+        {
+            if (!await administrators.IsActiveAsync(session.UserId, cancellationToken)) return null;
+        }
+        else
+        {
+            var user = await portalUsers.GetActiveByIdAsync(session.UserId, cancellationToken);
+            if (user is null
+                || user.Context != session.Context
+                || user.Role != session.Role
+                || user.TenantId != session.TenantId) return null;
+        }
 
         return Build(session with { Id = replacementId, ExpiresAt = replacementExpiresAt }, replacement);
     }
