@@ -79,6 +79,23 @@ public sealed class FailedSmsPublishRetryWorkerTests
     }
 
     [Fact]
+    public async Task PublishBatchAsync_ReleasesClaimAndPropagatesCancellation()
+    {
+        var message = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var source = new Source([message]);
+        using var cancellation = new CancellationTokenSource();
+        var bus = new Mock<IBus>();
+        bus.Setup(x => x.Publish(It.IsAny<SmsSendEvent>(), It.IsAny<CancellationToken>()))
+            .Callback(() => cancellation.Cancel())
+            .ThrowsAsync(new OperationCanceledException(cancellation.Token));
+        var worker = new FailedSmsPublishRetryWorker(source, bus.Object, NullLogger<FailedSmsPublishRetryWorker>.Instance);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => worker.PublishBatchAsync(cancellation.Token));
+
+        Assert.Equal([message.MessageId], source.Released.Select(x => x.MessageId));
+    }
+
+    [Fact]
     public async Task BackgroundWorker_StartsAndStopsWithNoPendingMessages()
     {
         var worker = new FailedSmsPublishRetryWorker(
