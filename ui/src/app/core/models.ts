@@ -41,3 +41,5 @@ export interface AlertNotification {
   id: string; ruleId: string; ruleName: string; provider: string | null; status: number;
   matchCount: number; windowMinutes: number; createdAt: string; isRead: boolean; readAt: string | null;
 }
+
+export interface MessageTemplate { id: string; name: string; body: string; variables: string[]; createdAt: string; updatedAt: string | null; }
