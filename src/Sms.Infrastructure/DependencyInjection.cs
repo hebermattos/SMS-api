@@ -55,6 +55,15 @@ public static class DependencyInjection
         services.AddSingleton<ITenantSmsOverviewEventPublisher, TenantSmsOverviewEventPublisher>();
         services.AddScoped<ITenantSmsOverviewProjection, TenantSmsOverviewProjection>();
         var rabbitMq = RabbitMqAlertOptions.From(configuration);
+        services.AddSingleton(rabbitMq);
+        services.AddHttpClient("RabbitMqManagement", client =>
+        {
+            client.BaseAddress = new Uri($"http://{rabbitMq.Host}:{rabbitMq.ManagementPort}/");
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+                "Basic", Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{rabbitMq.User}:{rabbitMq.Password}")));
+        });
+        services.AddHostedService<RabbitMqMonitoringService>();
         services.AddMassTransit(bus =>
         {
             bus.AddConsumer<AlertEvaluationConsumer>();
