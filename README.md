@@ -208,54 +208,9 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 
 ### Docker Compose
 
-```mermaid
-flowchart LR
-    User[Browser / API client]
-    UI["ui<br/>Angular + Nginx<br/>:4200"]
-    API["api<br/>ASP.NET Core<br/>:8080"]
-    Rabbit["rabbitmq<br/>RabbitMQ<br/>:5672 / :15672"]
-    Redis["redis<br/>Redis<br/>:6379"]
-    Postgres["postgres<br/>PostgreSQL 17<br/>:5432"]
-    DbInit["db-init<br/>Schema + seed initialization"]
-    ProviderInit["provider-init<br/>Provider/admin bootstrap"]
-    Tests["webhook-tests<br/>tests profile"]
-
-    AppDb[(sms_api)]
-    LogsDb[(sms_api_logs)]
-    ReportingDb[(sms_api_reporting)]
-    Volume[(postgres-data)]
-
-    User --> UI
-    User --> API
-    UI --> API
-
-    API --> Rabbit
-    API --> Redis
-    API --> AppDb
-    API --> LogsDb
-    API --> ReportingDb
-
-    Postgres --> AppDb
-    Postgres --> LogsDb
-    Postgres --> ReportingDb
-    Postgres --- Volume
-
-    Postgres -->|healthy| DbInit
-    DbInit -->|completed| ProviderInit
-    ProviderInit -->|completed| API
-    Rabbit -->|healthy| API
-    Redis -->|healthy| API
-
-    DbInit --> AppDb
-    DbInit --> LogsDb
-    DbInit --> ReportingDb
-    ProviderInit --> AppDb
-    Tests -. tests profile .-> AppDb
-```
+![SMS API Docker Compose architecture](docs/images/sms-api-architecture.svg)
 
 The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts three isolated databases for application data, observability, and reporting. The API starts only after database and provider initialization complete and RabbitMQ and Redis are healthy. The optional `webhook-tests` service is enabled through the `tests` profile.
-
-![SMS API architecture](docs/images/sms-api-architecture.svg)
 
 ```text
 src/Sms.Api              HTTP, authentication, authorization
