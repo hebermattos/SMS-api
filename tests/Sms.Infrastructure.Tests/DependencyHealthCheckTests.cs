@@ -36,6 +36,26 @@ public sealed class DependencyHealthCheckTests
     }
 
     [Fact]
+    public void AddDependencyHealthChecks_WhenCacheIsDisabled_RegistersDisabledCacheHealthCheck()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Cache:Enabled"] = "false"
+            })
+            .Build();
+
+        services.AddDependencyHealthChecks(configuration);
+
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value;
+        var registration = options.Registrations.Single(x => x.Name == "redis");
+
+        Assert.IsType<DependencyHealthChecks.DisabledCacheHealthCheck>(registration.Factory(provider));
+    }
+
+    [Fact]
     public async Task ApplicationDatabaseHealthCheck_ReturnsUnhealthyWhenPostgresIsUnavailable()
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
