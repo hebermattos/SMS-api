@@ -7,6 +7,7 @@ using Sms.Application.Common;
 namespace Sms.Api.Controllers;
 
 public sealed record CreateTenantUserRequest(string Username, string Email, string Password, string Role);
+public sealed record UpdateTenantUserRequest(string Username, string Email, string Role);
 
 [ApiController]
 [Authorize(Policy = PortalSecurity.TenantAdministratorPolicy)]
@@ -32,6 +33,15 @@ public sealed class TenantUsersController(
             tenantContext.TenantId, request.Username, request.Email, request.Password,
             request.Role, cancellationToken);
         return Created($"/api/v1/tenant/users/{id}", new { id });
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        Guid id, UpdateTenantUserRequest request, CancellationToken cancellationToken)
+    {
+        await users.UpdateAsync(
+            tenantContext.TenantId, id, request.Username, request.Email, request.Role, cancellationToken);
+        return NoContent();
     }
 
     [HttpPut("{id:guid}/state")]
