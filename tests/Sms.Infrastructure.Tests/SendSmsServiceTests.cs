@@ -20,12 +20,12 @@ public sealed class SendSmsServiceTests
 
         Assert.Equal("Twilio", result.Provider);
         Assert.Null(result.ProviderMessageId);
-        Assert.Equal(nameof(SmsStatus.Queued), result.Status);
+        Assert.Equal(nameof(SmsQueueStatus.Queued), result.Status);
         Assert.NotNull(repository.Inserted);
         Assert.Equal(tenantId, repository.Inserted!.TenantId);
         Assert.Equal("+15551234567", repository.Inserted.To);
-        Assert.Equal(SmsStatus.NotQueued, repository.Inserted.Status);
-        Assert.Equal(SmsStatus.Queued, repository.UpdatedStatus);
+        Assert.Equal(SmsQueueStatus.NotQueued, repository.Inserted.QueueStatus);
+        Assert.Equal(SmsQueueStatus.Queued, repository.UpdatedStatus);
         Assert.Equal(0, provider.SendCalls);
         Assert.Equal((tenantId, repository.Inserted.Id), publisher.Published);
     }
@@ -42,7 +42,7 @@ public sealed class SendSmsServiceTests
             service.SendAsync(new SendSmsRequest("+15551234567", "hello")));
 
         Assert.NotNull(repository.Inserted);
-        Assert.Equal(SmsStatus.NotQueued, repository.Inserted!.Status);
+        Assert.Equal(SmsQueueStatus.NotQueued, repository.Inserted!.QueueStatus);
         Assert.Null(repository.UpdatedStatus);
         Assert.Null(repository.UpdatedMessageId);
     }
@@ -77,7 +77,7 @@ public sealed class SendSmsServiceTests
 
         var result = await service.SendAsync(new SendSmsRequest("+15551234567", "hello", ScheduledAt: new DateTime(2026, 1, 1, 10, 0, 0)));
 
-        Assert.Equal(nameof(SmsStatus.Scheduled), result.Status);
+        Assert.Equal(nameof(SmsQueueStatus.Scheduled), result.Status);
         Assert.Equal(new DateTimeOffset(2026, 1, 1, 13, 0, 0, TimeSpan.Zero), repository.Inserted!.ScheduledAtUtc);
         Assert.Null(publisher.Published);
     }
@@ -151,7 +151,7 @@ public sealed class SendSmsServiceTests
     {
         public SmsMessage? Inserted { get; private set; }
         public Guid? UpdatedMessageId { get; private set; }
-        public SmsStatus? UpdatedStatus { get; private set; }
+        public SmsQueueStatus? UpdatedStatus { get; private set; }
 
         public Task InsertAsync(SmsMessage message, CancellationToken cancellationToken = default)
         {
@@ -159,12 +159,14 @@ public sealed class SendSmsServiceTests
             return Task.CompletedTask;
         }
 
-        public Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
+        public Task UpdateQueueStatusAsync(Guid tenantId, Guid id, SmsQueueStatus status, DateTimeOffset updatedAt, CancellationToken cancellationToken = default)
         {
             UpdatedMessageId = id;
             UpdatedStatus = status;
             return Task.CompletedTask;
         }
+
+        public Task UpdateStatusAsync(Guid tenantId, Guid id, SmsStatus status, string? providerMessageId, DateTimeOffset updatedAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task<SmsMessage?> GetByIdAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default) => Task.FromResult<SmsMessage?>(null);
         public Task<IReadOnlyList<SmsMessage>> GetHistoryAsync(Guid tenantId, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SmsMessage>>([]);
