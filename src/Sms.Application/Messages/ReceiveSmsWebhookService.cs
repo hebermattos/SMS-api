@@ -53,6 +53,7 @@ public sealed class ReceiveSmsWebhookService(ISmsMessageRepository messages, Opt
             Provider = webhookEvent.Provider,
             ProviderMessageId = webhookEvent.ProviderMessageId,
             Direction = webhookEvent.Direction,
+            QueueStatus = SmsQueueStatus.Queued,
             Status = webhookEvent.Status,
             From = webhookEvent.From,
             To = webhookEvent.To,
