@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Improvement Review"
+  short_description: "Review project architecture and prioritize improvements"
+  default_prompt: "Analyze this project's architecture and produce evidence-backed, prioritized improvement suggestions without changing code."
