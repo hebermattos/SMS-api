@@ -8,7 +8,7 @@ namespace Sms.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/templates")]
-public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTemplateRepository repository) : ControllerBase
+public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTemplateRepository repository, Sms.Application.Administration.ITenantPortalRepository portal) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
@@ -52,7 +52,7 @@ public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTe
     {
         var item = await repository.GetAsync(tenant.TenantId, id, cancellationToken);
         if (item is null) return NotFound();
-        try { return Ok(new { body = MessageTemplateRenderer.Render(item.Body, request.Variables) }); }
+        try\n        {\n            var overview = await portal.GetOverviewAsync(tenant.TenantId, cancellationToken);\n            var system = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)\n            {\n                ["recipientName"] = request.RecipientName ?? string.Empty,\n                ["recipientPhone"] = request.RecipientPhone ?? string.Empty,\n                ["tenantName"] = overview?.Name ?? string.Empty\n            };\n            return Ok(new { body = MessageTemplateRenderer.Render(item.Body, request.Variables, system) });\n        }
         catch (ArgumentException ex) { return BadRequest(ex.Message); }
     }
 
@@ -71,4 +71,4 @@ public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTe
 }
 
 public sealed record SaveTemplateRequest(string Name, string Body);
-public sealed record RenderTemplateRequest(Dictionary<string, string> Variables);
+public sealed record RenderTemplateRequest(Dictionary<string, string> Variables, string? RecipientName = null, string? RecipientPhone = null);
