@@ -17,6 +17,7 @@ using Sms.Infrastructure.Providers;
 using Sms.Infrastructure.Security;
 using Sms.Infrastructure.Messaging;
 using Sms.Application.OptOut;
+using Sms.Application.Templates;
 using Sms.Infrastructure.Caching;
 
 namespace Sms.Infrastructure;
@@ -111,6 +112,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvisioner, TenantProvisioner>();
         services.AddScoped<ISmsMessageRepository, SmsMessageRepository>();
         services.AddScoped<IOptOutRepository, OptOutRepository>();
+        services.AddScoped<IMessageTemplateRepository, MessageTemplateRepository>();
         services.AddScoped<ISmsSendEventPublisher, SmsSendEventPublisher>();
         services.AddScoped<ISmsReportRepository, SmsReportRepository>();
         services.AddScoped<IAlertRepository, AlertRepository>();
