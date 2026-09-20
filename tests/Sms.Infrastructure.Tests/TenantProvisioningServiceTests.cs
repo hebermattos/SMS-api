@@ -36,6 +36,41 @@ public sealed class TenantProvisioningServiceTests
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(" "));
     }
 
+    [Fact]
+    public async Task CreateAsync_RejectsLongName()
+    {
+        var service = new TenantProvisioningService(new FakeProvisioner());
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(new string('x', 201)));
+    }
+
+    [Theory]
+    [InlineData("client id")]
+    [InlineData("client.id")]
+    [InlineData("client/id")]
+    [InlineData("!")]
+    public async Task CreateAsync_RejectsInvalidClientId(string clientId)
+    {
+        var service = new TenantProvisioningService(new FakeProvisioner());
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync("Tenant", clientId));
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsClientIdLongerThanOneHundredCharacters()
+    {
+        var service = new TenantProvisioningService(new FakeProvisioner());
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync("Tenant", new string('a', 101)));
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("ABC-123")]
+    [InlineData("tenant_client")]
+    public async Task CreateAsync_AcceptsSupportedClientIds(string clientId)
+    {
+        var result = await new TenantProvisioningService(new FakeProvisioner()).CreateAsync("Tenant", clientId);
+        Assert.Equal(clientId, result.ClientId);
+    }
+
     private sealed class FakeProvisioner : ITenantProvisioner
     {
         public CreateApiClient? Client { get; private set; }
