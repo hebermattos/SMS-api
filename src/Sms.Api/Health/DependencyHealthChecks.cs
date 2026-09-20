@@ -26,7 +26,7 @@ public static class DependencyHealthChecks
             client.Timeout = TimeSpan.FromSeconds(5);
         });
 
-        services.AddHealthChecks()
+        var healthChecks = services.AddHealthChecks()
             .AddCheck<ApplicationDatabaseHealthCheck>(
                 "postgres.application",
                 failureStatus: HealthStatus.Unhealthy,
@@ -41,12 +41,26 @@ public static class DependencyHealthChecks
                 "postgres.reporting",
                 failureStatus: HealthStatus.Degraded,
                 tags: ["database", "internal"],
-                timeout: TimeSpan.FromSeconds(3))
-            .AddCheck<RedisHealthCheck>(
+                timeout: TimeSpan.FromSeconds(3));
+
+        if (CacheConfiguration.IsEnabled(configuration))
+        {
+            healthChecks.AddCheck<RedisHealthCheck>(
                 "redis",
                 failureStatus: HealthStatus.Degraded,
                 tags: ["cache", "internal"],
-                timeout: TimeSpan.FromSeconds(3))
+                timeout: TimeSpan.FromSeconds(3));
+        }
+        else
+        {
+            healthChecks.AddCheck<DisabledCacheHealthCheck>(
+                "redis",
+                failureStatus: HealthStatus.Degraded,
+                tags: ["cache", "internal"],
+                timeout: TimeSpan.FromSeconds(3));
+        }
+
+        healthChecks
             .AddCheck<RabbitMqHealthCheck>(
                 "rabbitmq",
                 failureStatus: HealthStatus.Unhealthy,
@@ -102,15 +116,12 @@ public static class DependencyHealthChecks
     public sealed class ReportingDatabaseHealthCheck(IConfiguration configuration)
         : PostgresHealthCheck(RequiredConnectionString(configuration, "ReportingPostgres"));
 
-    public sealed class RedisHealthCheck(IDistributedCache cache, CacheOptions cacheOptions) : IHealthCheck
+    public sealed class RedisHealthCheck(IDistributedCache cache) : IHealthCheck
     {
         public async Task<HealthCheckResult> CheckHealthAsync(
             HealthCheckContext context,
             CancellationToken cancellationToken = default)
         {
-            if (!cacheOptions.Enabled)
-                return HealthCheckResult.Healthy("Cache is disabled.");
-
             try
             {
                 await cache.GetAsync("health:redis-probe", cancellationToken);
@@ -121,6 +132,14 @@ public static class DependencyHealthChecks
                 return Failure(context, "Redis connection failed.");
             }
         }
+    }
+
+    public sealed class DisabledCacheHealthCheck : IHealthCheck
+    {
+        public Task<HealthCheckResult> CheckHealthAsync(
+            HealthCheckContext context,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(HealthCheckResult.Healthy("Cache is disabled."));
     }
 
     public sealed class RabbitMqHealthCheck : IHealthCheck
