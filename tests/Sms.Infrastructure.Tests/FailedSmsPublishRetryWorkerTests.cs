@@ -5,20 +5,20 @@ using Sms.Infrastructure.Messaging;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class FailedSmsPublishRetryWorkerTests
+public sealed class SmsQueuePublisherWorkerTests
 {
     [Fact]
     public async Task PublishBatchAsync_PublishesEveryFailedMessage()
     {
-        var first = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
-        var second = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var first = new SmsQueuePublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var second = new SmsQueuePublishMessage(Guid.NewGuid(), Guid.NewGuid());
         var source = new Source([first, second]);
         var bus = new Mock<IBus>();
         var published = new List<SmsSendEvent>();
         bus.Setup(x => x.Publish(It.IsAny<SmsSendEvent>(), It.IsAny<CancellationToken>()))
             .Callback<SmsSendEvent, CancellationToken>((item, _) => published.Add(item))
             .Returns(Task.CompletedTask);
-        var worker = new FailedSmsPublishRetryWorker(source, bus.Object, NullLogger<FailedSmsPublishRetryWorker>.Instance);
+        var worker = new SmsQueuePublisherWorker(source, bus.Object, NullLogger<SmsQueuePublisherWorker>.Instance);
 
         var count = await worker.PublishBatchAsync();
 
@@ -33,14 +33,14 @@ public sealed class FailedSmsPublishRetryWorkerTests
     [Fact]
     public async Task PublishBatchAsync_ContinuesWhenOnePublishFails()
     {
-        var first = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
-        var second = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var first = new SmsQueuePublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var second = new SmsQueuePublishMessage(Guid.NewGuid(), Guid.NewGuid());
         var bus = new Mock<IBus>();
         bus.SetupSequence(x => x.Publish(It.IsAny<SmsSendEvent>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("RabbitMQ unavailable"))
             .Returns(Task.CompletedTask);
         var source = new Source([first, second]);
-        var worker = new FailedSmsPublishRetryWorker(source, bus.Object, NullLogger<FailedSmsPublishRetryWorker>.Instance);
+        var worker = new SmsQueuePublisherWorker(source, bus.Object, NullLogger<SmsQueuePublisherWorker>.Instance);
 
         var count = await worker.PublishBatchAsync();
 
@@ -53,10 +53,10 @@ public sealed class FailedSmsPublishRetryWorkerTests
     [Fact]
     public async Task PublishBatchAsync_SkipsMessageWhenAnotherWorkerAlreadyClaimedIt()
     {
-        var message = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var message = new SmsQueuePublishMessage(Guid.NewGuid(), Guid.NewGuid());
         var source = new Source([message]) { CanClaim = false };
         var bus = new Mock<IBus>();
-        var worker = new FailedSmsPublishRetryWorker(source, bus.Object, NullLogger<FailedSmsPublishRetryWorker>.Instance);
+        var worker = new SmsQueuePublisherWorker(source, bus.Object, NullLogger<SmsQueuePublisherWorker>.Instance);
 
         var count = await worker.PublishBatchAsync();
 
@@ -67,13 +67,13 @@ public sealed class FailedSmsPublishRetryWorkerTests
     [Fact]
     public async Task PublishBatchAsync_PropagatesRequestedCancellation()
     {
-        var message = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var message = new SmsQueuePublishMessage(Guid.NewGuid(), Guid.NewGuid());
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         var bus = new Mock<IBus>();
         bus.Setup(x => x.Publish(It.IsAny<SmsSendEvent>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException(cancellation.Token));
-        var worker = new FailedSmsPublishRetryWorker(new Source([message]), bus.Object, NullLogger<FailedSmsPublishRetryWorker>.Instance);
+        var worker = new SmsQueuePublisherWorker(new Source([message]), bus.Object, NullLogger<SmsQueuePublisherWorker>.Instance);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => worker.PublishBatchAsync(cancellation.Token));
     }
@@ -81,14 +81,14 @@ public sealed class FailedSmsPublishRetryWorkerTests
     [Fact]
     public async Task PublishBatchAsync_ReleasesClaimAndPropagatesCancellation()
     {
-        var message = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var message = new SmsQueuePublishMessage(Guid.NewGuid(), Guid.NewGuid());
         var source = new Source([message]);
         using var cancellation = new CancellationTokenSource();
         var bus = new Mock<IBus>();
         bus.Setup(x => x.Publish(It.IsAny<SmsSendEvent>(), It.IsAny<CancellationToken>()))
             .Callback(() => cancellation.Cancel())
             .ThrowsAsync(new OperationCanceledException(cancellation.Token));
-        var worker = new FailedSmsPublishRetryWorker(source, bus.Object, NullLogger<FailedSmsPublishRetryWorker>.Instance);
+        var worker = new SmsQueuePublisherWorker(source, bus.Object, NullLogger<SmsQueuePublisherWorker>.Instance);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => worker.PublishBatchAsync(cancellation.Token));
 
@@ -98,10 +98,10 @@ public sealed class FailedSmsPublishRetryWorkerTests
     [Fact]
     public async Task PublishBatchAsync_PropagatesClaimFailureWithoutPublishing()
     {
-        var message = new FailedSmsPublishMessage(Guid.NewGuid(), Guid.NewGuid());
+        var message = new SmsQueuePublishMessage(Guid.NewGuid(), Guid.NewGuid());
         var source = new ThrowingClaimSource(message);
         var bus = new Mock<IBus>();
-        var worker = new FailedSmsPublishRetryWorker(source, bus.Object, NullLogger<FailedSmsPublishRetryWorker>.Instance);
+        var worker = new SmsQueuePublisherWorker(source, bus.Object, NullLogger<SmsQueuePublisherWorker>.Instance);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => worker.PublishBatchAsync());
 
@@ -112,10 +112,10 @@ public sealed class FailedSmsPublishRetryWorkerTests
     public async Task BackgroundWorker_HandlesSourceFailureUntilStopped()
     {
         var source = new ThrowingPendingSource();
-        var worker = new FailedSmsPublishRetryWorker(
+        var worker = new SmsQueuePublisherWorker(
             source,
             Mock.Of<IBus>(),
-            NullLogger<FailedSmsPublishRetryWorker>.Instance);
+            NullLogger<SmsQueuePublisherWorker>.Instance);
 
         await worker.StartAsync(default);
         await source.Called.Task.WaitAsync(TimeSpan.FromSeconds(2));
@@ -127,20 +127,20 @@ public sealed class FailedSmsPublishRetryWorkerTests
     [Fact]
     public async Task BackgroundWorker_StartsAndStopsWithNoPendingMessages()
     {
-        var worker = new FailedSmsPublishRetryWorker(
+        var worker = new SmsQueuePublisherWorker(
             new Source([]),
             Mock.Of<IBus>(),
-            NullLogger<FailedSmsPublishRetryWorker>.Instance);
+            NullLogger<SmsQueuePublisherWorker>.Instance);
 
         await worker.StartAsync(default);
         await Task.Delay(25);
         await worker.StopAsync(default);
     }
 
-    private sealed class ThrowingClaimSource(FailedSmsPublishMessage message) : IFailedSmsPublishSource
+    private sealed class ThrowingClaimSource(SmsQueuePublishMessage message) : ISmsQueuePublishSource
     {
-        public Task<IReadOnlyList<FailedSmsPublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<FailedSmsPublishMessage>>([message]);
+        public Task<IReadOnlyList<SmsQueuePublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SmsQueuePublishMessage>>([message]);
 
         public Task<bool> TryMarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("claim failed");
@@ -149,12 +149,12 @@ public sealed class FailedSmsPublishRetryWorkerTests
             Task.CompletedTask;
     }
 
-    private sealed class ThrowingPendingSource : IFailedSmsPublishSource
+    private sealed class ThrowingPendingSource : ISmsQueuePublishSource
     {
         public TaskCompletionSource Called { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int Calls { get; private set; }
 
-        public Task<IReadOnlyList<FailedSmsPublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<SmsQueuePublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default)
         {
             Calls++;
             Called.TrySetResult();
@@ -168,13 +168,13 @@ public sealed class FailedSmsPublishRetryWorkerTests
             Task.CompletedTask;
     }
 
-    private sealed class Source(IReadOnlyList<FailedSmsPublishMessage> messages) : IFailedSmsPublishSource
+    private sealed class Source(IReadOnlyList<SmsQueuePublishMessage> messages) : ISmsQueuePublishSource
     {
-        public List<FailedSmsPublishMessage> Claimed { get; } = [];
-        public List<FailedSmsPublishMessage> Released { get; } = [];
+        public List<SmsQueuePublishMessage> Claimed { get; } = [];
+        public List<SmsQueuePublishMessage> Released { get; } = [];
         public bool CanClaim { get; init; } = true;
 
-        public Task<IReadOnlyList<FailedSmsPublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<SmsQueuePublishMessage>> GetPendingAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(messages);
 
         public Task<bool> TryMarkQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
@@ -182,13 +182,13 @@ public sealed class FailedSmsPublishRetryWorkerTests
             if (!CanClaim)
                 return Task.FromResult(false);
 
-            Claimed.Add(new FailedSmsPublishMessage(messageId, tenantId));
+            Claimed.Add(new SmsQueuePublishMessage(messageId, tenantId));
             return Task.FromResult(true);
         }
 
         public Task MarkNotQueuedAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
         {
-            Released.Add(new FailedSmsPublishMessage(messageId, tenantId));
+            Released.Add(new SmsQueuePublishMessage(messageId, tenantId));
             return Task.CompletedTask;
         }
     }
