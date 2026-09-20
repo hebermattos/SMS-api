@@ -4,14 +4,15 @@
 </style><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#102a56"/></marker><marker id="g" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#64748b"/></marker></defs>
 <rect width="1600" height="1050" fill="#fff"/>
 <text x="800" y="48" text-anchor="middle" class="title">SMS API – Docker Compose Architecture</text>
-<text x="800" y="80" text-anchor="middle" class="sub">API and background processing deployed independently</text>
+<text x="800" y="80" text-anchor="middle" class="sub">HAProxy load balancing across two API instances with independent background processing</text>
 
 <rect x="30" y="120" width="245" height="120" fill="#eef6ff" stroke="#1683e8" class="box"/>
 <text x="152" y="160" text-anchor="middle" class="h">Web UI</text><text x="152" y="188" text-anchor="middle" class="s">Angular + Nginx</text><text x="152" y="216" text-anchor="middle" class="mini">localhost:4200</text>
 
-<rect x="380" y="115" width="300" height="130" fill="#eef6ff" stroke="#1683e8" class="box"/>
-<text x="530" y="155" text-anchor="middle" class="h">SMS API</text><text x="530" y="183" text-anchor="middle" class="s">ASP.NET Core / .NET 8</text><text x="530" y="211" text-anchor="middle" class="mini">HTTP · Auth · Webhooks · Publishers</text>
-<path d="M275 180H380" class="line"/><text x="327" y="165" text-anchor="middle" class="mini">REST + JWT</text>
+<rect x="300" y="115" width="150" height="130" fill="#f8fafc" stroke="#64748b" class="box"/><text x="375" y="155" text-anchor="middle" class="h">HAProxy</text><text x="375" y="183" text-anchor="middle" class="s">Round robin</text><text x="375" y="211" text-anchor="middle" class="mini">:8080 · /stats :8404</text>
+<rect x="485" y="105" width="210" height="62" fill="#eef6ff" stroke="#1683e8" class="box"/><text x="590" y="132" text-anchor="middle" class="t">SMS API 1</text><text x="590" y="153" text-anchor="middle" class="mini">ASP.NET Core · api-1</text>
+<rect x="485" y="185" width="210" height="62" fill="#eef6ff" stroke="#1683e8" class="box"/><text x="590" y="212" text-anchor="middle" class="t">SMS API 2</text><text x="590" y="233" text-anchor="middle" class="mini">ASP.NET Core · api-2</text>
+<path d="M275 180H300" class="line"/><text x="287" y="165" text-anchor="middle" class="mini">HTTP</text><path d="M450 165L485 136" class="line"/><path d="M450 195L485 216" class="line"/>
 
 <rect x="765" y="115" width="300" height="130" fill="#eef6ff" stroke="#1683e8" class="box"/>
 <text x="915" y="155" text-anchor="middle" class="h">SMS Worker</text><text x="915" y="183" text-anchor="middle" class="s">.NET 8 Worker Service</text><text x="915" y="211" text-anchor="middle" class="mini">Consumers · Schedulers · Monitoring</text>
@@ -20,7 +21,7 @@
 <rect x="1240" y="150" width="290" height="45" fill="#fff" stroke="#aaa" class="box"/><text x="1385" y="179" text-anchor="middle" class="t">Twilio</text>
 <rect x="1240" y="210" width="290" height="45" fill="#fff" stroke="#aaa" class="box"/><text x="1385" y="239" text-anchor="middle" class="t">Bandwidth</text>
 <path d="M1065 165H1240" class="line"/><text x="1152" y="150" text-anchor="middle" class="mini">Send SMS</text>
-<path d="M1240 232H1150V220H680" class="line"/><text x="1135" y="213" text-anchor="middle" class="mini">Webhooks → API</text>
+<path d="M1240 232H1150V260H450V195" class="line"/><text x="1135" y="213" text-anchor="middle" class="mini">Webhooks → API</text>
 
 <rect x="40" y="330" width="210" height="115" fill="#f7f1ff" stroke="#8b5cf6" class="box"/><text x="145" y="370" text-anchor="middle" class="h">Ollama</text><text x="145" y="398" text-anchor="middle" class="s">Qwen2.5 0.5B</text><text x="145" y="425" text-anchor="middle" class="mini">Local AI assistant</text>
 <rect x="290" y="330" width="210" height="115" fill="#effdf3" stroke="#16a34a" class="box"/><text x="395" y="374" text-anchor="middle" class="h">Redis</text><text x="395" y="402" text-anchor="middle" class="s">Cache</text><text x="395" y="428" text-anchor="middle" class="mini">localhost:6379</text>
@@ -29,13 +30,13 @@
 <rect x="1100" y="330" width="205" height="115" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="1202" y="370" text-anchor="middle" class="h">OTel Collector</text><text x="1202" y="399" text-anchor="middle" class="s">OTLP :4318</text><text x="1202" y="425" text-anchor="middle" class="mini">Internal only</text>
 <rect x="1340" y="330" width="220" height="115" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="1450" y="370" text-anchor="middle" class="h">ClickStack</text><text x="1450" y="398" text-anchor="middle" class="s">ClickHouse + HyperDX</text><text x="1450" y="425" text-anchor="middle" class="mini">HyperDX via Caddy :8081</text>
 
-<path d="M470 245V290H145V330" class="line"/>
-<path d="M500 245V300H395V330" class="line"/>
-<path d="M550 245V330" class="line"/><text x="585" y="302" class="mini">publish</text>
+<path d="M520 247V290H145V330" class="line"/>
+<path d="M550 247V300H395V330" class="line"/>
+<path d="M580 247V330" class="line"/><text x="585" y="302" class="mini">publish</text>
 <path d="M660 330V285H915V245" class="line"/><text x="760" y="278" class="mini">consume</text>
-<path d="M600 245V305H940V330" class="line"/>
+<path d="M610 247V305H940V330" class="line"/>
 <path d="M915 245V300H940V330" class="line"/>
-<path d="M640 245V285H1202V330" class="line"/><text x="1080" y="278" class="mini">API telemetry</text>
+<path d="M650 247V285H1202V330" class="line"/><text x="1080" y="278" class="mini">API telemetry</text>
 <path d="M965 245V290H1202V330" class="line"/><text x="1050" y="310" class="mini">Worker telemetry</text>
 <path d="M1305 387H1340" class="line"/>
 
