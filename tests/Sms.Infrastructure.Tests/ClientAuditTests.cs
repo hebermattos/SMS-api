@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sms.Api.Auth;
 using Sms.Api.Controllers;
@@ -26,17 +25,16 @@ public sealed class ClientAuditTests
         var controller = new AuthController(new TokenService(Options.Create(new JwtOptions
             { Issuer = "i", Audience = "a", Key = "01234567890123456789012345678901" })), new Repository(credential))
             { ControllerContext = new ControllerContext { HttpContext = context } };
-        var logger = new Recorder<ClientLoginAuditMiddleware>();
+        var writer = new ActivityRecorder();
         await RunPipelineAsync(context, async c =>
         {
             var result = await controller.Token(new TokenRequest("untrusted-input", valid ? "correct-secret" : "wrong-secret"), default);
             c.Response.StatusCode = result is OkObjectResult ? 200 : 401;
-        }, new ClientLoginAuditMiddleware(new ActivityRecorder()));
-        Assert.Equal(valid ? "verified-client" : null, logger.Values["ClientId"]);
-        Assert.Equal(valid ? credential.TenantId : (Guid?)null, logger.Values["TenantId"]);
-        Assert.DoesNotContain("secret", logger.Message);
-        Assert.DoesNotContain("untrusted-input", logger.Message);
-        Assert.StartsWith(valid ? "Signed in to the API." : "Could not sign in to the API.", logger.Message);
+        }, new ClientLoginAuditMiddleware(writer));
+        Assert.Equal(valid ? "verified-client" : null, writer.Activity?.UserId);
+        Assert.Equal(valid ? credential.TenantId : null, writer.Activity?.TenantId);
+        Assert.DoesNotContain("secret", writer.Activity?.Description ?? "");
+        Assert.DoesNotContain("untrusted-input", writer.Activity?.Description ?? "");
     }
 
     [Theory]
@@ -50,11 +48,11 @@ public sealed class ClientAuditTests
             new Claim("tenant_id", tenant.ToString()), new Claim(subjectClaim, "client-1")], "test"));
         context.Request.Headers["ClientId"] = "forged-client";
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "Overview", ActionName = "Get" }), "activity"));
-        var logger = new Recorder<RequestAuditMiddleware>();
-        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(new ActivityRecorder()));
-        Assert.Equal("client-1", logger.Values["ActorId"]);
-        Assert.Equal(tenant, logger.Values["TenantId"]);
-        Assert.DoesNotContain("forged-client", logger.Message);
+        var writer = new ActivityRecorder();
+        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(writer));
+        Assert.Equal("client-1", writer.Activity?.UserId);
+        Assert.Equal(tenant, writer.Activity?.TenantId);
+        Assert.DoesNotContain("forged-client", writer.Activity?.Description ?? "");
     }
 
 
@@ -88,17 +86,16 @@ public sealed class ClientAuditTests
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(
             new ControllerActionDescriptor { ControllerName = controller, ActionName = action }), "activity"));
         context.Request.Method = action.StartsWith("Get") || action is "List" or "Rules" or "Sms" ? "GET" : "POST";
-        var logger = new Recorder<RequestAuditMiddleware>();
+        var writer = new ActivityRecorder();
 
         await RunPipelineAsync(context, c =>
         {
             c.Response.StatusCode = status;
             return Task.CompletedTask;
-        }, new RequestAuditMiddleware(new ActivityRecorder()));
+        }, new RequestAuditMiddleware(writer));
 
-        Assert.StartsWith(expected, logger.Message);
-        Assert.Equal(expected, logger.Values["Activity"]);
-        Assert.Equal(status, logger.Values["StatusCode"]);
+        Assert.Equal(expected, writer.Activity?.Description);
+        Assert.Equal(status < 400 ? "Succeeded" : "Failed", writer.Activity?.Outcome);
     }
 
     [Fact]
@@ -109,9 +106,9 @@ public sealed class ClientAuditTests
         context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("tenant_id", tenant.ToString()), new Claim("sub", "client-1")], "test"));
         context.Request.Method = "GET";
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "NewPage", ActionName = "Get" }), "activity"));
-        var logger = new Recorder<RequestAuditMiddleware>();
-        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(new ActivityRecorder()));
-        Assert.Empty(logger.Values);
+        var writer = new ActivityRecorder();
+        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(writer));
+        Assert.Null(writer.Activity);
     }
 
     [Theory]
@@ -127,9 +124,9 @@ public sealed class ClientAuditTests
         context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("tenant_id", tenant.ToString()), new Claim("sub", "client-1")], "test"));
         context.Request.Method = method;
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "NewFeature", ActionName = "Save" }), "activity"));
-        var logger = new Recorder<RequestAuditMiddleware>();
-        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(new ActivityRecorder()));
-        Assert.Empty(logger.Values);
+        var writer = new ActivityRecorder();
+        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(writer));
+        Assert.Null(writer.Activity);
     }
 
     [Theory]
@@ -140,11 +137,9 @@ public sealed class ClientAuditTests
         var context = new DefaultHttpContext();
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(
             new ControllerActionDescriptor { ControllerName = "Auth", ActionName = "Token" }), "login"));
-        var logger = new Recorder<ClientLoginAuditMiddleware>();
-        await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new ClientLoginAuditMiddleware(new ActivityRecorder()));
-        Assert.Null(logger.Values["TenantId"]);
-        Assert.Null(logger.Values["ClientId"]);
-        Assert.Equal("Failed", logger.Values["Outcome"]);
+        var writer = new ActivityRecorder();
+        await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new ClientLoginAuditMiddleware(writer));
+        Assert.Null(writer.Activity);
     }
 
     private static Task RunPipelineAsync(HttpContext context, RequestDelegate next, params IAuditPipelineStep[] steps) =>
@@ -162,16 +157,4 @@ public sealed class ClientAuditTests
         public Task WriteAsync(UserActivity activity, CancellationToken cancellationToken = default) { Activity = activity; return Task.CompletedTask; }
     }
 
-    private sealed class Recorder<T> : ILogger<T>
-    {
-        public Dictionary<string, object?> Values { get; private set; } = [];
-        public string Message { get; private set; } = "";
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel level) => true;
-        public void Log<TState>(LogLevel level, EventId id, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            Values = ((IEnumerable<KeyValuePair<string, object?>>)state!).ToDictionary(x => x.Key, x => x.Value);
-            Message = formatter(state, exception);
-        }
-    }
 }
