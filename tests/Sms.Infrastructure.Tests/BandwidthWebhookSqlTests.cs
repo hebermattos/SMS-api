@@ -49,7 +49,7 @@ public sealed class BandwidthWebhookSqlTests
         try
         {
             await connection.ExecuteAsync("""
-                INSERT Tenants (Id, Name, IsActive, CreatedAt)
+                INSERT INTO Tenants (Id, Name, IsActive, CreatedAt)
                 VALUES (@Tenant, 'Webhook test', TRUE, CURRENT_TIMESTAMP),
                        (@OtherTenant, 'Other webhook test', TRUE, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant, OtherTenant = otherTenant });
@@ -139,10 +139,10 @@ public sealed class BandwidthWebhookSqlTests
         finally
         {
             await connection.ExecuteAsync("""
-                DELETE SmsMessageStatusHistory WHERE TenantId IN (@Tenant, @OtherTenant);
-                DELETE SmsMessages WHERE TenantId IN (@Tenant, @OtherTenant);
-                DELETE TenantSmsProviders WHERE TenantId IN (@Tenant, @OtherTenant);
-                DELETE Tenants WHERE Id IN (@Tenant, @OtherTenant);
+                DELETE FROM SmsMessageStatusHistory WHERE TenantId IN (@Tenant, @OtherTenant);
+                DELETE FROM SmsMessages WHERE TenantId IN (@Tenant, @OtherTenant);
+                DELETE FROM TenantSmsProviders WHERE TenantId IN (@Tenant, @OtherTenant);
+                DELETE FROM Tenants WHERE Id IN (@Tenant, @OtherTenant);
                 """, new { Tenant = tenant, OtherTenant = otherTenant });
         }
     }
