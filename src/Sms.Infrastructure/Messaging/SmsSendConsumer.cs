@@ -85,7 +85,7 @@ public sealed class SmsSendConsumer(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "SMS provider rejected queued message {MessageId}.", sendEvent.MessageId);
+            logger.LogError(exception, "Failed to process queued SMS message {MessageId} for tenant {TenantId} with provider {Provider}.", sendEvent.MessageId, sendEvent.TenantId, message.Provider);
 
             await repository.UpdateStatusAsync(
                 sendEvent.TenantId,
