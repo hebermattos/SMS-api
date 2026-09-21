@@ -27,9 +27,9 @@ public sealed class AlertSqlTests
             await connection.ExecuteAsync("""
                 INSERT INTO Tenants(Id,Name,IsActive,CreatedAt) VALUES
                     (@Tenant,'Alert tenant',TRUE,CURRENT_TIMESTAMP),(@Other,'Other tenant',TRUE,CURRENT_TIMESTAMP);
-                INSERT INTO SmsMessages(Id,TenantId,"From","To",Body,Provider,Direction,Status,CreatedAt) VALUES
-                    (@Message1,@Tenant,'x','x','x','Twilio',1,4,CURRENT_TIMESTAMP),
-                    (@Message2,@Tenant,'x','x','x','Twilio',1,4,CURRENT_TIMESTAMP);
+                INSERT INTO SmsMessages(Id,TenantId,"From","To",Body,Provider,Direction,QueueStatus,Status,CreatedAt) VALUES
+                    (@Message1,@Tenant,'x','x','x','Twilio',1,2,4,CURRENT_TIMESTAMP),
+                    (@Message2,@Tenant,'x','x','x','Twilio',1,2,4,CURRENT_TIMESTAMP);
                 INSERT INTO SmsMessageStatusHistory(Id,TenantId,MessageId,Status,CreatedAt) VALUES
                     (gen_random_uuid(),@Tenant,@Message1,4,CURRENT_TIMESTAMP),
                     (gen_random_uuid(),@Tenant,@Message2,4,CURRENT_TIMESTAMP);
