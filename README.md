@@ -83,8 +83,8 @@ The local Compose stack uses explicit CPU and memory limits to keep development 
 
 | Service | CPU limit | Memory reservation | Memory limit |
 | --- | ---: | ---: | ---: |
-| API 1 | 0.50 | 256 MB | 256 MB |
-| API 2 | 0.50 | 256 MB | 256 MB |
+| API 1 | 0.50 | 128 MB | 256 MB |
+| API 2 | 0.50 | 128 MB | 256 MB |
 | Worker | 0.50 | 128 MB | 256 MB |
 | PostgreSQL | 0.75 | 128 MB | 384 MB |
 | Redis | 0.20 | 32 MB | 64 MB |
@@ -349,7 +349,7 @@ The diagram reflects the current Docker Compose topology and startup dependencie
 
 ![SMS API database ER diagram](docs/images/sms-api-er-diagram.svg)
 
-The diagram keeps the database model in a single image. It contains the transactional schema from `database/schema.sql` and the reporting read model from `database/reporting-schema.sql`, while preserving the boundary between `sms_api` and `sms_api_reporting`. The reporting flow is `SmsMessages → TenantSmsOverviewOutbox → RabbitMQ → Worker → ReportingSmsMessages → daily tenant/provider/user aggregates`. Alert status events flow through `AlertEvaluationOutbox → sms.alert.evaluation → AlertEvaluationConsumer`; the consumer stores each event in the 24-hour `AlertMessageWindow`, finds candidate rules, and publishes one message per rule to `sms.alert.rule-evaluation`. `AlertRuleEvaluationConsumer` evaluates exactly one rule per message and creates an idempotent `Alerts` row using `(TenantId, RuleId, EventId)`. The audit/error-log database remains separate.
+The diagram contains only persisted data structures from the transactional `sms_api` schema and the `sms_api_reporting` read model. Runtime components such as RabbitMQ queues and consumers are documented in the architecture and RabbitMQ sections instead of being modeled as database entities. `AlertEvaluationOutbox` and `TenantSmsOverviewOutbox` remain part of the transactional schema because they are persisted tables. The audit/error-log database remains separate.
 
 The two API containers and Worker are separate processes and can be deployed and scaled independently. HAProxy is the single host-facing API entry point; API containers are reachable only on the internal Compose network. The API handles HTTP, authentication, authorization, webhooks, and RabbitMQ publishing. The Worker owns RabbitMQ consumers, scheduled-message publishing, failed-publish retry, alert event publishing, per-rule alert evaluation, and RabbitMQ monitoring. Both wait for their required infrastructure dependencies before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
 
