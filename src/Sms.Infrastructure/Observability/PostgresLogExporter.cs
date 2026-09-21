@@ -9,7 +9,7 @@ namespace Sms.Infrastructure.Observability;
 
 public sealed class PostgresLogExporter(string connectionString) : BaseExporter<LogRecord>
 {
-    private static readonly string InsertSystemSql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerLogExporter.SqlServerLogExporter.02.sql");
+    private static readonly string InsertSystemSql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/PostgresLogExporter.InsertSystemLog.sql");
 
     public override ExportResult Export(in Batch<LogRecord> batch)
     {
