@@ -36,12 +36,20 @@ public sealed class RefreshTokenService(
         if (session is null) return null;
 
         var user = await portalUsers.GetActiveByIdAsync(session.UserId, cancellationToken);
-            if (user is null
-                || user.Context != session.Context
-                || user.Role != session.Role
-                || user.TenantId != session.TenantId) return null;
+        if (user is null
+            || user.Context != session.Context
+            || user.Role != session.Role
+            || user.TenantId != session.TenantId) return null;
 
         return Build(session with { Id = replacementId, ExpiresAt = replacementExpiresAt }, replacement);
+    }
+
+    public Task RevokeAsync(string refreshToken, Guid userId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken) || refreshToken.Length > 512)
+            return Task.CompletedTask;
+
+        return repository.RevokeAsync(Hash(refreshToken), userId, cancellationToken);
     }
 
     private IssuedTokens Build(RefreshTokenSession session, string refreshToken)
