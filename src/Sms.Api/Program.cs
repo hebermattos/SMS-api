@@ -93,6 +93,7 @@ builder.Services.AddRateLimiter(options =>
         { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 builder.Services.AddApplication();
+builder.Services.AddRedisConnection(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<IRateLimitCounter, RedisRateLimitCounter>();
 builder.Services.AddDependencyHealthChecks(builder.Configuration);
