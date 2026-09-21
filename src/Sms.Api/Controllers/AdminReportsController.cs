@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sms.Api.Auth;
 using Sms.Application.Reports;
-using Sms.Domain.Messages;
 
 namespace Sms.Api.Controllers;
 
@@ -15,12 +14,9 @@ public sealed class AdminReportsController(ISmsReportRepository reports) : Contr
     public Task<PlatformSmsReportSummary> Sms(
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
-        [FromQuery] SmsStatus? status,
-        [FromQuery] SmsDirection? direction,
         [FromQuery] string? provider,
         CancellationToken cancellationToken) =>
-        reports.GetPlatformSummaryAsync(
-            new(from, to, status, direction, NormalizeProvider(provider)), cancellationToken);
+        reports.GetPlatformSummaryAsync(new(from, to, NormalizeProvider(provider)), cancellationToken);
 
     private static string? NormalizeProvider(string? provider) =>
         string.IsNullOrWhiteSpace(provider) ? null : provider.Trim();
