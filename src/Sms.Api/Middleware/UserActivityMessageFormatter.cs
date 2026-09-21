@@ -41,17 +41,14 @@ internal static class UserActivityMessageFormatter
         [("OptOuts", "Remove")] = Change("Removed a number from the SMS opt-out list.", "Could not remove the number.")
     };
 
-    internal static UserActivityDescription? Format(string? controller, string? action, string method)
+    internal static UserActivityDescription? Format(string? controller, string? action)
     {
-        if (controller is not null && action is not null && Messages.TryGetValue((controller, action), out var description))
-            return description;
+        if (controller is null || action is null)
+            return null;
 
-        // Unknown reads are intentionally ignored: background UI/API reads should not flood the activity log.
-        // Unknown writes remain auditable so new data-changing endpoints are never silently missed.
-        if (HttpMethods.IsPost(method)) return Change("Changed account data.", "Could not change account data.");
-        if (HttpMethods.IsPut(method) || HttpMethods.IsPatch(method)) return Change("Updated account data.", "Could not update account data.");
-        if (HttpMethods.IsDelete(method)) return Change("Deleted account data.", "Could not delete account data.");
-        return null;
+        return Messages.TryGetValue((controller, action), out var description)
+            ? description
+            : null;
     }
 
     private static UserActivityDescription Page(string success, string failure) => new(success, failure, UserActivityKind.PageView);
