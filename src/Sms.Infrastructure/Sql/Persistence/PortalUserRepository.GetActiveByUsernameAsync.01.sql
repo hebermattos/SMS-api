@@ -2,7 +2,7 @@ SELECT u.Id, u.TenantId, u.Username, u.Email, u.PasswordHash, u.PasswordSalt, u.
        u.Context, u.Role, u.IsActive
 FROM PortalUsers u
 LEFT JOIN Tenants t ON t.Id=u.TenantId
-WHERE u.Username=@Username
+WHERE LOWER(u.Username)=LOWER(@Username)
   AND u.Context=@Context
   AND u.IsActive
   AND
