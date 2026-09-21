@@ -24,6 +24,12 @@ public sealed class RefreshTokenService(
         return Build(session, raw);
     }
 
+    public Task<bool> RevokeAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken) || refreshToken.Length > 512) return Task.FromResult(false);
+        return repository.RevokeAsync(Hash(refreshToken), cancellationToken);
+    }
+
     public async Task<IssuedTokens?> RotateAsync(string refreshToken, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(refreshToken) || refreshToken.Length > 512) return null;
