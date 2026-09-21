@@ -89,8 +89,8 @@ public sealed class ReportingSqlTests
         finally
         {
             if (eventIds.Count > 0)
-                await reporting.ExecuteAsync("DELETE TenantSmsOverviewInbox WHERE EventId IN @EventIds;", new { EventIds = eventIds });
-            await reporting.ExecuteAsync("DELETE ReportingSmsMessages WHERE TenantId=@TenantId; DELETE UserSmsOverview WHERE TenantId=@TenantId; DELETE TenantSmsOverview WHERE TenantId=@TenantId;", new { TenantId = tenantId });
+                await reporting.ExecuteAsync("DELETE FROM TenantSmsOverviewInbox WHERE EventId = ANY(@EventIds);", new { EventIds = eventIds.ToArray() });
+            await reporting.ExecuteAsync("""\n                DELETE FROM ReportingSmsMessages WHERE TenantId=@TenantId;\n                DELETE FROM UserSmsOverview WHERE TenantId=@TenantId;\n                DELETE FROM TenantSmsOverview WHERE TenantId=@TenantId;\n                """, new { TenantId = tenantId });
             await application.ExecuteAsync("""
                 DELETE TenantSmsOverviewOutbox WHERE TenantId=@TenantId;
                 DELETE SmsMessageStatusHistory WHERE TenantId=@TenantId;
