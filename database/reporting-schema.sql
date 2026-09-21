@@ -112,7 +112,6 @@ CREATE TABLE AlertMessageWindow
 (
     EventId UUID PRIMARY KEY,
     TenantId UUID NOT NULL,
-    MessageId UUID NOT NULL,
     Provider VARCHAR(50) NOT NULL,
     Status INTEGER NOT NULL,
     OccurredAtUtc TIMESTAMPTZ NOT NULL,
@@ -123,7 +122,7 @@ CREATE TABLE AlertMessageWindow
 
 CREATE INDEX IX_AlertMessageWindow_Tenant_Status_Occurred
     ON AlertMessageWindow(TenantId, Status, OccurredAtUtc DESC)
-    INCLUDE (Provider, MessageId, ExpiresAtUtc);
+    INCLUDE (Provider, ExpiresAtUtc);
 
 CREATE INDEX IX_AlertMessageWindow_Expires
     ON AlertMessageWindow(ExpiresAtUtc);
