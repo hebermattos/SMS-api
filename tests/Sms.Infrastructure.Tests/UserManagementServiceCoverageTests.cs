@@ -35,6 +35,25 @@ public sealed class UserManagementServiceCoverageTests
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreatePlatformUserAsync(username, email, password, role));
     }
 
+    [Theory]
+    [InlineData("", "user@example.com", Password, "user")]
+    [InlineData("validuser", "", Password, "user")]
+    [InlineData("validuser", "user@example.com", "", "user")]
+    [InlineData("validuser", "user@example.com", Password, "")]
+    public async Task PlatformUser_CreateRejectsBlankInput(string username, string email, string password, string role)
+    {
+        var service = new PortalUserManagementService(new PlatformRepository());
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreatePlatformUserAsync(username, email, password, role));
+    }
+
+    [Fact]
+    public async Task PlatformUser_CreateRejectsOversizedEmailAndPassword()
+    {
+        var service = new PortalUserManagementService(new PlatformRepository());
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreatePlatformUserAsync("validuser", $"{new string('a', 310)}@example.com", Password, "user"));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreatePlatformUserAsync("validuser", "user@example.com", new string('x', 129), "user"));
+    }
+
     [Fact]
     public async Task PlatformUser_StateAndPasswordThrowWhenMissing()
     {
