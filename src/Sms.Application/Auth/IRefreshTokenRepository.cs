@@ -18,4 +18,5 @@ public interface IRefreshTokenRepository
         Guid replacementId,
         DateTimeOffset replacementExpiresAt,
         CancellationToken cancellationToken = default);
+    Task RevokeAsync(byte[] tokenHash, Guid userId, CancellationToken cancellationToken = default);
 }
