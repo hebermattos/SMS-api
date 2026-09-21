@@ -2,31 +2,34 @@ using Sms.Api.Auth;
 
 namespace Sms.Api.Middleware;
 
-public sealed class PortalLoginAuditMiddleware(ILogger<PortalLoginAuditMiddleware> logger) : IAuditPipelineStep
+public sealed class PortalLoginAuditMiddleware(IUserActivityWriter activities) : IAuditPipelineStep
 {
     internal static readonly object IdentityKey = new();
 
-    public Task AuditAsync(AuditPipelineContext audit)
+    public async Task AuditAsync(AuditPipelineContext audit)
     {
         var action = audit.Action;
         if (action?.ControllerName != "PortalAuth" || action.ActionName != "Token")
-            return Task.CompletedTask;
+            return;
 
         var context = audit.HttpContext;
-        var status = audit.Failed ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
         var identity = context.Items[IdentityKey] as PortalLoginIdentity;
-        var succeeded = status >= 200 && status < 300 && identity is not null;
+        if (identity is null || identity.Context != PortalSecurity.TenantContext || identity.TenantId is null)
+            return;
 
-        logger.Log(status >= 500 ? LogLevel.Error : succeeded ? LogLevel.Information : LogLevel.Warning,
-            "{Activity} Activity type {ActivityType}. HTTP {StatusCode} for user {ActorId}, tenant {TenantId}. Outcome: {Outcome}.",
+        var status = audit.Failed ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
+        var succeeded = status >= 200 && status < 300;
+
+        await activities.WriteAsync(new UserActivity(
+            identity.TenantId.Value,
+            identity.UserId.ToString(),
+            UserActivityKind.Action.ToString(),
+            "PortalSignedIn",
+            "User",
+            identity.UserId.ToString(),
             succeeded ? "Signed in to the portal." : "Could not sign in to the portal.",
-            "Action",
-            status,
-            succeeded ? identity!.UserId : null,
-            succeeded && identity!.Context == PortalSecurity.TenantContext ? identity.TenantId : null,
-            succeeded ? "Succeeded" : "Failed");
-
-        return Task.CompletedTask;
+            succeeded ? "Succeeded" : "Failed"),
+            context.RequestAborted);
     }
 }
 
