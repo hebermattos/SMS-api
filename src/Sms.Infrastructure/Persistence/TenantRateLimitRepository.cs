@@ -1,17 +1,34 @@
+using System.Text.Json;
 using Dapper;
+using Microsoft.Extensions.Caching.Distributed;
 using Sms.Application.Administration;
 
 namespace Sms.Infrastructure.Persistence;
 
-public sealed class TenantRateLimitRepository(SqlConnectionFactory connections) : ITenantRateLimitRepository
+public sealed class TenantRateLimitRepository(
+    SqlConnectionFactory connections,
+    IDistributedCache cache) : ITenantRateLimitRepository
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public async Task<TenantRateLimitSettings> GetAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
+        var key = CacheKey(tenantId);
+        var cached = await cache.GetStringAsync(key, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(cached))
+        {
+            var value = JsonSerializer.Deserialize<TenantRateLimitSettings>(cached, JsonOptions);
+            if (value is not null) return value;
+        }
+
         var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantRateLimitRepository.GetAsync.01.sql");
         using var connection = connections.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<TenantRateLimitSettings>(
+        var settings = await connection.QuerySingleOrDefaultAsync<TenantRateLimitSettings>(
             new CommandDefinition(sql, new { TenantId = tenantId }, cancellationToken: cancellationToken))
             ?? new TenantRateLimitSettings(120, 10, 6);
+
+        await cache.SetStringAsync(key, JsonSerializer.Serialize(settings, JsonOptions), cancellationToken);
+        return settings;
     }
 
     public async Task SaveAsync(Guid tenantId, TenantRateLimitSettings settings, CancellationToken cancellationToken = default)
@@ -25,5 +42,9 @@ public sealed class TenantRateLimitRepository(SqlConnectionFactory connections) 
             settings.SmsPerMinute,
             settings.OllamaRequestsPerMinute
         }, cancellationToken: cancellationToken));
+
+        await cache.RemoveAsync(CacheKey(tenantId), CancellationToken.None);
     }
+
+    private static string CacheKey(Guid tenantId) => $"tenant-config:rate-limit:{tenantId:N}";
 }
