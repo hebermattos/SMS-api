@@ -16,8 +16,23 @@ var password = configuration["Admin:Password"] ?? throw new InvalidOperationExce
 var email = configuration["Admin:Email"] ?? throw new InvalidOperationException("Admin:Email is required for local bootstrap.");
 if (await portalUsers.GetActiveByUsernameAsync(username.Trim(), "platform", null) is null)
 {
-    await new PortalUserManagementService(platformUsers)
-        .CreatePlatformUserAsync(username, email, password, "administrator");
+    var allowInsecureBootstrapPassword = configuration.GetValue<bool>("Admin:AllowInsecureBootstrapPassword");
+    if (password.Length >= 15)
+    {
+        await new PortalUserManagementService(platformUsers)
+            .CreatePlatformUserAsync(username, email, password, "administrator");
+    }
+    else if (allowInsecureBootstrapPassword)
+    {
+        var (hash, salt, iterations) = ClientSecretHasher.Hash(password);
+        await platformUsers.CreatePlatformUserAsync(new(
+            Guid.NewGuid(), null, username.Trim(), email.Trim().ToLowerInvariant(),
+            hash, salt, iterations, "platform", "administrator"));
+    }
+    else
+    {
+        throw new ArgumentException("Passwords must contain 15–128 characters.");
+    }
 }
 Console.WriteLine("Initial platform administrator is configured. Existing passwords are not overwritten.");
 var configurationCache = new TenantConfigurationCache(
