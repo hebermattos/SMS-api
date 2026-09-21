@@ -77,6 +77,10 @@ public sealed class SmsSendConsumer(
         }
         catch (TransientSmsProviderException)
         {
+            // MassTransit retries the same delivery in this consumer instance. The
+            // database claim remains Processing so another delivery cannot send it.
+            // SendAsync is retried directly instead of returning through Consume,
+            // which would reject the already claimed Processing state.
             throw;
         }
         catch (Exception exception)
