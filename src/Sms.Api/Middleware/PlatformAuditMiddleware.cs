@@ -14,7 +14,8 @@ public sealed class PlatformAuditMiddleware(ILogger<PlatformAuditMiddleware> log
         var context = audit.HttpContext;
         var status = audit.Failed ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
         var administrator = context.User.Identity?.IsAuthenticated == true
-            && context.User.HasClaim(PortalSecurity.AdminClaim, "true")
+            && context.User.HasClaim(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext)
+            && context.User.HasClaim(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole)
             && !context.User.HasClaim(claim => claim.Type == "tenant_id");
         var actor = administrator ? context.User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? context.User.FindFirstValue("sub") ?? "unauthenticated" : "unauthenticated";
