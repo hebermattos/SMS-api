@@ -9,27 +9,14 @@ namespace Sms.Infrastructure.Messaging;
 public sealed class AlertEvaluationOutboxPublisher(
     SqlConnectionFactory connectionFactory,
     IBus bus,
-    ILogger<AlertEvaluationOutboxPublisher> logger) : BackgroundService
+    ILogger<AlertEvaluationOutboxPublisher> logger) : PollingBackgroundService(PollingInterval, logger)
 {
     private static readonly TimeSpan PollingInterval = TimeSpan.FromMinutes(5);
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await PublishBatchAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Failed to publish alert evaluation outbox batch.");
-            }
+    protected override string FailureMessage => "Failed to publish alert evaluation outbox batch.";
 
-            await Task.Delay(PollingInterval, stoppingToken);
-        }
-    }
+    protected override async Task ExecuteIterationAsync(CancellationToken stoppingToken) =>
+        await PublishBatchAsync(stoppingToken);
 
     private async Task<int> PublishBatchAsync(CancellationToken cancellationToken)
     {
