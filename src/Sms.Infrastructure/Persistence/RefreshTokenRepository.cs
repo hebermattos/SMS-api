@@ -16,6 +16,13 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
         }, cancellationToken: cancellationToken));
     }
 
+    public async Task<bool> RevokeAsync(byte[] tokenHash, CancellationToken cancellationToken = default)
+    {
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/RefreshTokenRepository.RevokeAsync.01.sql");
+        using var connection = connections.CreateConnection();
+        return await connection.ExecuteAsync(new CommandDefinition(sql, new { TokenHash = tokenHash }, cancellationToken: cancellationToken)) > 0;
+    }
+
     public async Task<RefreshTokenSession?> RotateAsync(
         byte[] currentTokenHash, byte[] replacementTokenHash, Guid replacementId,
         DateTimeOffset replacementExpiresAt, CancellationToken cancellationToken = default)

@@ -42,6 +42,16 @@ public sealed class AdminAuthController(
         return Ok(new { access_token = issued.AccessToken, refresh_token = issued.RefreshToken, token_type = "Bearer", expires_in = issued.ExpiresIn });
     }
 
+    [Authorize(Policy = PortalSecurity.AdminPolicy)]
+    [HttpPost("logout")]
+    [RequestSizeLimit(2048)]
+    public async Task<IActionResult> Logout(RefreshTokenRequest request, CancellationToken cancellationToken = default)
+    {
+        Response.Headers.CacheControl = "no-store";
+        await refreshTokens.RevokeAsync(request.RefreshToken, cancellationToken);
+        return NoContent();
+    }
+
     [AllowAnonymous]
     [EnableRateLimiting("login")]
     [HttpPost("refresh")]

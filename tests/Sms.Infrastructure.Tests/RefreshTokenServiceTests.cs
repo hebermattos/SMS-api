@@ -58,6 +58,7 @@ public sealed class RefreshTokenServiceTests
         public RefreshTokenSession? Created { get; private set; }
         public byte[]? CreatedHash { get; private set; }
         public RefreshTokenSession? Rotated { get; set; }
+        public Task<bool> RevokeAsync(byte[] tokenHash, CancellationToken cancellationToken = default) => Task.FromResult(true);
         public Task CreateAsync(RefreshTokenSession session, byte[] tokenHash, CancellationToken cancellationToken = default) { Created = session; CreatedHash = tokenHash; return Task.CompletedTask; }
         public Task<RefreshTokenSession?> RotateAsync(byte[] currentTokenHash, byte[] replacementTokenHash, Guid replacementId, DateTimeOffset replacementExpiresAt, CancellationToken cancellationToken = default) => Task.FromResult(Rotated);
     }

@@ -8,6 +8,7 @@ internal static class UserActivityMessageFormatter
 {
     private static readonly Dictionary<(string Controller, string Action), UserActivityDescription> Messages = new()
     {
+        [("PortalAuth", "Logout")] = Action("Signed out of the portal.", "Could not sign out of the portal."),
         [("Messages", "Send")] = Change("Sent an SMS message.", "Could not send an SMS message."),
         [("TenantUsers", "Create")] = Change("Created a tenant user.", "Could not create the tenant user."),
         [("TenantUsers", "SetState")] = Change("Updated a tenant user's status.", "Could not update the tenant user's status."),

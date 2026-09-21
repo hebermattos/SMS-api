@@ -18,7 +18,7 @@ public sealed class PlatformAuditMiddlewareTests
         var tenant = Guid.NewGuid();
         context.Request.RouteValues["tenantId"] = tenant.ToString();
         var logger = new RecordingLogger();
-        await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new PlatformAuditMiddleware(logger));
+        await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new PlatformAuditMiddleware(new PlatformActivities(), logger));
         Assert.Equal(LogLevel.Error, logger.Level);
         Assert.Equal("Administration.SaveProvider", logger.Values["Action"]);
         Assert.Equal(tenant, logger.Values["TargetTenantId"]);
@@ -29,7 +29,7 @@ public sealed class PlatformAuditMiddlewareTests
     public async Task SuccessfulPlatformOperationIsNotWrittenAsSystemLog()
     {
         var logger = new RecordingLogger();
-        await RunPipelineAsync(Context("Administration", "SaveProvider"), c => { c.Response.StatusCode = 204; return Task.CompletedTask; }, new PlatformAuditMiddleware(logger));
+        await RunPipelineAsync(Context("Administration", "SaveProvider"), c => { c.Response.StatusCode = 204; return Task.CompletedTask; }, new PlatformAuditMiddleware(new PlatformActivities(), logger));
         Assert.Empty(logger.Values);
     }
 
@@ -37,7 +37,7 @@ public sealed class PlatformAuditMiddlewareTests
     public async Task ExceptionIsRecordedAsFailureAndRethrownWithoutItsDetails()
     {
         var logger = new RecordingLogger();
-        var step = new PlatformAuditMiddleware(logger);
+        var step = new PlatformAuditMiddleware(new PlatformActivities(), logger);
         await Assert.ThrowsAsync<InvalidOperationException>(() => RunPipelineAsync(Context("Administration", "UpdateTenant"), _ => throw new InvalidOperationException("secret"), step));
         Assert.Equal(500, logger.Values["StatusCode"]);
         Assert.DoesNotContain("secret", logger.Message);
@@ -49,7 +49,7 @@ public sealed class PlatformAuditMiddlewareTests
     public async Task SuccessfulPlatformActionsAreNotTenantOrSystemLogs(string controller, int status)
     {
         var logger = new RecordingLogger();
-        await RunPipelineAsync(Context(controller, "Token"), c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new PlatformAuditMiddleware(logger));
+        await RunPipelineAsync(Context(controller, "Token"), c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new PlatformAuditMiddleware(new PlatformActivities(), logger));
         Assert.Empty(logger.Values);
     }
 
@@ -57,7 +57,7 @@ public sealed class PlatformAuditMiddlewareTests
     public async Task DoesNotAuditProviderCallbacksAsUserActions()
     {
         var logger = new RecordingLogger();
-        await RunPipelineAsync(Context("TwilioWebhooks", "Inbound"), _ => Task.CompletedTask, new PlatformAuditMiddleware(logger));
+        await RunPipelineAsync(Context("TwilioWebhooks", "Inbound"), _ => Task.CompletedTask, new PlatformAuditMiddleware(new PlatformActivities(), logger));
         Assert.Empty(logger.Values);
     }
 
@@ -70,6 +70,16 @@ public sealed class PlatformAuditMiddlewareTests
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask,
             new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = controller, ActionName = action }), "test"));
         return context;
+    }
+
+    private sealed class PlatformActivities : IPlatformActivityWriter
+    {
+        public PlatformActivity? Last { get; private set; }
+        public Task WriteAsync(PlatformActivity activity, CancellationToken cancellationToken = default)
+        {
+            Last = activity;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class RecordingLogger : ILogger<PlatformAuditMiddleware>

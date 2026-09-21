@@ -16,6 +16,23 @@ CREATE TABLE UserActivityLogs
 CREATE INDEX IX_UserActivityLogs_Tenant_Timestamp
     ON UserActivityLogs(TenantId, "Timestamp" DESC, Id DESC);
 
+CREATE TABLE PlatformActivityLogs
+(
+    Id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    "Timestamp" TIMESTAMPTZ NOT NULL,
+    UserId VARCHAR(100) NULL,
+    ActivityType VARCHAR(32) NOT NULL,
+    Action VARCHAR(100) NOT NULL,
+    ResourceType VARCHAR(100) NULL,
+    ResourceId VARCHAR(100) NULL,
+    Description VARCHAR(4000) NOT NULL,
+    Outcome VARCHAR(16) NOT NULL,
+    CHECK (Outcome IN ('Succeeded', 'Failed'))
+);
+
+CREATE INDEX IX_PlatformActivityLogs_Timestamp
+    ON PlatformActivityLogs("Timestamp" DESC, Id DESC);
+
 CREATE TABLE SystemLogs
 (
     Id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

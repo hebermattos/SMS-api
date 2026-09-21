@@ -39,6 +39,7 @@ public sealed class PortalAuthControllerTests
 
     private sealed class RefreshTokens : IRefreshTokenRepository
     {
+        public Task<bool> RevokeAsync(byte[] tokenHash, CancellationToken cancellationToken = default) => Task.FromResult(true);
         public Task CreateAsync(RefreshTokenSession session, byte[] tokenHash, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<RefreshTokenSession?> RotateAsync(byte[] currentTokenHash, byte[] replacementTokenHash, Guid replacementId, DateTimeOffset replacementExpiresAt, CancellationToken cancellationToken = default) => Task.FromResult<RefreshTokenSession?>(null);
     }

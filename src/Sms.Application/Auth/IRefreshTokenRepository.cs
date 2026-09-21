@@ -12,6 +12,7 @@ public sealed record RefreshTokenSession(
 public interface IRefreshTokenRepository
 {
     Task CreateAsync(RefreshTokenSession session, byte[] tokenHash, CancellationToken cancellationToken = default);
+    Task<bool> RevokeAsync(byte[] tokenHash, CancellationToken cancellationToken = default);
     Task<RefreshTokenSession?> RotateAsync(
         byte[] currentTokenHash,
         byte[] replacementTokenHash,

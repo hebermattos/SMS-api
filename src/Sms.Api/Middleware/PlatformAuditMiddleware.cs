@@ -3,13 +3,15 @@ using System.Security.Claims;
 
 namespace Sms.Api.Middleware;
 
-public sealed class PlatformAuditMiddleware(ILogger<PlatformAuditMiddleware> logger) : IAuditPipelineStep
+public sealed class PlatformAuditMiddleware(
+    IPlatformActivityWriter activities,
+    ILogger<PlatformAuditMiddleware> logger) : IAuditPipelineStep
 {
-    public Task AuditAsync(AuditPipelineContext audit)
+    public async Task AuditAsync(AuditPipelineContext audit)
     {
         var action = audit.Action;
         if (action?.ControllerName is not ("Administration" or "AdminTenants" or "AdminAuth" or "SystemLogs"))
-            return Task.CompletedTask;
+            return;
 
         var context = audit.HttpContext;
         var status = audit.Failed ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
@@ -17,26 +19,58 @@ public sealed class PlatformAuditMiddleware(ILogger<PlatformAuditMiddleware> log
             && context.User.HasClaim(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext)
             && context.User.HasClaim(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole)
             && !context.User.HasClaim(claim => claim.Type == "tenant_id");
-        var actor = administrator ? context.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? context.User.FindFirstValue("sub") ?? "unauthenticated" : "unauthenticated";
-        if (status < 400 && action.ControllerName == "AdminAuth")
-            actor = context.Items[PortalSecurity.AdministratorLoginIdentityKey] as string ?? "unauthenticated";
+
+        var actor = administrator
+            ? context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub")
+            : null;
+
+        if (status < 400 && action.ControllerName == "AdminAuth" && action.ActionName == "Token")
+            actor = context.Items[PortalSecurity.AdministratorLoginIdentityKey] as string;
+
         if (status < 400 && action.ControllerName == "AdminTenants" && !administrator)
             actor = "bootstrap-key";
 
-        // Target IDs are metadata only. Never set TenantId on platform audit events:
-        // that would expose administrative activity through the customer log endpoint.
-        Guid? targetTenant = Guid.TryParse(context.Request.RouteValues["tenantId"]?.ToString(), out var tenant) ? tenant : null;
-        Guid? targetClient = Guid.TryParse(context.Request.RouteValues["clientId"]?.ToString(), out var client) ? client : null;
-        Guid? targetAdministrator = Guid.TryParse(context.Request.RouteValues["administratorId"]?.ToString(), out var targetAdmin) ? targetAdmin : null;
+        var targetTenant = context.Request.RouteValues["tenantId"]?.ToString();
+        var targetClient = context.Request.RouteValues["clientId"]?.ToString();
+        var targetAdministrator = context.Request.RouteValues["administratorId"]?.ToString();
+        var resourceId = targetTenant ?? targetClient ?? targetAdministrator;
+        var resourceType = targetTenant is not null ? "Tenant"
+            : targetClient is not null ? "ApiClient"
+            : targetAdministrator is not null ? "PlatformAdministrator"
+            : null;
 
-        // Platform activity is not tenant activity and must never be stored in UserActivityLogs.
-        // Keep only failures here as technical system telemetry.
         if (status >= 400)
+        {
             logger.LogError(
                 "Platform operation {Action} failed. HTTP {StatusCode}. Target tenant {TargetTenantId}, client {TargetClientId}, administrator {TargetAdministratorId}",
                 $"{action.ControllerName}.{action.ActionName}", status, targetTenant, targetClient, targetAdministrator);
+            return;
+        }
 
-        return Task.CompletedTask;
+        if (actor is null)
+            return;
+
+        var functionalAction = action.ControllerName == "AdminAuth" && action.ActionName == "Token"
+            ? "PlatformSignedIn"
+            : action.ControllerName == "AdminAuth" && action.ActionName == "Logout"
+                ? "PlatformSignedOut"
+                : $"{action.ControllerName}.{action.ActionName}";
+
+        var description = functionalAction switch
+        {
+            "PlatformSignedIn" => "Signed in to the platform.",
+            "PlatformSignedOut" => "Signed out of the platform.",
+            _ => $"Performed platform action {functionalAction}."
+        };
+
+        await activities.WriteAsync(new PlatformActivity(
+            actor,
+            UserActivityKind.Action.ToString(),
+            functionalAction,
+            resourceType,
+            resourceId,
+            description,
+            "Succeeded"),
+            context.RequestAborted);
     }
 }
