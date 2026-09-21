@@ -61,7 +61,7 @@ public sealed class PortalAuthController(
         return issued is null ? Unauthorized() : Ok(ToResponse(issued));
     }
 
-    [Authorize]
+    [Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
     [RequestSizeLimit(2048)]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
