@@ -49,9 +49,10 @@ public sealed class ClientAuditTests
         context.User = new ClaimsPrincipal(new ClaimsIdentity([
             new Claim("tenant_id", tenant.ToString()), new Claim(subjectClaim, "client-1")], "test"));
         context.Request.Headers["ClientId"] = "forged-client";
+        context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "Overview", ActionName = "Get" }), "activity"));
         var logger = new Recorder<RequestAuditMiddleware>();
         await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(logger));
-        Assert.Equal("client-1", logger.Values["ClientId"]);
+        Assert.Equal("client-1", logger.Values["ActorId"]);
         Assert.Equal(tenant, logger.Values["TenantId"]);
         Assert.DoesNotContain("forged-client", logger.Message);
     }
@@ -113,18 +114,22 @@ public sealed class ClientAuditTests
         Assert.Empty(logger.Values);
     }
 
-    [Fact]
-    public async Task UnknownWriteIsStillRecorded()
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("POST")]
+    [InlineData("PUT")]
+    [InlineData("PATCH")]
+    [InlineData("DELETE")]
+    public async Task UnknownRequestIsNotRecordedAsUserActivity(string method)
     {
         var context = new DefaultHttpContext();
         var tenant = Guid.NewGuid();
         context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("tenant_id", tenant.ToString()), new Claim("sub", "client-1")], "test"));
-        context.Request.Method = "PUT";
+        context.Request.Method = method;
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "NewFeature", ActionName = "Save" }), "activity"));
         var logger = new Recorder<RequestAuditMiddleware>();
         await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(logger));
-        Assert.Equal("Updated account data.", logger.Values["Activity"]);
-        Assert.Equal("DataChange", logger.Values["ActivityType"]?.ToString());
+        Assert.Empty(logger.Values);
     }
 
     [Theory]
