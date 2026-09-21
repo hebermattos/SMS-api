@@ -43,13 +43,13 @@ public sealed class ReportingSqlTests
         try
         {
             await application.ExecuteAsync("""
-                INSERT Tenants(Id, Name, IsActive, CreatedAt)
+                INSERT INTO Tenants(Id, Name, IsActive, CreatedAt)
                 VALUES (@TenantId, 'Reporting tenant', TRUE, CURRENT_TIMESTAMP);
 
-                INSERT PortalUsers(Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive, CreatedAt)
+                INSERT INTO PortalUsers(Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive, CreatedAt)
                 VALUES (@UserId, @TenantId, 'report-user', 'report@example.com', decode('00','hex'), decode('00','hex'), 600000, 'tenant', 'user', TRUE, CURRENT_TIMESTAMP);
 
-                INSERT SmsMessages
+                INSERT INTO SmsMessages
                     (Id, TenantId, UserId, "From", "To", Body, Provider, Direction, QueueStatus, Status, CreatedAt)
                 VALUES
                     (@MessageId, @TenantId, @UserId, 'encrypted-from', 'encrypted-to', 'encrypted-body', 'Mock', 1, 2, 1, CURRENT_TIMESTAMP);
@@ -102,11 +102,11 @@ public sealed class ReportingSqlTests
                 await reporting.ExecuteAsync("DELETE FROM TenantSmsOverviewInbox WHERE EventId = ANY(@EventIds);", new { EventIds = eventIds.ToArray() });
             await reporting.ExecuteAsync("""\n                DELETE FROM ReportingSmsMessages WHERE TenantId=@TenantId;\n                DELETE FROM UserSmsOverview WHERE TenantId=@TenantId;\n                DELETE FROM TenantSmsOverview WHERE TenantId=@TenantId;\n                """, new { TenantId = tenantId });
             await application.ExecuteAsync("""
-                DELETE TenantSmsOverviewOutbox WHERE TenantId=@TenantId;
-                DELETE SmsMessageStatusHistory WHERE TenantId=@TenantId;
-                DELETE SmsMessages WHERE TenantId=@TenantId;
-                DELETE PortalUsers WHERE TenantId=@TenantId;
-                DELETE Tenants WHERE Id=@TenantId;
+                DELETE FROM TenantSmsOverviewOutbox WHERE TenantId=@TenantId;
+                DELETE FROM SmsMessageStatusHistory WHERE TenantId=@TenantId;
+                DELETE FROM SmsMessages WHERE TenantId=@TenantId;
+                DELETE FROM PortalUsers WHERE TenantId=@TenantId;
+                DELETE FROM Tenants WHERE Id=@TenantId;
                 """, new { TenantId = tenantId });
         }
     }

@@ -25,15 +25,15 @@ public sealed class AlertSqlTests
         try
         {
             await connection.ExecuteAsync("""
-                INSERT Tenants(Id,Name,IsActive,CreatedAt) VALUES
+                INSERT INTO Tenants(Id,Name,IsActive,CreatedAt) VALUES
                     (@Tenant,'Alert tenant',TRUE,CURRENT_TIMESTAMP),(@Other,'Other tenant',TRUE,CURRENT_TIMESTAMP);
-                INSERT SmsMessages(Id,TenantId,"From","To",Body,Provider,Direction,Status,CreatedAt) VALUES
+                INSERT INTO SmsMessages(Id,TenantId,"From","To",Body,Provider,Direction,Status,CreatedAt) VALUES
                     (@Message1,@Tenant,'x','x','x','Twilio',1,4,CURRENT_TIMESTAMP),
                     (@Message2,@Tenant,'x','x','x','Twilio',1,4,CURRENT_TIMESTAMP);
-                INSERT SmsMessageStatusHistory(Id,TenantId,MessageId,Status,CreatedAt) VALUES
+                INSERT INTO SmsMessageStatusHistory(Id,TenantId,MessageId,Status,CreatedAt) VALUES
                     (gen_random_uuid(),@Tenant,@Message1,4,CURRENT_TIMESTAMP),
                     (gen_random_uuid(),@Tenant,@Message2,4,CURRENT_TIMESTAMP);
-                INSERT AlertStatusCounters(TenantId,Provider,Status,BucketStartUtc,MessageCount,UpdatedAtUtc)
+                INSERT INTO AlertStatusCounters(TenantId,Provider,Status,BucketStartUtc,MessageCount,UpdatedAtUtc)
                 VALUES (@Tenant,'Twilio',4,date_trunc('minute', CURRENT_TIMESTAMP),2,CURRENT_TIMESTAMP);
                 """, new { Tenant = tenantId, Other = otherTenantId, Message1 = message1, Message2 = message2 });
 
@@ -71,11 +71,11 @@ public sealed class AlertSqlTests
         finally
         {
             await connection.ExecuteAsync("""
-                DELETE Alerts WHERE TenantId IN (@Tenant,@Other);
-                DELETE AlertRules WHERE TenantId IN (@Tenant,@Other);
-                DELETE SmsMessageStatusHistory WHERE TenantId IN (@Tenant,@Other);
-                DELETE SmsMessages WHERE TenantId IN (@Tenant,@Other);
-                DELETE Tenants WHERE Id IN (@Tenant,@Other);
+                DELETE FROM Alerts WHERE TenantId IN (@Tenant,@Other);
+                DELETE FROM AlertRules WHERE TenantId IN (@Tenant,@Other);
+                DELETE FROM SmsMessageStatusHistory WHERE TenantId IN (@Tenant,@Other);
+                DELETE FROM SmsMessages WHERE TenantId IN (@Tenant,@Other);
+                DELETE FROM Tenants WHERE Id IN (@Tenant,@Other);
                 """, new { Tenant = tenantId, Other = otherTenantId });
         }
     }

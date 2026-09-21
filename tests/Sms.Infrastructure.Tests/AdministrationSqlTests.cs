@@ -39,7 +39,7 @@ public sealed class AdministrationSqlTests
         try
         {
             await connection.ExecuteAsync("""
-                INSERT Tenants(Id, Name, IsActive, CreatedAt)
+                INSERT INTO Tenants(Id, Name, IsActive, CreatedAt)
                 VALUES (@Tenant, 'Portal test', TRUE, CURRENT_TIMESTAMP), (@Other, 'Other portal test', TRUE, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant, Other = other });
             var issued = await service.CreateClientAsync(tenant, null, default);
@@ -82,7 +82,7 @@ public sealed class AdministrationSqlTests
             Assert.Equal("Twilio", (await providers.GetDefaultAsync(other))!.Provider);
 
             await reportingConnection.ExecuteAsync("""
-                INSERT TenantSmsOverview(TenantId, Outbound, Inbound, Delivered, Failed, Pending, UpdatedAtUtc)
+                INSERT INTO TenantSmsOverview(TenantId, Outbound, Inbound, Delivered, Failed, Pending, UpdatedAtUtc)
                 VALUES (@Tenant, 12, 3, 8, 1, 3, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant });
 
@@ -94,11 +94,11 @@ public sealed class AdministrationSqlTests
         }
         finally
         {
-            await reportingConnection.ExecuteAsync("DELETE TenantSmsOverview WHERE TenantId IN (@Tenant, @Other);", new { Tenant = tenant, Other = other });
+            await reportingConnection.ExecuteAsync("DELETE FROM TenantSmsOverview WHERE TenantId IN (@Tenant, @Other);", new { Tenant = tenant, Other = other });
             await connection.ExecuteAsync("""
-                DELETE TenantSmsProviders WHERE TenantId IN (@Tenant, @Other);
-                DELETE ApiClients WHERE TenantId IN (@Tenant, @Other);
-                DELETE Tenants WHERE Id IN (@Tenant, @Other);
+                DELETE FROM TenantSmsProviders WHERE TenantId IN (@Tenant, @Other);
+                DELETE FROM ApiClients WHERE TenantId IN (@Tenant, @Other);
+                DELETE FROM Tenants WHERE Id IN (@Tenant, @Other);
                 """, new { Tenant = tenant, Other = other });
         }
     }
@@ -117,11 +117,11 @@ public sealed class AdministrationSqlTests
         try
         {
             await connection.ExecuteAsync("""
-                INSERT Tenants(Id, Name, IsActive, CreatedAt)
+                INSERT INTO Tenants(Id, Name, IsActive, CreatedAt)
                 VALUES (@Tenant, 'Integrity tenant', TRUE, CURRENT_TIMESTAMP),
                        (@OtherTenant, 'Other integrity tenant', TRUE, CURRENT_TIMESTAMP);
 
-                INSERT SmsMessages
+                INSERT INTO SmsMessages
                     (Id, TenantId, "From", "To", Body, Provider, ProviderMessageId, Direction, Status, CreatedAt)
                 VALUES
                     (@MessageId, @Tenant, 'encrypted-from', 'encrypted-to', 'encrypted-body',
@@ -129,7 +129,7 @@ public sealed class AdministrationSqlTests
                 """, new { Tenant = tenant, OtherTenant = otherTenant, MessageId = messageId });
 
             var invalidUser = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync("""
-                INSERT PortalUsers
+                INSERT INTO PortalUsers
                     (Id, TenantId, Username, Email, PasswordHash, PasswordSalt, PasswordIterations, Context, Role, IsActive, CreatedAt)
                 VALUES
                     (gen_random_uuid(), @MissingTenant, 'invalid-user', 'invalid@example.com',
@@ -138,7 +138,7 @@ public sealed class AdministrationSqlTests
             Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, invalidUser.SqlState);
 
             var crossTenantHistory = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync("""
-                INSERT SmsMessageStatusHistory(Id, TenantId, MessageId, Status, CreatedAt)
+                INSERT INTO SmsMessageStatusHistory(Id, TenantId, MessageId, Status, CreatedAt)
                 VALUES (gen_random_uuid(), @OtherTenant, @MessageId, 1, CURRENT_TIMESTAMP);
                 """, new { OtherTenant = otherTenant, MessageId = messageId }));
             Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, crossTenantHistory.SqlState);
@@ -146,10 +146,10 @@ public sealed class AdministrationSqlTests
         finally
         {
             await connection.ExecuteAsync("""
-                DELETE SmsMessageStatusHistory WHERE MessageId=@MessageId;
-                DELETE SmsMessages WHERE Id=@MessageId;
-                DELETE PortalUsers WHERE TenantId IN (@Tenant, @OtherTenant);
-                DELETE Tenants WHERE Id IN (@Tenant, @OtherTenant);
+                DELETE FROM SmsMessageStatusHistory WHERE MessageId=@MessageId;
+                DELETE FROM SmsMessages WHERE Id=@MessageId;
+                DELETE FROM PortalUsers WHERE TenantId IN (@Tenant, @OtherTenant);
+                DELETE FROM Tenants WHERE Id IN (@Tenant, @OtherTenant);
                 """, new { Tenant = tenant, OtherTenant = otherTenant, MessageId = messageId });
         }
     }
