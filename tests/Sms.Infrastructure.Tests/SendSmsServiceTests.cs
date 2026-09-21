@@ -8,7 +8,7 @@ namespace Sms.Infrastructure.Tests;
 public sealed class SendSmsServiceTests
 {
     [Fact]
-    public async Task SendAsync_PersistsNotQueuedMessageThenMarksItQueuedAfterPublishing()
+    public async Task SendAsync_PersistsNotQueuedMessageThenMarksItQueuedBeforePublishing()
     {
         var tenantId = Guid.NewGuid();
         var repository = new FakeRepository();
@@ -31,7 +31,7 @@ public sealed class SendSmsServiceTests
     }
 
     [Fact]
-    public async Task SendAsync_LeavesMessageNotQueuedWhenQueuePublishFails()
+    public async Task SendAsync_LeavesMessageQueuedForRecoveryWhenQueuePublishFails()
     {
         var tenantId = Guid.NewGuid();
         var repository = new FakeRepository();
@@ -43,8 +43,9 @@ public sealed class SendSmsServiceTests
 
         Assert.NotNull(repository.Inserted);
         Assert.Equal(SmsQueueStatus.NotQueued, repository.Inserted!.QueueStatus);
-        Assert.Null(repository.UpdatedStatus);
-        Assert.Null(repository.UpdatedMessageId);
+        Assert.Equal(SmsQueueStatus.Queued, repository.UpdatedStatus);
+        Assert.Equal(repository.Inserted.Id, repository.UpdatedMessageId);
+        Assert.Equal((tenantId, repository.Inserted.Id), publisher.Published);
     }
 
     [Theory]
