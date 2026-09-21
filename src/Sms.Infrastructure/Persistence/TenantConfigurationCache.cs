@@ -2,8 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Dapper;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Logging;
+using Sms.Infrastructure.Caching;
 using Sms.Application.Administration;
 using Sms.Application.Auth;
 using Sms.Application.Providers;
@@ -17,15 +16,14 @@ public sealed record TenantConfigurationSnapshot(
 
 public sealed class TenantConfigurationCache(
     SqlConnectionFactory connectionFactory,
-    IDistributedCache cache,
-    ILogger<TenantConfigurationCache> logger)
+    ResilientDistributedCache cache)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public async Task<TenantConfigurationSnapshot?> GetAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
         var key = TenantKey(tenantId);
-        var cached = await GetStringAsync(key, cancellationToken);
+        var cached = await cache.GetStringAsync(key, "TenantConfiguration", tenantId: null, cancellationToken, key);
         if (!string.IsNullOrWhiteSpace(cached))
         {
             var value = JsonSerializer.Deserialize<TenantConfigurationSnapshot>(cached, JsonOptions);
@@ -44,14 +42,14 @@ public sealed class TenantConfigurationCache(
         if (tenant is null) return null;
 
         var snapshot = new TenantConfigurationSnapshot(tenant, clients, providers);
-        await SetStringAsync(key, JsonSerializer.Serialize(snapshot, JsonOptions), cancellationToken);
+        await cache.SetStringAsync(key, JsonSerializer.Serialize(snapshot, JsonOptions), "TenantConfiguration", tenantId: null, cancellationToken, key);
         return snapshot;
     }
 
     public async Task<ApiClientCredential?> GetApiClientAsync(string clientId, CancellationToken cancellationToken = default)
     {
         var key = ApiClientKey(clientId);
-        var cached = await GetStringAsync(key, cancellationToken);
+        var cached = await cache.GetStringAsync(key, "TenantConfiguration", tenantId: null, cancellationToken, key);
         if (!string.IsNullOrWhiteSpace(cached))
         {
             var value = JsonSerializer.Deserialize<ApiClientCredential>(cached, JsonOptions);
@@ -65,7 +63,7 @@ public sealed class TenantConfigurationCache(
             cancellationToken: cancellationToken));
 
         if (valueFromDatabase is not null)
-            await SetStringAsync(key, JsonSerializer.Serialize(valueFromDatabase, JsonOptions), cancellationToken);
+            await cache.SetStringAsync(key, JsonSerializer.Serialize(valueFromDatabase, JsonOptions), "TenantConfiguration", tenantId: null, cancellationToken, key);
 
         return valueFromDatabase;
     }
@@ -77,7 +75,7 @@ public sealed class TenantConfigurationCache(
         CancellationToken cancellationToken = default)
     {
         var key = ProviderRouteKey(provider, accountId, number);
-        var cached = await GetStringAsync(key, cancellationToken);
+        var cached = await cache.GetStringAsync(key, "TenantConfiguration", tenantId: null, cancellationToken, key);
         if (!string.IsNullOrWhiteSpace(cached))
         {
             var value = JsonSerializer.Deserialize<TenantSmsProviderConfiguration>(cached, JsonOptions);
@@ -91,7 +89,7 @@ public sealed class TenantConfigurationCache(
             cancellationToken: cancellationToken));
 
         if (valueFromDatabase is not null)
-            await SetStringAsync(key, JsonSerializer.Serialize(valueFromDatabase, JsonOptions), cancellationToken);
+            await cache.SetStringAsync(key, JsonSerializer.Serialize(valueFromDatabase, JsonOptions), "TenantConfiguration", tenantId: null, cancellationToken, key);
 
         return valueFromDatabase;
     }
@@ -120,7 +118,7 @@ public sealed class TenantConfigurationCache(
             AddProviderRouteKey(keys, changedProvider);
 
         foreach (var key in keys)
-            await RemoveAsync(key, cancellationToken);
+            await cache.RemoveAsync(key, "TenantConfiguration", tenantId, cancellationToken, key);
     }
 
     private static void AddProviderRouteKey(HashSet<string> keys, TenantSmsProviderConfiguration provider)
@@ -129,55 +127,6 @@ public sealed class TenantConfigurationCache(
             return;
 
         keys.Add(ProviderRouteKey(provider.Provider, provider.AccountId, provider.FromNumber));
-    }
-
-    private async Task<string?> GetStringAsync(string key, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await cache.GetStringAsync(key, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Unable to read tenant configuration cache {CacheKey}.", key);
-            return null;
-        }
-    }
-
-    private async Task SetStringAsync(string key, string value, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await cache.SetStringAsync(key, value, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Unable to write tenant configuration cache {CacheKey}.", key);
-        }
-    }
-
-    private async Task RemoveAsync(string key, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await cache.RemoveAsync(key, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Unable to invalidate tenant configuration cache {CacheKey}.", key);
-        }
     }
 
     private static string TenantKey(Guid tenantId) => $"tenant-config:{tenantId:N}";

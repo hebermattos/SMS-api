@@ -13,8 +13,15 @@ public sealed class PostgresLogExporter(string connectionString) : BaseExporter<
 
     public override ExportResult Export(in Batch<LogRecord> batch)
     {
-        var records = batch.Where(record => record.LogLevel is LogLevel.Error or LogLevel.Critical).ToArray();
-        if (records.Length == 0) return ExportResult.Success;
+        var hasPersistableRecords = false;
+        foreach (var record in batch)
+        {
+            if (record.LogLevel is not (LogLevel.Error or LogLevel.Critical)) continue;
+            hasPersistableRecords = true;
+            break;
+        }
+
+        if (!hasPersistableRecords) return ExportResult.Success;
 
         try
         {
@@ -22,8 +29,10 @@ public sealed class PostgresLogExporter(string connectionString) : BaseExporter<
             connection.Open();
             using var transaction = connection.BeginTransaction();
 
-            foreach (var record in records
+            foreach (var record in batch)
             {
+                if (record.LogLevel is not (LogLevel.Error or LogLevel.Critical)) continue;
+
                 var attributes = record.Attributes?.ToDictionary(x => x.Key, x => x.Value);
                 var values = new
                 {

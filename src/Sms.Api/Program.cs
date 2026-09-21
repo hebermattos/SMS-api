@@ -9,7 +9,6 @@ using Sms.Api.Health;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Sms.Api.Auth;
@@ -22,21 +21,7 @@ using Sms.Infrastructure;
 using Sms.Infrastructure.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Logging.AddSimpleConsole(options =>
-{
-    options.SingleLine = true;
-    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss 'UTC' ";
-    options.UseUtcTimestamp = true;
-});
-var logsConnectionString = builder.Configuration.GetConnectionString("LogsPostgres")
-    ?? throw new InvalidOperationException("Connection string 'LogsPostgres' is not configured.");
-builder.Logging.AddOpenTelemetry(options =>
-{
-    options.IncludeFormattedMessage = true;
-    options.ParseStateValues = true;
-    options.AddProcessor(new BatchLogRecordExportProcessor(new PostgresLogExporter(logsConnectionString)));
-    options.AddOtlpExporter();
-});
+builder.AddSmsLogging();
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing
         .AddAspNetCoreInstrumentation()
@@ -58,11 +43,11 @@ builder.Services.AddScoped<IAuditPipelineStep, PortalLoginAuditMiddleware>();
 builder.Services.AddScoped<IAuditPipelineStep, PlatformAuditMiddleware>();
 builder.Services.AddScoped<IAuditPipelineStep, RequestAuditMiddleware>();
 builder.Services.AddScoped<IUserActivityWriter>(services => new PostgresUserActivityWriter(
-    logsConnectionString,
+    builder.Configuration.GetConnectionString("LogsPostgres")!,
     services.GetRequiredService<TimeProvider>(),
     services.GetRequiredService<ILogger<PostgresUserActivityWriter>>()));
 builder.Services.AddScoped<IPlatformActivityWriter>(services => new PostgresPlatformActivityWriter(
-    logsConnectionString,
+    builder.Configuration.GetConnectionString("LogsPostgres")!,
     services.GetRequiredService<TimeProvider>(),
     services.GetRequiredService<ILogger<PostgresPlatformActivityWriter>>()));
 builder.Services.AddEndpointsApiExplorer();
