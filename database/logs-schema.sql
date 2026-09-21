@@ -2,19 +2,19 @@ CREATE TABLE UserActivityLogs
 (
     Id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     "Timestamp" TIMESTAMPTZ NOT NULL,
-    TenantId UUID NULL,
-    Severity VARCHAR(32) NOT NULL,
-    Category VARCHAR(256) NOT NULL,
-    Message VARCHAR(4000) NOT NULL,
-    TraceId CHAR(32) NULL,
-    SpanId CHAR(16) NULL,
-    Attributes TEXT NULL,
-    CHECK (Attributes IS NULL OR Attributes IS JSON)
+    TenantId UUID NOT NULL,
+    UserId VARCHAR(100) NULL,
+    ActivityType VARCHAR(32) NOT NULL,
+    Action VARCHAR(100) NOT NULL,
+    ResourceType VARCHAR(100) NULL,
+    ResourceId VARCHAR(100) NULL,
+    Description VARCHAR(4000) NOT NULL,
+    Outcome VARCHAR(16) NOT NULL,
+    CHECK (Outcome IN ('Succeeded', 'Failed'))
 );
 
 CREATE INDEX IX_UserActivityLogs_Tenant_Timestamp
-    ON UserActivityLogs(TenantId, "Timestamp" DESC, Id DESC)
-    INCLUDE (Severity, Category, TraceId, SpanId);
+    ON UserActivityLogs(TenantId, "Timestamp" DESC, Id DESC);
 
 CREATE TABLE SystemLogs
 (
