@@ -5,7 +5,7 @@ namespace Sms.Infrastructure.Sql;
 
 public static class SqlQuery
 {
-    private const string ResourcePrefix = "Sms.Infrastructure.Sql.";
+    private const string ResourcePrefix = "TextRelay.Infrastructure.Sql.";
     private static readonly ConcurrentDictionary<string, string> Cache = new(StringComparer.Ordinal);
 
     public static string Load(string path) => Cache.GetOrAdd(path, static value =>
