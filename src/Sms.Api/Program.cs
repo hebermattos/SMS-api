@@ -61,6 +61,10 @@ builder.Services.AddScoped<IUserActivityWriter>(services => new PostgresUserActi
     logsConnectionString,
     services.GetRequiredService<TimeProvider>(),
     services.GetRequiredService<ILogger<PostgresUserActivityWriter>>()));
+builder.Services.AddScoped<IPlatformActivityWriter>(services => new PostgresPlatformActivityWriter(
+    logsConnectionString,
+    services.GetRequiredService<TimeProvider>(),
+    services.GetRequiredService<ILogger<PostgresPlatformActivityWriter>>()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddHttpContextAccessor();
