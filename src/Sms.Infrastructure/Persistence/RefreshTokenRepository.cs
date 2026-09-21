@@ -47,4 +47,12 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
         await transaction.CommitAsync(cancellationToken);
         return session;
     }
+
+    public async Task RevokeAsync(byte[] tokenHash, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/RefreshTokenRepository.RevokeAsync.01.sql");
+        using var connection = connections.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            sql, new { TokenHash = tokenHash, UserId = userId }, cancellationToken: cancellationToken));
+    }
 }
