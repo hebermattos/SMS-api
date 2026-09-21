@@ -146,7 +146,6 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IPortalUserManagementRepository, PortalUserManagementRepository>();
         services.AddScoped<ITenantPortalUserManagementRepository, TenantPortalUserManagementRepository>();
-        services.AddScoped<IAdministratorRepository, AdministratorRepository>();
         services.AddScoped<IAdministrationRepository, AdministrationRepository>();
         services.AddScoped<ITenantRateLimitRepository, TenantRateLimitRepository>();
         services.AddScoped<ITenantPortalRepository, TenantPortalRepository>();
