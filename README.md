@@ -85,16 +85,16 @@ The local Compose stack uses explicit CPU and memory limits to keep development 
 | --- | ---: | ---: | ---: |
 | API 1 | 0.50 | 256 MB | 256 MB |
 | API 2 | 0.50 | 256 MB | 256 MB |
-| Worker | 0.50 | 256 MB | 256 MB |
+| Worker | 0.50 | 128 MB | 256 MB |
 | PostgreSQL | 0.75 | 128 MB | 384 MB |
-| Redis | 0.20 | 64 MB | 64 MB |
+| Redis | 0.20 | 32 MB | 64 MB |
 | RabbitMQ 1 | 0.40 | 256 MB | 384 MB |
 | RabbitMQ 2 | 0.40 | 256 MB | 384 MB |
 | RabbitMQ 3 | 0.40 | 256 MB | 384 MB |
 | RabbitMQ HAProxy | 0.20 | 32 MB | 48 MB |
 | API HAProxy | 0.20 | 32 MB | 48 MB |
 | ClickStack | 0.75 | 512 MB | 768 MB |
-| OpenTelemetry Collector | 0.25 | 128 MB | 128 MB |
+| OpenTelemetry Collector | 0.25 | 64 MB | 128 MB |
 | HyperDX auth proxy | 0.25 | 32 MB | 64 MB |
 | UI | 0.20 | 32 MB | 64 MB |
 | PostgreSQL backup | 0.25 | 64 MB | 128 MB |
