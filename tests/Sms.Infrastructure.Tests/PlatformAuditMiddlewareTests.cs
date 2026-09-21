@@ -11,9 +11,9 @@ namespace Sms.Infrastructure.Tests;
 public sealed class PlatformAuditMiddlewareTests
 {
     [Theory]
-    [InlineData(403)]
     [InlineData(500)]
-    public async Task FailedPlatformOperationsAreSystemErrorsWithoutCustomerTenant(int status)
+    [InlineData(503)]
+    public async Task ServerFailedPlatformOperationsAreSystemErrorsWithoutCustomerTenant(int status)
     {
         var context = Context("Administration", "SaveProvider");
         context.Request.Method = "PUT";
@@ -30,6 +30,25 @@ public sealed class PlatformAuditMiddlewareTests
         Assert.False(logger.Values.ContainsKey("TenantId"));
     }
 
+
+
+    [Theory]
+    [InlineData(400)]
+    [InlineData(401)]
+    [InlineData(403)]
+    [InlineData(404)]
+    [InlineData(429)]
+    public async Task ClientErrorsAreNotWrittenAsSystemErrors(int status)
+    {
+        var logger = new RecordingLogger();
+
+        await RunPipelineAsync(
+            Context("Administration", "SaveProvider"),
+            c => { c.Response.StatusCode = status; return Task.CompletedTask; },
+            new PlatformAuditMiddleware(new PlatformActivities(), logger));
+
+        Assert.Empty(logger.Values);
+    }
 
     [Fact]
     public async Task AuditStepFailureDoesNotPreventFollowingSteps()
