@@ -7,6 +7,8 @@ internal static class LogAttributeSanitizer
     private static readonly HashSet<string> AllowedKeys = new(StringComparer.Ordinal)
     {
         "Activity",
+        "ActivityType",
+        "ActorId",
         "TenantId",
         "MessageId",
         "Provider",
