@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -59,6 +60,19 @@ public sealed class PortalAuthController(
         Response.Headers.CacheControl = "no-store";
         var issued = await refreshTokens.RotateAsync(request.RefreshToken, cancellationToken);
         return issued is null ? Unauthorized() : Ok(ToResponse(issued));
+    }
+
+    [Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
+    [RequestSizeLimit(2048)]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+    {
+        var subject = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (!Guid.TryParse(subject, out var userId))
+            return Unauthorized();
+
+        await refreshTokens.RevokeAsync(request.RefreshToken, userId, cancellationToken);
+        return NoContent();
     }
 
     private static object ToResponse(IssuedTokens issued) => new
