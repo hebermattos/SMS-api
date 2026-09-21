@@ -12,15 +12,19 @@ public sealed class RequestAuditMiddleware(ILogger<RequestAuditMiddleware> logge
         if (context.User.Identity?.IsAuthenticated != true || !Guid.TryParse(tenantId, out var parsedTenantId))
             return Task.CompletedTask;
 
-        var activity = UserActivityMessageFormatter.Format(
-            audit.Action?.ControllerName, audit.Action?.ActionName, context.Response.StatusCode);
+        var description = UserActivityMessageFormatter.Format(
+            audit.Action?.ControllerName, audit.Action?.ActionName, context.Request.Method);
+        if (description is null)
+            return Task.CompletedTask;
+
+        var status = audit.Failed ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
+        var activity = status < 400 ? description.Success : description.Failure;
 
         logger.LogInformation(
-            "{Activity} {RequestMethod} {RequestPath} returned HTTP {StatusCode} in {ElapsedMilliseconds} ms for client {ClientId}, tenant {TenantId}.",
+            "{Activity} Activity type {ActivityType}. HTTP {StatusCode} in {ElapsedMilliseconds} ms for user {ActorId}, tenant {TenantId}.",
             activity,
-            context.Request.Method,
-            context.Request.Path.Value,
-            audit.Failed ? StatusCodes.Status500InternalServerError : context.Response.StatusCode,
+            description.Kind.ToString(),
+            status,
             Stopwatch.GetElapsedTime(audit.StartedTimestamp).TotalMilliseconds,
             context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
             parsedTenantId);
