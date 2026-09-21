@@ -21,7 +21,7 @@ public sealed class PlatformAuditMiddlewareTests
         context.Request.RouteValues["provider"] = "secret-phone-number";
         context.Request.Headers.Authorization = "Bearer secret-token";
         var administratorId = Guid.NewGuid().ToString();
-        context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(PortalSecurity.AdminClaim, "true"), new Claim(ClaimTypes.NameIdentifier, administratorId)], "test"));
+        context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext), new Claim(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole), new Claim(ClaimTypes.NameIdentifier, administratorId)], "test"));
         var logger = new RecordingLogger();
         await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new PlatformAuditMiddleware(logger));
         Assert.Equal(level, logger.Level);
