@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Sms.Api.Auth;
 using Sms.Application.Auth;
+using Sms.Api.Middleware;
 
 namespace Sms.Api.Controllers;
 
@@ -39,6 +40,7 @@ public sealed class PortalAuthController(
         if (user is not null
             && ClientSecretHasher.Verify(request.Password, user.PasswordHash, user.PasswordSalt, user.PasswordIterations))
         {
+            HttpContext.Items[PortalLoginAuditMiddleware.IdentityKey] = new PortalLoginIdentity(user.Id, user.TenantId, user.Context);
             var issued = await refreshTokens.IssueAsync(
                 user.Id, user.Username, user.TenantId, user.Context, user.Role,
                 cancellationToken: cancellationToken);
