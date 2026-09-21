@@ -22,7 +22,7 @@ public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTe
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken)
     {
         var item = await repository.GetAsync(tenant.TenantId, id, cancellationToken);
-        return item is null ? NotFound() : Ok(Response(item));
+        return item is null ? NotFound() : Ok(ToResponse(item));
     }
 
     [HttpPost]
@@ -31,7 +31,7 @@ public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTe
         var error = Validate(request);
         if (error is not null) return BadRequest(error);
         var item = await repository.CreateAsync(tenant.TenantId, request.Name.Trim(), request.Body.Trim(), cancellationToken);
-        return CreatedAtAction(nameof(Get), new { id = item.Id }, Response(item));
+        return CreatedAtAction(nameof(Get), new { id = item.Id }, ToResponse(item));
     }
 
     [HttpPut("{id:guid}")]
@@ -40,7 +40,7 @@ public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTe
         var error = Validate(request);
         if (error is not null) return BadRequest(error);
         var item = await repository.UpdateAsync(tenant.TenantId, id, request.Name.Trim(), request.Body.Trim(), cancellationToken);
-        return item is null ? NotFound() : Ok(Response(item));
+        return item is null ? NotFound() : Ok(ToResponse(item));
     }
 
     [HttpDelete("{id:guid}")]
@@ -72,7 +72,7 @@ public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTe
         string.IsNullOrWhiteSpace(request.Body) ? "Body is required." :
         request.Body.Length > 4000 ? "Body cannot exceed 4000 characters." : null;
 
-    private static object Response(MessageTemplate item) => new
+    private static object ToResponse(MessageTemplate item) => new
     {
         item.Id, item.Name, item.Body,
         Variables = MessageTemplateRenderer.Variables(item.Body),
