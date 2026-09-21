@@ -23,4 +23,15 @@ public sealed class SqlQueryTests
 
         Assert.Contains("Embedded SQL resource", exception.Message, StringComparison.Ordinal);
     }
+    [Theory]
+    [InlineData("Persistence/SmsReportRepository.GetTenantSummaryAsync.01.sql", "ProviderSmsDailyOverview")]
+    [InlineData("Persistence/SmsReportRepository.GetPlatformSummaryAsync.02.sql", "TenantSmsDailyOverview")]
+    [InlineData("Persistence/SmsReportRepository.GetUserSummaryAsync.03.sql", "UserSmsOverview")]
+    public void Load_ReturnsReportingQueries(string path, string expectedTable)
+    {
+        var sql = SqlQuery.Load(path);
+
+        Assert.Contains(expectedTable, sql, StringComparison.Ordinal);
+    }
 }
+
