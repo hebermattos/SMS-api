@@ -16,7 +16,7 @@ public sealed class TenantRateLimitRepository(
     public async Task<TenantRateLimitSettings> GetAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
         var key = CacheKey(tenantId);
-        var cached = await GetCachedAsync(key, cancellationToken);
+        var cached = await GetCachedAsync(key, tenantId, cancellationToken);
         if (!string.IsNullOrWhiteSpace(cached))
         {
             var value = JsonSerializer.Deserialize<TenantRateLimitSettings>(cached, JsonOptions);
@@ -29,7 +29,7 @@ public sealed class TenantRateLimitRepository(
             new CommandDefinition(sql, new { TenantId = tenantId }, cancellationToken: cancellationToken))
             ?? new TenantRateLimitSettings(120, 10, 6);
 
-        await SetCachedAsync(key, JsonSerializer.Serialize(settings, JsonOptions), cancellationToken);
+        await SetCachedAsync(key, tenantId, JsonSerializer.Serialize(settings, JsonOptions), cancellationToken);
         return settings;
     }
 
@@ -45,31 +45,31 @@ public sealed class TenantRateLimitRepository(
             settings.OllamaRequestsPerMinute
         }, cancellationToken: cancellationToken));
 
-        await RemoveCachedAsync(CacheKey(tenantId));
+        await RemoveCachedAsync(CacheKey(tenantId), tenantId);
     }
 
-    private async Task<string?> GetCachedAsync(string key, CancellationToken cancellationToken)
+    private async Task<string?> GetCachedAsync(string key, Guid tenantId, CancellationToken cancellationToken)
     {
         try { return await cache.GetStringAsync(key, cancellationToken); }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Failed to read tenant settings from distributed cache.");
+            logger.LogError(exception, "Failed to read {CacheArea} cache for tenant {TenantId}.", "RateLimit", tenantId);
             return null;
         }
     }
 
-    private async Task SetCachedAsync(string key, string value, CancellationToken cancellationToken)
+    private async Task SetCachedAsync(string key, Guid tenantId, string value, CancellationToken cancellationToken)
     {
         try { await cache.SetStringAsync(key, value, cancellationToken); }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch (Exception exception) { logger.LogError(exception, "Failed to write tenant settings to distributed cache."); }
+        catch (Exception exception) { logger.LogError(exception, "Failed to write {CacheArea} cache for tenant {TenantId}.", "RateLimit", tenantId); }
     }
 
-    private async Task RemoveCachedAsync(string key)
+    private async Task RemoveCachedAsync(string key, Guid tenantId)
     {
         try { await cache.RemoveAsync(key, CancellationToken.None); }
-        catch (Exception exception) { logger.LogError(exception, "Failed to invalidate tenant settings in distributed cache."); }
+        catch (Exception exception) { logger.LogError(exception, "Failed to invalidate {CacheArea} cache for tenant {TenantId}.", "RateLimit", tenantId); }
     }
 
     private static string CacheKey(Guid tenantId) => $"tenant-config:rate-limit:{tenantId:N}";
