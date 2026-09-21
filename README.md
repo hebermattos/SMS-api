@@ -168,7 +168,7 @@ Tenant configuration is also cached in Redis. Tenant metadata, time zone, API-cl
 
 Immediate messages are queued through RabbitMQ/MassTransit. Scheduled messages are stored in UTC and queued when due.
 
-Docker Compose runs a three-node RabbitMQ cluster. Application AMQP connections use a dedicated HAProxy endpoint on port `5672`, which health-checks all three brokers and removes failed nodes from connection rotation. The application queues (`sms.send`, `sms.alert.evaluation`, and `sms.reporting.overview`) are quorum queues with three members, so one RabbitMQ node can fail while a majority remains available. Each broker has its own persistent Docker volume.
+Docker Compose runs a three-node RabbitMQ cluster. Application AMQP connections use a dedicated HAProxy endpoint on port `5672`, which health-checks all three brokers and removes failed nodes from connection rotation. The application queues (`sms.send`, `sms.alert.evaluation`, `sms.alert.rule-evaluation`, and `sms.reporting.overview`) are quorum queues with three members, so one RabbitMQ node can fail while a majority remains available. Each broker has its own persistent Docker volume.
 
 All three RabbitMQ containers run on the same Docker host in the local Compose environment. This provides broker/container failover for development, but not host-level high availability. A production deployment should place the three RabbitMQ nodes on separate hosts or failure domains while retaining an odd-sized quorum.
 
@@ -349,9 +349,9 @@ The diagram reflects the current Docker Compose topology and startup dependencie
 
 ![SMS API database ER diagram](docs/images/sms-api-er-diagram.svg)
 
-The diagram keeps the database model in a single image. It contains the transactional schema from `database/schema.sql` and the reporting read model from `database/reporting-schema.sql`, while preserving the boundary between `sms_api` and `sms_api_reporting`. The reporting flow is `SmsMessages → TenantSmsOverviewOutbox → RabbitMQ → Worker → ReportingSmsMessages → daily tenant/provider/user aggregates`. The audit/error-log database remains separate. `PortalUsers` and `AlertEvaluationInbox` have no foreign-key relationships in the transactional schema.
+The diagram keeps the database model in a single image. It contains the transactional schema from `database/schema.sql` and the reporting read model from `database/reporting-schema.sql`, while preserving the boundary between `sms_api` and `sms_api_reporting`. The reporting flow is `SmsMessages → TenantSmsOverviewOutbox → RabbitMQ → Worker → ReportingSmsMessages → daily tenant/provider/user aggregates`. Alert status events flow through `AlertEvaluationOutbox → sms.alert.evaluation → AlertEvaluationConsumer`; the consumer stores each event in the 24-hour `AlertMessageWindow`, finds candidate rules, and publishes one message per rule to `sms.alert.rule-evaluation`. `AlertRuleEvaluationConsumer` evaluates exactly one rule per message and creates an idempotent `Alerts` row using `(TenantId, RuleId, EventId)`. The audit/error-log database remains separate.
 
-The two API containers and Worker are separate processes and can be deployed and scaled independently. HAProxy is the single host-facing API entry point; API containers are reachable only on the internal Compose network. The API handles HTTP, authentication, authorization, webhooks, and RabbitMQ publishing. The Worker owns RabbitMQ consumers, scheduled-message publishing, failed-publish retry, alert outbox publishing, and RabbitMQ monitoring. Both wait for their required infrastructure dependencies before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
+The two API containers and Worker are separate processes and can be deployed and scaled independently. HAProxy is the single host-facing API entry point; API containers are reachable only on the internal Compose network. The API handles HTTP, authentication, authorization, webhooks, and RabbitMQ publishing. The Worker owns RabbitMQ consumers, scheduled-message publishing, failed-publish retry, alert event publishing, per-rule alert evaluation, and RabbitMQ monitoring. Both wait for their required infrastructure dependencies before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
 
 ```text
 src/Sms.Api              HTTP, authentication, authorization, webhooks, RabbitMQ publishing
@@ -375,7 +375,7 @@ The Worker collects RabbitMQ queue metrics from the Management API every five mi
 - `rabbitmq.queue.messages.unacknowledged`: messages currently being processed.
 - `rabbitmq.queue.consumers`: active consumers per queue.
 
-Metrics include the `rabbitmq.queue` attribute for filtering. The monitored queues are `sms.send`, `sms.alert.evaluation`, and `sms.reporting.overview`. Collection failures are logged as errors.
+Metrics include the `rabbitmq.queue` attribute for filtering. The monitored queues are `sms.send`, `sms.alert.evaluation`, `sms.alert.rule-evaluation`, and `sms.reporting.overview`. Collection failures are logged as errors.
 
 
 ### High availability
