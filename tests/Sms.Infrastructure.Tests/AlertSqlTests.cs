@@ -19,7 +19,7 @@ public sealed class AlertSqlTests
             ["ConnectionStrings:Postgres"] = connectionString,
             ["ConnectionStrings:ReportingPostgres"] = connectionString
         }).Build();
-        var repository = new AlertRepository(new SqlConnectionFactory(configuration));
+        var repository = new AlertRepository(new SqlConnectionFactory(configuration), new ReportingSqlConnectionFactory(configuration));
         var tenantId = Guid.NewGuid();
         var otherTenantId = Guid.NewGuid();
         var ruleId = Guid.NewGuid();
@@ -50,8 +50,8 @@ public sealed class AlertSqlTests
                 VALUES(gen_random_uuid(),@Tenant,'Twilio',4,@Now,@Now + INTERVAL '24 hours');
                 """, new { Tenant = tenantId, Now = now });
 
-            await repository.ProcessEventAsync(Guid.NewGuid(), tenantId, SmsStatus.Failed, "Twilio", now);
-            await repository.ProcessEventAsync(Guid.NewGuid(), tenantId, SmsStatus.Failed, "Twilio", now);
+            await repository.EvaluateRuleAsync(Guid.NewGuid(), ruleId, tenantId, now);
+            await repository.EvaluateRuleAsync(Guid.NewGuid(), ruleId, tenantId, now);
 
             Assert.Equal(2, (await repository.ListAlertsAsync(tenantId, false, 0, 20)).Count);
             Assert.Empty(await repository.ListAlertsAsync(otherTenantId, false, 0, 20));

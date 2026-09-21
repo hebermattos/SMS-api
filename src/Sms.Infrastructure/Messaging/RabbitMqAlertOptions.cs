@@ -11,6 +11,7 @@ public sealed class RabbitMqAlertOptions
     public string Password { get; init; } = "guest";
     public string VirtualHost { get; init; } = "/";
     public string Queue { get; init; } = "sms.alert.evaluation";
+    public string RuleEvaluationQueue { get; init; } = "sms.alert.rule-evaluation";
     public string SendQueue { get; init; } = "sms.send";
     public string ReportingQueue { get; init; } = "sms.reporting.overview";
 
@@ -26,6 +27,7 @@ public sealed class RabbitMqAlertOptions
             Password = section["Password"] ?? "guest",
             VirtualHost = section["VirtualHost"] ?? "/",
             Queue = section["Queue"] ?? "sms.alert.evaluation",
+            RuleEvaluationQueue = section["RuleEvaluationQueue"] ?? "sms.alert.rule-evaluation",
             SendQueue = section["SendQueue"] ?? "sms.send",
             ReportingQueue = section["ReportingQueue"] ?? "sms.reporting.overview"
         };
