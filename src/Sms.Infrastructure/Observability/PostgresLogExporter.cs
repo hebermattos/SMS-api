@@ -13,13 +13,16 @@ public sealed class PostgresLogExporter(string connectionString) : BaseExporter<
 
     public override ExportResult Export(in Batch<LogRecord> batch)
     {
+        var records = batch.Where(record => record.LogLevel is LogLevel.Error or LogLevel.Critical).ToArray();
+        if (records.Length == 0) return ExportResult.Success;
+
         try
         {
             using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
 
-            foreach (var record in batch)
+            foreach (var record in records
             {
                 var attributes = record.Attributes?.ToDictionary(x => x.Key, x => x.Value);
                 var values = new
@@ -34,8 +37,7 @@ public sealed class PostgresLogExporter(string connectionString) : BaseExporter<
                     Attributes = LogAttributeSanitizer.Serialize(attributes)
                 };
 
-                if (record.LogLevel is LogLevel.Error or LogLevel.Critical)
-                    connection.Execute(InsertSystemSql, values, transaction);
+                connection.Execute(InsertSystemSql, values, transaction);
             }
 
             transaction.Commit();
