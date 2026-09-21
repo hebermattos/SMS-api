@@ -16,15 +16,15 @@ import { IconComponent } from '../shared/icon.component';
 ` })
 export class LogsComponent {
   private readonly destroyRef = inject(DestroyRef);
-  private readonly http = inject(HttpClient); readonly logs = signal<LogEntry[]>([]); readonly loading = signal(false); readonly error = signal(''); readonly page = signal(0); readonly hasNext = signal(false);
+  private readonly http = inject(HttpClient); readonly logs = signal<LogEntry[]>([]); readonly loading = signal(false); readonly error = signal(''); readonly page = signal(0); readonly hasNext = signal(false); private readonly cursors: ({ timestamp: string; id: number } | null)[] = [null];
   from = ''; to = ''; private appliedFrom = ''; private appliedTo = '';
   constructor() { this.load(); }
   clear() { this.from = ''; this.to = ''; this.load(0); }
   load(page = 0) {
-    const from = page === 0 ? this.from : this.appliedFrom; const to = page === 0 ? this.to : this.appliedTo;
+    const from = page === 0 ? this.from : this.appliedFrom; const to = page === 0 ? this.to : this.appliedTo; if (page === 0) this.cursors.splice(1);
     if ((from && !Number.isFinite(Date.parse(from))) || (to && !Number.isFinite(Date.parse(to))) || (from && to && new Date(from) >= new Date(to))) { this.error.set('The start of the date range must be before the end.'); return; }
-    let params = new HttpParams().set('skip', page * 20).set('take', 21);
+    let params = new HttpParams().set('take', 21); const cursor = this.cursors[page]; if (cursor) params = params.set('cursorTimestamp', cursor.timestamp).set('cursorId', cursor.id);
     if (from) params = params.set('from', new Date(from).toISOString()); if (to) params = params.set('to', new Date(to).toISOString());
-    this.loading.set(true); this.error.set(''); this.http.get<LogEntry[]>('/api/v1/logs', { params }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({ next: rows => { this.logs.set(rows.slice(0, 20)); this.hasNext.set(rows.length > 20); this.page.set(page); this.appliedFrom = from; this.appliedTo = to; }, error: error => this.error.set(errorMessage(error)) });
+    this.loading.set(true); this.error.set(''); this.http.get<LogEntry[]>('/api/v1/logs', { params }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({ next: rows => { this.logs.set(rows.slice(0, 20)); this.hasNext.set(rows.length > 20); this.page.set(page); if (rows.length > 20) { const last = rows[19]; this.cursors[page + 1] = { timestamp: last.timestamp, id: last.id }; } else this.cursors.splice(page + 1); this.appliedFrom = from; this.appliedTo = to; }, error: error => this.error.set(errorMessage(error)) });
   }
 }
