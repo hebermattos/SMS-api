@@ -32,7 +32,7 @@ public sealed class SmsReportRepository(ReportingSqlConnectionFactory connection
         var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/SmsReportRepository.GetPlatformSummaryAsync.02.sql");
         using var connection = connectionFactory.CreateConnection();
         var rows = (await connection.QueryAsync<PlatformSmsReportTenantRow>(new CommandDefinition(sql,
-            new { filter.From, filter.To }, cancellationToken: cancellationToken))).AsList();
+            new { filter.From, filter.To, filter.Provider }, cancellationToken: cancellationToken))).AsList();
 
         var tenants = rows.Select(row => new PlatformSmsReportTenantSummary(row.TenantId, row.TenantName, row.TotalMessages,
             row.Scheduled, row.Queued, row.Sent, row.Delivered, row.Failed, row.Received, row.Outbound, row.Inbound, row.Pending)).ToArray();
