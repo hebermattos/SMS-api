@@ -12,19 +12,6 @@ CREATE TABLE Tenants
 );
 CREATE UNIQUE INDEX UX_Tenants_Code ON Tenants(Code);
 
-CREATE TABLE PlatformAdministrators
-(
-    Id UUID PRIMARY KEY,
-    Username CITEXT NOT NULL UNIQUE,
-    Email CITEXT NOT NULL,
-    PasswordHash BYTEA NOT NULL,
-    PasswordSalt BYTEA NOT NULL,
-    PasswordIterations INTEGER NOT NULL CHECK (PasswordIterations >= 600000),
-    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
-    CreatedAt TIMESTAMPTZ NOT NULL
-);
-CREATE UNIQUE INDEX UX_PlatformAdministrators_Email ON PlatformAdministrators(Email);
-
 CREATE TABLE PortalUsers
 (
     Id UUID PRIMARY KEY,
