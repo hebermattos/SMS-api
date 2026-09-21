@@ -66,9 +66,7 @@ docker compose up --build
 
 Database backups are stored outside Docker volumes in `./backups` by default, so `docker compose down --volumes` does not delete them. Set `POSTGRES_BACKUP_PATH` to an absolute path on independent storage for stronger protection.
 
-Docker is intended for local testing only. Never use fallback Compose credentials outside development.
-
-> Docker is intended for local testing. Resource reservations and limits are defined directly in `docker-compose.yml`; treat that file as the source of truth.
+> Docker is intended for local testing only. Never use fallback Compose credentials outside development. Resource reservations and limits are defined directly in `docker-compose.yml`; treat that file as the source of truth.
 
 ## Features
 
@@ -94,9 +92,13 @@ Swagger documents the complete API surface.
 
 ## Local AI message assistant
 
-Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints. AI assistant requests use a dedicated per-tenant `OllamaRequestsPerMinute` rate-limit bucket, configured alongside the API and SMS tenant limits. The default is 6 requests per minute per authenticated login. API requests default to 120 per minute per login, and SMS sends default to 10 per minute per login. Authenticated rate-limit keys combine tenant, login, and request bucket. Counters are shared through Redis, so limits remain consistent when HAProxy sends consecutive requests to different API instances. Exceeding a limit returns HTTP `429`.
+Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints. AI assistant requests use a dedicated `OllamaRequestsPerMinute` rate-limit bucket; see [Rate limiting](#rate-limiting) for limits and enforcement details.
 
 Ollama model initialization runs independently from the API startup. A slow or failed model pull does not prevent the API from starting; AI assistance becomes available after `ollama-init` successfully downloads the model.
+
+The tenant UI exposes a single **AI tips** action for SMS messages and templates. It uses the validation endpoint to review clarity, spelling, tone, length, ambiguous wording, and malformed template placeholders, then returns concise improvement suggestions without automatically rewriting the user's text. It does not make legal/compliance decisions.
+
+The backend keeps both `/improve` and `/validate` endpoints available for API compatibility, but the tenant UI uses only `/validate`. SMS/template content sent to the assistant stays inside the local Ollama deployment. AI output is advisory and should be reviewed before sending. Platform administrators can configure the tenant AI prompts from the company settings screen; the validation prompt controls the AI tips experience.
 
 ## Rate limiting
 
@@ -114,14 +116,9 @@ The platform can configure tenant rate limits. The values are persisted with the
 
 The Ollama bucket is intentionally more restrictive because local model inference is comparatively expensive. Its default of 6 requests per minute is equivalent to an average of one request every 10 seconds.
 
-The tenant UI exposes a single **AI tips** action for SMS messages and templates. It uses the validation endpoint to review clarity, spelling, tone, length, ambiguous wording, and malformed template placeholders, then returns concise improvement suggestions without automatically rewriting the user's text. It does not make legal/compliance decisions.
-
-The backend keeps both `/improve` and `/validate` endpoints available for API compatibility, but the tenant UI uses only `/validate`. SMS/template content sent to the assistant stays inside the local Ollama deployment. AI output is advisory and should be reviewed before sending. Platform administrators can configure the tenant AI prompts from the company settings screen; the validation prompt controls the AI tips experience.
-
 ## Messaging
 
 Outbound provider calls use a platform-wide transient-failure retry policy. HTTP 429, HTTP 5xx, and provider network failures are retried with exponential backoff. Permanent provider errors, invalid configuration, invalid numbers, and opt-out failures are not retried. The defaults are 3 retries with an initial 60-second interval (approximately 1, 2, and 4 minutes). Configure globally with `SmsRetry__MaxAttempts` and `SmsRetry__InitialIntervalSeconds`; the effective policy is available to platform administrators at `GET /api/v1/admin/sms-retry`.
-
 
 The provider is selected per request. All providers implement `ISmsProvider`, while provider-specific code remains isolated from the application core.
 
@@ -329,7 +326,9 @@ tools/Sms.Provision      Bootstrap provisioning
 tests                    Unit and integration tests
 ```
 
-## RabbitMQ monitoring
+## RabbitMQ operations
+
+### Monitoring
 
 The Worker collects RabbitMQ queue metrics from the Management API every five minutes and exports them through the existing OpenTelemetry pipeline to ClickStack/HyperDX.
 
@@ -340,7 +339,7 @@ The Worker collects RabbitMQ queue metrics from the Management API every five mi
 Metrics include the `rabbitmq.queue` attribute for filtering. The monitored queues are `sms.send`, `sms.alert.evaluation`, and `sms.reporting.overview`. Collection failures are logged as errors.
 
 
-### RabbitMQ high availability
+### High availability
 
 The local topology is:
 
