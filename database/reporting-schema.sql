@@ -44,6 +44,32 @@ CREATE INDEX IX_ReportingSmsMessages_Created
     ON ReportingSmsMessages(CreatedAtUtc DESC, MessageId)
     INCLUDE (TenantId, TenantName, Provider, Direction, QueueStatus, Status);
 
+CREATE TABLE SmsDailyOverview
+(
+    ReportDate DATE NOT NULL,
+    TenantId UUID NOT NULL,
+    TenantName VARCHAR(200) NOT NULL,
+    Provider VARCHAR(50) NOT NULL,
+    Direction INTEGER NOT NULL,
+    QueueStatus INTEGER NOT NULL,
+    Status INTEGER NOT NULL,
+    TotalMessages BIGINT NOT NULL DEFAULT 0,
+    UpdatedAtUtc TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (ReportDate, TenantId, Provider, Direction, QueueStatus, Status),
+    CHECK (Direction IN (1, 2)),
+    CHECK (QueueStatus BETWEEN 1 AND 4),
+    CHECK (Status BETWEEN 1 AND 5),
+    CHECK (TotalMessages >= 0)
+);
+
+CREATE INDEX IX_SmsDailyOverview_Tenant_Date
+    ON SmsDailyOverview(TenantId, ReportDate DESC)
+    INCLUDE (Provider, Direction, QueueStatus, Status, TotalMessages);
+
+CREATE INDEX IX_SmsDailyOverview_Date
+    ON SmsDailyOverview(ReportDate DESC)
+    INCLUDE (TenantId, TenantName, Provider, Direction, QueueStatus, Status, TotalMessages);
+
 CREATE TABLE UserSmsOverview
 (
     TenantId UUID NOT NULL,
