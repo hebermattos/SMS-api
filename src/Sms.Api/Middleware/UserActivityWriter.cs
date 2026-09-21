@@ -47,7 +47,7 @@ public sealed class PostgresUserActivityWriter(string connectionString, TimeProv
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Could not persist user activity audit record.");
+            logger.LogError(exception, "Could not persist user activity {Action} for tenant {TenantId}, user {UserId}, resource {ResourceType} {ResourceId}.", activity.Action, activity.TenantId, activity.UserId, activity.ResourceType, activity.ResourceId);
         }
     }
 }
