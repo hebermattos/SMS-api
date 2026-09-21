@@ -84,14 +84,11 @@ jobs:
           BEGIN
             IF to_regclass('public.useractivitylogs') IS NULL THEN RAISE EXCEPTION 'User activity schema is missing.'; END IF;
             IF to_regclass('public.systemlogs') IS NULL THEN RAISE EXCEPTION 'System log schema is missing.'; END IF;
-            IF to_regclass('public.traces') IS NULL THEN RAISE EXCEPTION 'Trace schema is missing.'; END IF;
-            IF to_regclass('public.metrics') IS NULL THEN RAISE EXCEPTION 'Metric schema is missing.'; END IF;
           END $$;
           SQL
       - name: Verify administrator password login and tenant separation over HTTP
         run: |
-          docker compose up -d --wait rabbitmq-1 rabbitmq-2 rabbitmq-3 rabbitmq-lb
-          docker compose up -d --build --no-deps api
+          docker compose up -d --build haproxy
           python3 - <<'PY'
           import json, time, urllib.request, urllib.error
           base = 'http://localhost:8080'
@@ -121,7 +118,7 @@ jobs:
           PY
       - name: Show initialization logs
         if: failure()
-        run: docker compose logs postgres db-init provider-init rabbitmq-1 rabbitmq-2 rabbitmq-3 rabbitmq-lb api
+        run: docker compose logs postgres db-init provider-init rabbitmq-1 rabbitmq-2 rabbitmq-3 rabbitmq-lb redis clickstack otel-collector api-1 api-2 haproxy
       - name: Clean up
         if: always()
         run: docker compose down --remove-orphans --volumes
