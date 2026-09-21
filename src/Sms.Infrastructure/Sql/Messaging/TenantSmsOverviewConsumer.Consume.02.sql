@@ -11,59 +11,8 @@ DO UPDATE SET
     Pending=TenantSmsOverview.Pending + EXCLUDED.Pending,
     UpdatedAtUtc=GREATEST(TenantSmsOverview.UpdatedAtUtc, EXCLUDED.UpdatedAtUtc);
 
--- Remove the previous current state before replacing it.
-UPDATE TenantSmsDailyOverview d SET
-    TotalMessages=d.TotalMessages-1,
-    Scheduled=d.Scheduled-CASE WHEN m.QueueStatus=3 THEN 1 ELSE 0 END,
-    Queued=d.Queued-CASE WHEN m.QueueStatus=2 THEN 1 ELSE 0 END,
-    Sent=d.Sent-CASE WHEN m.Status=2 THEN 1 ELSE 0 END,
-    Delivered=d.Delivered-CASE WHEN m.Status=3 THEN 1 ELSE 0 END,
-    Failed=d.Failed-CASE WHEN m.Status=4 THEN 1 ELSE 0 END,
-    Received=d.Received-CASE WHEN m.Status=5 THEN 1 ELSE 0 END,
-    Outbound=d.Outbound-CASE WHEN m.Direction=1 THEN 1 ELSE 0 END,
-    Inbound=d.Inbound-CASE WHEN m.Direction=2 THEN 1 ELSE 0 END,
-    Pending=d.Pending-CASE WHEN m.Status=1 THEN 1 ELSE 0 END,
-    UpdatedAtUtc=GREATEST(d.UpdatedAtUtc, @OccurredAtUtc)
-FROM ReportingSmsMessages m
-WHERE m.MessageId=@MessageId AND @OccurredAtUtc>=m.UpdatedAtUtc
-  AND d.ReportDate=CAST(m.CreatedAtUtc AT TIME ZONE 'UTC' AS date) AND d.TenantId=m.TenantId;
-
-UPDATE ProviderSmsDailyOverview d SET
-    TotalMessages=d.TotalMessages-1,
-    Scheduled=d.Scheduled-CASE WHEN m.QueueStatus=3 THEN 1 ELSE 0 END,
-    Queued=d.Queued-CASE WHEN m.QueueStatus=2 THEN 1 ELSE 0 END,
-    Sent=d.Sent-CASE WHEN m.Status=2 THEN 1 ELSE 0 END,
-    Delivered=d.Delivered-CASE WHEN m.Status=3 THEN 1 ELSE 0 END,
-    Failed=d.Failed-CASE WHEN m.Status=4 THEN 1 ELSE 0 END,
-    Received=d.Received-CASE WHEN m.Status=5 THEN 1 ELSE 0 END,
-    Outbound=d.Outbound-CASE WHEN m.Direction=1 THEN 1 ELSE 0 END,
-    Inbound=d.Inbound-CASE WHEN m.Direction=2 THEN 1 ELSE 0 END,
-    Pending=d.Pending-CASE WHEN m.Status=1 THEN 1 ELSE 0 END,
-    UpdatedAtUtc=GREATEST(d.UpdatedAtUtc, @OccurredAtUtc)
-FROM ReportingSmsMessages m
-WHERE m.MessageId=@MessageId AND @OccurredAtUtc>=m.UpdatedAtUtc
-  AND d.ReportDate=CAST(m.CreatedAtUtc AT TIME ZONE 'UTC' AS date) AND d.TenantId=m.TenantId AND d.Provider=m.Provider;
-
-UPDATE UserSmsOverview d SET
-    TotalMessages=d.TotalMessages-1,
-    Scheduled=d.Scheduled-CASE WHEN m.QueueStatus=3 THEN 1 ELSE 0 END,
-    Queued=d.Queued-CASE WHEN m.QueueStatus=2 THEN 1 ELSE 0 END,
-    Sent=d.Sent-CASE WHEN m.Status=2 THEN 1 ELSE 0 END,
-    Delivered=d.Delivered-CASE WHEN m.Status=3 THEN 1 ELSE 0 END,
-    Failed=d.Failed-CASE WHEN m.Status=4 THEN 1 ELSE 0 END,
-    Received=d.Received-CASE WHEN m.Status=5 THEN 1 ELSE 0 END,
-    Outbound=d.Outbound-CASE WHEN m.Direction=1 THEN 1 ELSE 0 END,
-    Inbound=d.Inbound-CASE WHEN m.Direction=2 THEN 1 ELSE 0 END,
-    Pending=d.Pending-CASE WHEN m.Status=1 THEN 1 ELSE 0 END,
-    UpdatedAtUtc=GREATEST(d.UpdatedAtUtc, @OccurredAtUtc)
-FROM ReportingSmsMessages m
-WHERE m.MessageId=@MessageId AND @OccurredAtUtc>=m.UpdatedAtUtc AND m.UserId IS NOT NULL
-  AND d.ReportDate=CAST(m.CreatedAtUtc AT TIME ZONE 'UTC' AS date) AND d.TenantId=m.TenantId AND d.UserId=m.UserId;
-
-DELETE FROM TenantSmsDailyOverview WHERE TotalMessages=0;
-DELETE FROM ProviderSmsDailyOverview WHERE TotalMessages=0;
-DELETE FROM UserSmsOverview WHERE TotalMessages=0;
-
+-- Persist the latest message state first. Daily aggregates are rebuilt from that state below,
+-- so older events cannot overwrite a newer status.
 INSERT INTO ReportingSmsMessages
     (MessageId, TenantId, TenantName, UserId, Username, Provider, Direction, QueueStatus, Status, CreatedAtUtc, UpdatedAtUtc)
 VALUES
@@ -75,8 +24,13 @@ DO UPDATE SET
     Status=EXCLUDED.Status, UpdatedAtUtc=EXCLUDED.UpdatedAtUtc
 WHERE EXCLUDED.UpdatedAtUtc >= ReportingSmsMessages.UpdatedAtUtc;
 
--- Older events are kept for delta counters and idempotency; the INSERT ... SELECT statements below
--- only add a row when this event still matches the current message state.
+DELETE FROM TenantSmsDailyOverview
+WHERE TenantId=@TenantId AND ReportDate=CAST(@CreatedAtUtc AT TIME ZONE 'UTC' AS date);
+DELETE FROM ProviderSmsDailyOverview
+WHERE TenantId=@TenantId AND ReportDate=CAST(@CreatedAtUtc AT TIME ZONE 'UTC' AS date);
+DELETE FROM UserSmsOverview
+WHERE TenantId=@TenantId AND ReportDate=CAST(@CreatedAtUtc AT TIME ZONE 'UTC' AS date);
+
 -- Add the new current state to each reporting grain.
 INSERT INTO TenantSmsDailyOverview
     (ReportDate,TenantId,TenantName,TotalMessages,Scheduled,Queued,Sent,Delivered,Failed,Received,Outbound,Inbound,Pending,UpdatedAtUtc)
@@ -87,8 +41,7 @@ SELECT CAST(CreatedAtUtc AT TIME ZONE 'UTC' AS date),TenantId,TenantName,1,
     CASE WHEN Direction=1 THEN 1 ELSE 0 END,CASE WHEN Direction=2 THEN 1 ELSE 0 END,
     CASE WHEN Status=1 THEN 1 ELSE 0 END,UpdatedAtUtc
 FROM ReportingSmsMessages
-WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc
-  AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction AND QueueStatus=@QueueStatus AND Status=@Status
+WHERE TenantId=@TenantId AND CAST(CreatedAtUtc AT TIME ZONE 'UTC' AS date)=CAST(@CreatedAtUtc AT TIME ZONE 'UTC' AS date)
 ON CONFLICT (ReportDate,TenantId) DO UPDATE SET
     TenantName=EXCLUDED.TenantName,TotalMessages=TenantSmsDailyOverview.TotalMessages+1,
     Scheduled=TenantSmsDailyOverview.Scheduled+EXCLUDED.Scheduled,Queued=TenantSmsDailyOverview.Queued+EXCLUDED.Queued,
@@ -106,8 +59,7 @@ SELECT CAST(CreatedAtUtc AT TIME ZONE 'UTC' AS date),TenantId,TenantName,Provide
     CASE WHEN Direction=1 THEN 1 ELSE 0 END,CASE WHEN Direction=2 THEN 1 ELSE 0 END,
     CASE WHEN Status=1 THEN 1 ELSE 0 END,UpdatedAtUtc
 FROM ReportingSmsMessages
-WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc
-  AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction AND QueueStatus=@QueueStatus AND Status=@Status
+WHERE TenantId=@TenantId AND CAST(CreatedAtUtc AT TIME ZONE 'UTC' AS date)=CAST(@CreatedAtUtc AT TIME ZONE 'UTC' AS date)
 ON CONFLICT (ReportDate,TenantId,Provider) DO UPDATE SET
     TenantName=EXCLUDED.TenantName,TotalMessages=ProviderSmsDailyOverview.TotalMessages+1,
     Scheduled=ProviderSmsDailyOverview.Scheduled+EXCLUDED.Scheduled,Queued=ProviderSmsDailyOverview.Queued+EXCLUDED.Queued,
@@ -125,8 +77,8 @@ SELECT TenantId,UserId,COALESCE(Username,''),CAST(CreatedAtUtc AT TIME ZONE 'UTC
     CASE WHEN Direction=1 THEN 1 ELSE 0 END,CASE WHEN Direction=2 THEN 1 ELSE 0 END,
     CASE WHEN Status=1 THEN 1 ELSE 0 END,UpdatedAtUtc
 FROM ReportingSmsMessages
-WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc AND UserId IS NOT NULL
-  AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction AND QueueStatus=@QueueStatus AND Status=@Status
+WHERE TenantId=@TenantId AND UserId IS NOT NULL
+  AND CAST(CreatedAtUtc AT TIME ZONE 'UTC' AS date)=CAST(@CreatedAtUtc AT TIME ZONE 'UTC' AS date)
 ON CONFLICT (TenantId,UserId,ReportDate) DO UPDATE SET
     Username=EXCLUDED.Username,TotalMessages=UserSmsOverview.TotalMessages+1,
     Scheduled=UserSmsOverview.Scheduled+EXCLUDED.Scheduled,Queued=UserSmsOverview.Queued+EXCLUDED.Queued,

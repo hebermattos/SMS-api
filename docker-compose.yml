@@ -1,6 +1,8 @@
 services:
   rabbitmq-1:
     image: rabbitmq:3.13-management
+    mem_limit: 384m
+    cpus: 0.40
     hostname: rabbitmq-1
     mem_reservation: 256m
     environment: &rabbitmq-environment
@@ -18,6 +20,8 @@ services:
 
   rabbitmq-2:
     image: rabbitmq:3.13-management
+    mem_limit: 384m
+    cpus: 0.40
     hostname: rabbitmq-2
     mem_reservation: 256m
     environment: *rabbitmq-environment
@@ -38,6 +42,8 @@ services:
 
   rabbitmq-3:
     image: rabbitmq:3.13-management
+    mem_limit: 384m
+    cpus: 0.40
     hostname: rabbitmq-3
     mem_reservation: 256m
     environment: *rabbitmq-environment
@@ -58,6 +64,8 @@ services:
 
   rabbitmq-lb:
     image: haproxy:3.2-alpine
+    mem_limit: 48m
+    cpus: 0.20
     mem_reservation: 32m
     depends_on:
       rabbitmq-1:
@@ -72,7 +80,10 @@ services:
     restart: unless-stopped
 
   ollama:
+    profiles: [ai]
     image: ollama/ollama:0.12.3
+    mem_limit: 1024m
+    cpus: 0.75
     mem_reservation: 768m
     volumes:
       - ollama-data:/root/.ollama
@@ -84,7 +95,10 @@ services:
       start_period: 10s
 
   ollama-init:
+    profiles: [ai]
     image: ollama/ollama:0.12.3
+    mem_limit: 256m
+    cpus: 0.50
     depends_on:
       ollama:
         condition: service_healthy
@@ -95,6 +109,8 @@ services:
 
   redis:
     image: redis:7.4-alpine
+    mem_limit: 64m
+    cpus: 0.20
     mem_reservation: 64m
     ports: ["6379:6379"]
     healthcheck:
@@ -105,6 +121,8 @@ services:
 
   clickstack:
     image: docker.io/clickhouse/clickstack-local:2.21.0
+    mem_limit: 768m
+    cpus: 0.75
     mem_reservation: 512m
     ports:
       - "18123:8123"
@@ -119,6 +137,8 @@ services:
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.136.0
+    mem_limit: 128m
+    cpus: 0.25
     mem_reservation: 128m
     depends_on:
       clickstack:
@@ -132,6 +152,8 @@ services:
 
   hyperdx-auth:
     image: caddy:2.10-alpine
+    mem_limit: 64m
+    cpus: 0.25
     mem_reservation: 32m
     depends_on:
       clickstack:
@@ -146,6 +168,8 @@ services:
 
   backup-init:
     image: alpine:3.22
+    mem_limit: 64m
+    cpus: 0.25
     user: "0:0"
     volumes:
       - ${POSTGRES_BACKUP_PATH:-./backups}:/backups
@@ -154,7 +178,8 @@ services:
   postgres:
     image: postgres:17-alpine
     mem_reservation: 128m
-    mem_limit: 256m
+    mem_limit: 384m
+    cpus: 0.75
     depends_on:
       backup-init:
         condition: service_completed_successfully
@@ -183,7 +208,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ${POSTGRES_BACKUP_PATH:-./backups}:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U \"$POSTGRES_USER\" -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -191,6 +216,8 @@ services:
 
   db-init:
     image: postgres:17-alpine
+    mem_limit: 256m
+    cpus: 0.50
     mem_reservation: 128m
     depends_on:
       postgres:
@@ -207,7 +234,7 @@ services:
       - |
         set -eu
         database_exists() {
-          [ "$$(psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$$1'")" = "1" ]
+          [ "$(psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$1'")" = "1" ]
         }
 
         if ! database_exists "sms_api"; then
@@ -229,6 +256,8 @@ services:
 
   postgres-backup:
     image: postgres:17-alpine
+    mem_limit: 128m
+    cpus: 0.25
     mem_reservation: 64m
     depends_on:
       postgres:
@@ -251,6 +280,8 @@ services:
 
   provider-init:
     mem_reservation: 128m
+    mem_limit: 256m
+    cpus: 0.50
     build:
       context: .
       dockerfile: database/seeds/Sms.Seed/Dockerfile
@@ -267,6 +298,8 @@ services:
 
   api-1:
     mem_reservation: 256m
+    mem_limit: 256m
+    cpus: 0.50
     build:
       context: .
       dockerfile: src/Sms.Api/Dockerfile
@@ -305,6 +338,8 @@ services:
 
   api-2:
     mem_reservation: 256m
+    mem_limit: 256m
+    cpus: 0.50
     build:
       context: .
       dockerfile: src/Sms.Api/Dockerfile
@@ -343,6 +378,8 @@ services:
 
   haproxy:
     image: haproxy:3.2-alpine
+    mem_limit: 48m
+    cpus: 0.20
     mem_reservation: 32m
     depends_on:
       api-1:
@@ -357,6 +394,8 @@ services:
 
   worker:
     mem_reservation: 256m
+    mem_limit: 256m
+    cpus: 0.50
     build:
       context: .
       dockerfile: src/Sms.Worker/Dockerfile
@@ -391,6 +430,8 @@ services:
 
   webhook-tests:
     profiles: [tests]
+    mem_limit: 768m
+    cpus: 1.00
     mem_reservation: 256m
     build:
       context: .
@@ -403,6 +444,8 @@ services:
 
   ui:
     mem_reservation: 32m
+    mem_limit: 64m
+    cpus: 0.20
     build:
       context: .
       dockerfile: ui/Dockerfile
