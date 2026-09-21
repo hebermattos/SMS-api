@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -6,7 +7,9 @@ using Sms.Application.Auth;
 
 namespace Sms.Api.Controllers;
 
-public sealed record AdminTokenRequest(string Username, string Password);
+public sealed record AdminTokenRequest(
+    [Required, StringLength(100, MinimumLength = 1)] string Username,
+    [Required, StringLength(128, MinimumLength = 1)] string Password);
 
 [ApiController]
 [Route("api/v1/admin/auth")]
