@@ -16,7 +16,7 @@ public sealed class AdministrationControllerTests
     {
         var attribute = Assert.Single(typeof(AdministrationController).GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>());
         Assert.Equal(PortalSecurity.AdminPolicy, attribute.Policy);
-        var repo = new AdministrationFakeRepository(); var controller = new AdministrationController(AdministrationServiceTests.Service(repo), new AdministratorAuthenticationService(new AdministratorRepositoryFake()), new AiSettingsFake(), new SmsRetryOptions());
+        var repo = new AdministrationFakeRepository(); var controller = new AdministrationController(AdministrationServiceTests.Service(repo), new AiSettingsFake(), new SmsRetryOptions());
         Assert.IsType<OkObjectResult>(await controller.ListTenants());
         Assert.IsType<OkObjectResult>(await controller.GetTenant(repo.Tenant.Id, default));
         Assert.IsType<NoContentResult>(await controller.UpdateTenant(repo.Tenant.Id, new("Company", "UTC", false), default));
@@ -29,8 +29,6 @@ public sealed class AdministrationControllerTests
         Assert.IsType<NoContentResult>(await controller.SaveProvider(repo.Tenant.Id, "Twilio", new("account", "+15550000001", true, true, "secret", null), default));
         Assert.Equal(repo.Tenant.Id, repo.SavedProvider!.TenantId);
         Assert.IsType<OkObjectResult>(controller.GetSmsRetry());
-        Assert.IsType<OkObjectResult>(await controller.ListAdministrators());
-        Assert.IsType<BadRequestObjectResult>(await controller.ListAdministrators(-1));
         Assert.IsType<OkObjectResult>(await controller.GetRateLimits(repo.Tenant.Id, default));
         Assert.IsType<NoContentResult>(await controller.UpdateRateLimits(repo.Tenant.Id, new(100, 20, 20), default));
         Assert.IsType<OkObjectResult>(await controller.GetAiSettings(repo.Tenant.Id, default));
@@ -47,15 +45,6 @@ public sealed class AdministrationControllerTests
         public Task SaveAsync(Guid tenantId, TenantAiSettings settings, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
-    private sealed class AdministratorRepositoryFake : IAdministratorRepository
-    {
-        public Task<AdministratorAccount?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default) => Task.FromResult<AdministratorAccount?>(null);
-        public Task<bool> IsActiveAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public Task<IReadOnlyList<AdministratorSummary>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<AdministratorSummary>>([]);
-        public Task CreateAsync(AdministratorAccount account, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<AdministratorStateResult> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default) => Task.FromResult(AdministratorStateResult.NotFound);
-        public Task<bool> ResetPasswordAsync(Guid id, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken = default) => Task.FromResult(false);
-    }
 
     [Fact]
     public async Task Overview_UsesOnlyAuthenticatedTenantAndHandlesMissingTenant()
