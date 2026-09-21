@@ -15,7 +15,7 @@
 <path d="M275 180H300" class="line"/><text x="287" y="165" text-anchor="middle" class="mini">HTTP</text><path d="M450 165L485 136" class="line"/><path d="M450 195L485 216" class="line"/>
 
 <rect x="765" y="115" width="300" height="130" fill="#eef6ff" stroke="#1683e8" class="box"/>
-<text x="915" y="155" text-anchor="middle" class="h">SMS Worker</text><text x="915" y="183" text-anchor="middle" class="s">.NET 8 Worker Service</text><text x="915" y="211" text-anchor="middle" class="mini">Consumers · Schedulers · Monitoring</text>
+<text x="915" y="155" text-anchor="middle" class="h">SMS Worker</text><text x="915" y="183" text-anchor="middle" class="s">.NET 8 Worker Service</text><text x="915" y="211" text-anchor="middle" class="mini">Consumers · Schedulers · Alert evaluation</text>
 
 <rect x="1200" y="105" width="360" height="165" class="group"/><text x="1380" y="136" text-anchor="middle" class="h">External SMS Providers</text>
 <rect x="1235" y="150" width="290" height="42" fill="#fff" stroke="#aaa" class="box"/><text x="1380" y="177" text-anchor="middle" class="t">Twilio</text>
@@ -29,7 +29,7 @@
 <text x="660" y="348" text-anchor="middle" class="h">RabbitMQ HA Cluster</text>
 <rect x="545" y="362" width="230" height="28" fill="#f8fafc" stroke="#64748b" class="box"/><text x="660" y="382" text-anchor="middle" class="mini">HAProxy AMQP · localhost:5672</text>
 <text x="660" y="415" text-anchor="middle" class="s">rabbitmq-1 · rabbitmq-2 · rabbitmq-3</text>
-<text x="660" y="440" text-anchor="middle" class="mini">3-member quorum queues · 1-node tolerance</text>
+<text x="660" y="438" text-anchor="middle" class="mini">4 quorum queues · 3 members · 1-node tolerance</text><text x="660" y="458" text-anchor="middle" class="mini">sms.send · sms.alert.evaluation · sms.alert.rule-evaluation · reporting</text>
 <rect x="820" y="330" width="240" height="115" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="940" y="374" text-anchor="middle" class="h">PostgreSQL 17</text><text x="940" y="402" text-anchor="middle" class="s">Database server</text><text x="940" y="428" text-anchor="middle" class="mini">localhost:5432</text>
 <rect x="1100" y="330" width="205" height="115" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="1202" y="370" text-anchor="middle" class="h">OTel Collector</text><text x="1202" y="399" text-anchor="middle" class="s">OTLP :4318</text><text x="1202" y="425" text-anchor="middle" class="mini">Internal only</text>
 <rect x="1340" y="330" width="220" height="115" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="1450" y="370" text-anchor="middle" class="h">ClickStack</text><text x="1450" y="398" text-anchor="middle" class="s">ClickHouse + HyperDX</text><text x="1450" y="425" text-anchor="middle" class="mini">HyperDX via Caddy :8081</text>
@@ -59,7 +59,7 @@
 <rect x="1245" y="505" width="315" height="215" class="group"/><text x="1265" y="532" class="h">Processing ownership</text>
 <text x="1270" y="575" class="s">API</text><text x="1325" y="575" class="mini">HTTP · auth · webhooks · publish</text>
 <text x="1270" y="610" class="s">Worker</text><text x="1340" y="610" class="mini">consume · schedule · retry</text>
-<text x="1340" y="635" class="mini">alert outbox · queue monitoring</text>
+<text x="1340" y="635" class="mini">alert events · per-rule workers · monitoring</text>
 <text x="1270" y="675" class="mini">Deploy and scale independently</text>
 
 <rect x="35" y="770" width="300" height="180" class="group"/><text x="55" y="802" class="h">Automatic Backup / PITR</text>
