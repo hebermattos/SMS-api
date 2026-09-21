@@ -14,7 +14,6 @@ public static class PortalSecurity
     public const string UserPolicy = "TenantUser";
     public const string PlatformUserPolicy = "PlatformUser";
     public const string TenantAdministratorPolicy = "TenantAdministrator";
-    public const string AdminClaim = "platform_admin";
     public const string RoleClaim = "role";
     public const string ContextClaim = "context";
     public const string TenantContext = "tenant";
@@ -27,8 +26,7 @@ public static class PortalSecurity
     {
         options.DefaultPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
             .RequireClaim(ContextClaim, TenantContext).RequireClaim(RoleClaim, UserRole)
-            .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _)
-                && !context.User.HasClaim(AdminClaim, "true")).Build();
+            .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _)).Build();
 
         options.AddPolicy(UserPolicy, policy => policy.RequireAuthenticatedUser()
             .RequireClaim(ContextClaim, TenantContext).RequireClaim(RoleClaim, UserRole)
@@ -36,8 +34,7 @@ public static class PortalSecurity
 
         options.AddPolicy(TenantAdministratorPolicy, policy => policy.RequireAuthenticatedUser()
             .RequireClaim(ContextClaim, TenantContext).RequireClaim(RoleClaim, AdministratorRole)
-            .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _))
-            .RequireAssertion(context => !context.User.HasClaim(AdminClaim, "true")));
+            .RequireAssertion(context => Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out _)));
 
         options.AddPolicy(PlatformUserPolicy, policy => policy.RequireAuthenticatedUser()
             .RequireClaim(ContextClaim, PlatformContext).RequireClaim(RoleClaim, UserRole)
