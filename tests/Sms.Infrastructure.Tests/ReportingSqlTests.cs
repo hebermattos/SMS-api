@@ -85,6 +85,14 @@ public sealed class ReportingSqlTests
                 "SELECT TotalMessages, Delivered, Failed, Pending FROM UserSmsOverview WHERE TenantId=@TenantId AND UserId=@UserId AND ReportDate=CURRENT_DATE;",
                 new { TenantId = tenantId, UserId = userId });
             Assert.Equal((1L, 1L, 0L, 0L), userCounters);
+
+            var dailyCounters = await reporting.QuerySingleAsync<(long TotalMessages, long Delivered)>("""
+                SELECT SUM(TotalMessages)::BIGINT AS TotalMessages,
+                       SUM(CASE WHEN Status=3 THEN TotalMessages ELSE 0 END)::BIGINT AS Delivered
+                FROM SmsDailyOverview
+                WHERE TenantId=@TenantId AND ReportDate=CURRENT_DATE;
+                """, new { TenantId = tenantId });
+            Assert.Equal((1L, 1L), dailyCounters);
         }
         finally
         {
