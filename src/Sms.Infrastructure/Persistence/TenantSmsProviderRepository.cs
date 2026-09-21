@@ -36,7 +36,9 @@ public sealed class TenantSmsProviderRepository(
     {
         var previous = await configurationCache.GetAsync(configuration.TenantId, cancellationToken);
         var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantSmsProviderRepository.UpsertAsync.01.sql");
-        using var connection = connectionFactory.CreateConnection();
+        using var connection = connectionFactory.CreateSqlConnection();
+        await connection.OpenAsync(cancellationToken);
+        using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         try
         {
             await connection.ExecuteAsync(new CommandDefinition(
@@ -54,7 +56,9 @@ public sealed class TenantSmsProviderRepository(
                     Settings = ProtectOptional(configuration.Settings),
                     Now = DateTimeOffset.UtcNow
                 },
+                transaction: transaction,
                 cancellationToken: cancellationToken));
+            await transaction.CommitAsync(cancellationToken);
 
             await configurationCache.InvalidateAsync(
                 configuration.TenantId,
@@ -64,6 +68,7 @@ public sealed class TenantSmsProviderRepository(
         }
         catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
         {
+            await transaction.RollbackAsync(CancellationToken.None);
             throw new AdministrationConflictException();
         }
     }
