@@ -1,5 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 import { AuthService } from './core/auth.service';
 import { IconComponent } from './shared/icon.component';
 
@@ -35,4 +38,35 @@ import { IconComponent } from './shared/icon.component';
       <footer class="workspace-footer"><span>SMS UI</span><span>Communication, made clear.</span></footer>
     </div>
   </div>` })
-export class ShellComponent { readonly auth = inject(AuthService); readonly menuOpen = signal(false); }
+export class ShellComponent {
+  readonly auth = inject(AuthService);
+  readonly menuOpen = signal(false);
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(event => this.recordPage(event.urlAfterRedirects));
+  }
+
+  private recordPage(url: string): void {
+    if (this.auth.role() === 'admin') return;
+
+    const path = url.split('?')[0];
+    const page =
+      path === '/app' ? 'overview' :
+      path === '/app/messages' || path.startsWith('/app/messages/') ? 'messages' :
+      path === '/app/send' ? 'send' :
+      path === '/app/templates' ? 'templates' :
+      path === '/app/users' ? 'users' :
+      path === '/app/reports' ? 'reports' :
+      path === '/app/alerts' ? 'alerts' :
+      path === '/app/opt-outs' ? 'opt-outs' :
+      path === '/app/logs' ? 'logs' : null;
+
+    if (page) this.http.post('/api/v1/activity/page', { page }).subscribe({ error: () => {} });
+  }
+}

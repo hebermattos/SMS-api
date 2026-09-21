@@ -9,7 +9,7 @@ public sealed class LogEntryRepository(LogsSqlConnectionFactory connectionFactor
         Guid tenantId,
         DateTimeOffset? from,
         DateTimeOffset? to,
-        int skip,
+        LogCursor? cursor,
         int take,
         CancellationToken cancellationToken = default)
     {
@@ -18,7 +18,7 @@ public sealed class LogEntryRepository(LogsSqlConnectionFactory connectionFactor
         await using var connection = connectionFactory.CreateConnection();
         var rows = await connection.QueryAsync<LogEntry>(new CommandDefinition(
             sql,
-            new { TenantId = tenantId, From = from, To = to, Skip = skip, Take = take },
+            new { TenantId = tenantId, From = from, To = to, CursorTimestamp = cursor?.Timestamp, CursorId = cursor?.Id, Take = take },
             cancellationToken: cancellationToken));
         return rows.AsList();
     }
@@ -26,7 +26,7 @@ public sealed class LogEntryRepository(LogsSqlConnectionFactory connectionFactor
     public async Task<IReadOnlyList<LogEntry>> GetSystemAsync(
         DateTimeOffset? from,
         DateTimeOffset? to,
-        int skip,
+        LogCursor? cursor,
         int take,
         CancellationToken cancellationToken = default)
     {
@@ -35,7 +35,7 @@ public sealed class LogEntryRepository(LogsSqlConnectionFactory connectionFactor
         await using var connection = connectionFactory.CreateConnection();
         var rows = await connection.QueryAsync<LogEntry>(new CommandDefinition(
             sql,
-            new { From = from, To = to, Skip = skip, Take = take },
+            new { From = from, To = to, CursorTimestamp = cursor?.Timestamp, CursorId = cursor?.Id, Take = take },
             cancellationToken: cancellationToken));
         return rows.AsList();
     }
