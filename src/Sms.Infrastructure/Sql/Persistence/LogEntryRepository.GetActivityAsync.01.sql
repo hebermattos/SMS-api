@@ -1,4 +1,5 @@
-SELECT Id, "Timestamp", Severity, Category, Message, TraceId, SpanId, Attributes
+SELECT Id, "Timestamp", 'Information' AS Severity, ActivityType AS Category, Description AS Message,
+       NULL AS TraceId, NULL AS SpanId, NULL AS Attributes
 FROM UserActivityLogs
 WHERE TenantId=@TenantId
   AND (@From IS NULL OR "Timestamp" >= @From)
