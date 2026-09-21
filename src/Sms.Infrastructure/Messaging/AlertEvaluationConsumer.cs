@@ -23,9 +23,7 @@ public sealed class AlertEvaluationConsumer(
             Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationConsumer.Consume.02.sql"),
             cancellationToken: context.CancellationToken));
 
-        if (inserted == 0) return;
-
         await alerts.EvaluateAsync(
-            message.TenantId, message.Status, message.Provider, message.OccurredAtUtc, context.CancellationToken);
+            message.EventId, message.TenantId, message.Status, message.Provider, message.OccurredAtUtc, context.CancellationToken);
     }
 }
