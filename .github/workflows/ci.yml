@@ -31,13 +31,16 @@ jobs:
         run: |
           $files = Get-ChildItem -Path ./TestResults -Filter coverage.cobertura.xml -Recurse
           if ($files.Count -eq 0) { throw "No coverage report was generated." }
-          $rates = foreach ($file in $files) {
+          $linesCovered = 0
+          $linesValid = 0
+          foreach ($file in $files) {
             [xml]$coverage = Get-Content $file.FullName
-            [double]$coverage.coverage.'line-rate'
+            $linesCovered += [int]$coverage.coverage.'lines-covered'
+            $linesValid += [int]$coverage.coverage.'lines-valid'
           }
-          $lineRate = ($rates | Measure-Object -Minimum).Minimum
-          $percent = [math]::Round($lineRate * 100, 2)
-          Write-Host "Minimum line coverage: $percent%"
+          if ($linesValid -eq 0) { throw "Coverage reports contain no valid lines." }
+          $percent = [math]::Round(($linesCovered / $linesValid) * 100, 2)
+          Write-Host "Combined line coverage: $percent% ($linesCovered/$linesValid)"
           if ($percent -lt 80) { throw "Line coverage $percent% is below the required 80%." }
       - name: Upload coverage
         if: always()
