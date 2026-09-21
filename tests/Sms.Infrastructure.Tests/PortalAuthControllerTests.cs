@@ -41,6 +41,7 @@ public sealed class PortalAuthControllerTests
     {
         public Task CreateAsync(RefreshTokenSession session, byte[] tokenHash, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<RefreshTokenSession?> RotateAsync(byte[] currentTokenHash, byte[] replacementTokenHash, Guid replacementId, DateTimeOffset replacementExpiresAt, CancellationToken cancellationToken = default) => Task.FromResult<RefreshTokenSession?>(null);
+        public Task RevokeAsync(byte[] tokenHash, Guid userId, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private static PortalUserAccount Account(string context, string role)
