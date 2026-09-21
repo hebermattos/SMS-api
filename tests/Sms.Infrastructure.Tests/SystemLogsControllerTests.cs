@@ -22,7 +22,7 @@ public sealed class SystemLogsControllerTests
     public async Task Get_RejectsInvalidPaginationAndDateRange()
     {
         var controller = new SystemLogsController(new RecordingRepository());
-        Assert.IsType<BadRequestObjectResult>(await controller.Get(skip: -1));
+        Assert.IsType<BadRequestObjectResult>(await controller.Get(cursorTimestamp: DateTimeOffset.UtcNow));
         Assert.IsType<BadRequestObjectResult>(await controller.Get(
             from: DateTimeOffset.Parse("2026-01-02T00:00:00Z"),
             to: DateTimeOffset.Parse("2026-01-01T00:00:00Z")));
@@ -39,10 +39,10 @@ public sealed class SystemLogsControllerTests
     {
         public int Take { get; private set; }
 
-        public Task<IReadOnlyList<LogEntry>> GetActivityAsync(Guid tenantId, DateTimeOffset? from, DateTimeOffset? to, int skip, int take, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<LogEntry>> GetActivityAsync(Guid tenantId, DateTimeOffset? from, DateTimeOffset? to, LogCursor? cursor, int take, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<LogEntry>>([]);
 
-        public Task<IReadOnlyList<LogEntry>> GetSystemAsync(DateTimeOffset? from, DateTimeOffset? to, int skip, int take, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<LogEntry>> GetSystemAsync(DateTimeOffset? from, DateTimeOffset? to, LogCursor? cursor, int take, CancellationToken cancellationToken = default)
         {
             Take = take;
             return Task.FromResult<IReadOnlyList<LogEntry>>([]);
