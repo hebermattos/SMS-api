@@ -215,6 +215,7 @@ CREATE TABLE Alerts
     Id UUID PRIMARY KEY,
     TenantId UUID NOT NULL REFERENCES Tenants(Id),
     RuleId UUID NOT NULL,
+    EventId UUID NOT NULL,
     RuleName VARCHAR(120) NOT NULL,
     Provider VARCHAR(50) NULL,
     Status INTEGER NOT NULL,
@@ -232,6 +233,7 @@ CREATE TABLE Alerts
         OR (IsRead AND ReadAt IS NOT NULL)
     )
 );
+CREATE UNIQUE INDEX UX_Alerts_Tenant_Rule_Event ON Alerts(TenantId, RuleId, EventId);
 CREATE INDEX IX_Alerts_Tenant_CreatedAt ON Alerts(TenantId, CreatedAt DESC, Id DESC)
     INCLUDE (IsRead, RuleId, Status, Provider, MatchCount);
 CREATE INDEX IX_Alerts_Tenant_Unread_CreatedAt ON Alerts(TenantId, CreatedAt DESC, Id DESC)
