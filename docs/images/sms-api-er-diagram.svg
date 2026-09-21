@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1220" viewBox="0 0 1600 1220">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1540" viewBox="0 0 1600 1540">
 <defs><style>
 .title{font:700 36px Arial,sans-serif;fill:#102a56}.sub{font:20px Arial,sans-serif;fill:#64748b}.h{font:700 19px Arial,sans-serif;fill:#102a56}.t{font:700 16px Arial,sans-serif;fill:#102a56}.s{font:14px Arial,sans-serif;fill:#334155}.mini{font:12px Arial,sans-serif;fill:#475569}.box{rx:14;ry:14;stroke-width:2}.group{rx:16;ry:16;fill:#fff;stroke:#cbd5e1;stroke-width:1.5}.line{stroke:#102a56;stroke-width:2;fill:none;marker-end:url(#a)}.dash{stroke:#64748b;stroke-width:1.8;fill:none;stroke-dasharray:7 6;marker-end:url(#g)}
 </style><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#102a56"/></marker><marker id="g" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#64748b"/></marker></defs>
-<rect width="1600" height="1220" fill="#fff"/>
-<text x="800" y="48" text-anchor="middle" class="title">SMS API – Application Database ER Diagram</text>
-<text x="800" y="80" text-anchor="middle" class="sub">PostgreSQL transactional schema · tenant isolation and messaging relationships</text>
+<rect width="1600" height="1540" fill="#fff"/>
+<text x="800" y="48" text-anchor="middle" class="title">SMS API – Database ER Diagram</text>
+<text x="800" y="80" text-anchor="middle" class="sub">PostgreSQL transactional + reporting schemas · tenant-isolated data model</text>
 
 <rect x="35" y="115" width="1530" height="190" class="group"/><text x="55" y="147" class="h">Tenant root and access</text>
 <rect x="70" y="175" width="220" height="95" fill="#eef6ff" stroke="#1683e8" class="box"/><text x="180" y="207" text-anchor="middle" class="h">Tenants</text><text x="180" y="232" text-anchor="middle" class="mini">PK Id · UK Code</text><text x="180" y="252" text-anchor="middle" class="mini">Name · TimeZoneId · IsActive</text>
@@ -46,4 +46,14 @@
 <path d="M460 270V345H525V395" class="line"/>
 <path d="M180 320V665H187V750" class="line"/><path d="M830 665V750" class="line"/><path d="M317 665V890" class="line"/>
 <path d="M525 530V655H1307V755" class="dash"/><text x="915" y="645" class="mini">insert/update trigger</text>
+
+<rect x="35" y="1195" width="1530" height="300" class="group"/><text x="55" y="1227" class="h">sms_api_reporting · reporting read model</text>
+<rect x="70" y="1260" width="250" height="100" fill="#effcf3" stroke="#16a34a" class="box"/><text x="195" y="1292" text-anchor="middle" class="t">ReportingSmsMessages</text><text x="195" y="1317" text-anchor="middle" class="mini">PK MessageId · TenantId · UserId</text><text x="195" y="1337" text-anchor="middle" class="mini">Provider · Direction · QueueStatus · Status</text>
+<rect x="365" y="1260" width="245" height="100" fill="#effcf3" stroke="#16a34a" class="box"/><text x="487" y="1292" text-anchor="middle" class="t">TenantSmsOverview</text><text x="487" y="1317" text-anchor="middle" class="mini">PK TenantId</text><text x="487" y="1337" text-anchor="middle" class="mini">Outbound · Inbound · Delivered · Failed · Pending</text>
+<rect x="655" y="1260" width="245" height="100" fill="#effcf3" stroke="#16a34a" class="box"/><text x="777" y="1292" text-anchor="middle" class="t">TenantSmsDailyOverview</text><text x="777" y="1317" text-anchor="middle" class="mini">PK ReportDate + TenantId</text><text x="777" y="1337" text-anchor="middle" class="mini">Daily status + direction aggregates</text>
+<rect x="945" y="1260" width="260" height="100" fill="#effcf3" stroke="#16a34a" class="box"/><text x="1075" y="1292" text-anchor="middle" class="t">ProviderSmsDailyOverview</text><text x="1075" y="1317" text-anchor="middle" class="mini">PK ReportDate + TenantId + Provider</text><text x="1075" y="1337" text-anchor="middle" class="mini">Daily provider aggregates</text>
+<rect x="1250" y="1260" width="260" height="100" fill="#effcf3" stroke="#16a34a" class="box"/><text x="1380" y="1292" text-anchor="middle" class="t">UserSmsOverview</text><text x="1380" y="1317" text-anchor="middle" class="mini">PK TenantId + UserId + ReportDate</text><text x="1380" y="1337" text-anchor="middle" class="mini">Daily user aggregates</text>
+<rect x="365" y="1390" width="245" height="70" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="487" y="1420" text-anchor="middle" class="t">TenantSmsOverviewInbox</text><text x="487" y="1442" text-anchor="middle" class="mini">PK EventId · idempotency</text>
+<path d="M320 1310H365" class="line"/><path d="M320 1325H655" class="dash"/><path d="M320 1340H945" class="dash"/><path d="M320 1355H1250" class="dash"/>
+<text x="790" y="1480" text-anchor="middle" class="mini">Projection flow: SmsMessages → TenantSmsOverviewOutbox → RabbitMQ → Worker → ReportingSmsMessages → aggregates</text>
 </svg>
