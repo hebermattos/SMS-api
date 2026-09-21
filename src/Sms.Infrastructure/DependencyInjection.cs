@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Sms.Application.Auth;
 using Sms.Application.Alerts;
 using Sms.Application.Common;
@@ -27,19 +28,24 @@ namespace Sms.Infrastructure;
 
 public static class DependencyInjection
 {
+    public static IServiceCollection AddRedisConnection(this IServiceCollection services, IConfiguration configuration)
+    {
+        var redisConnectionString = configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("Connection string 'Redis' is required.");
+
+        services.TryAddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+        return services;
+    }
+
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool registerConsumers = false)
     {
         var retryOptions = configuration.GetSection("SmsRetry").Get<SmsRetryOptions>() ?? new SmsRetryOptions();
         retryOptions.Validate();
         services.AddSingleton(retryOptions);
 
-        var redisConnectionString = configuration.GetConnectionString("Redis")
-            ?? throw new InvalidOperationException("Connection string 'Redis' is required.");
-
-        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
-
         if (CacheConfiguration.IsEnabled(configuration))
         {
+            services.AddRedisConnection(configuration);
             services.AddOptions<RedisCacheOptions>()
                 .Configure<IConnectionMultiplexer>((options, redis) =>
                 {
