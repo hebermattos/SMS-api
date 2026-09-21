@@ -60,6 +60,7 @@ public sealed class RefreshTokenServiceTests
         public RefreshTokenSession? Rotated { get; set; }
         public Task CreateAsync(RefreshTokenSession session, byte[] tokenHash, CancellationToken cancellationToken = default) { Created = session; CreatedHash = tokenHash; return Task.CompletedTask; }
         public Task<RefreshTokenSession?> RotateAsync(byte[] currentTokenHash, byte[] replacementTokenHash, Guid replacementId, DateTimeOffset replacementExpiresAt, CancellationToken cancellationToken = default) => Task.FromResult(Rotated);
+        public Task RevokeAsync(byte[] tokenHash, Guid userId, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class Users(PortalUserAccount? account) : IPortalUserRepository
