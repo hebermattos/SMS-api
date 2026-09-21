@@ -15,7 +15,7 @@ public interface IAuditPipelineStep
 
 public sealed class AuditPipelineMiddleware(
     RequestDelegate next,
-    ILogger<AuditPipelineMiddleware> logger)
+    ILogger<AuditPipelineMiddleware>? logger = null)
 {
     public async Task InvokeAsync(HttpContext context, IEnumerable<IAuditPipelineStep> steps)
     {
@@ -43,7 +43,7 @@ public sealed class AuditPipelineMiddleware(
                 }
                 catch (Exception exception)
                 {
-                    logger.LogError(
+                    logger?.LogError(
                         exception,
                         "Audit step {AuditStep} failed for {RequestMethod} {RequestPath}.",
                         step.GetType().Name,
