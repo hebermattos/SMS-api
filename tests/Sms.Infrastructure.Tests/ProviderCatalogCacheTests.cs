@@ -14,9 +14,8 @@ public sealed class ProviderCatalogCacheTests
         var distributedCache = new TenantConfigurationCacheTestFactory.TestDistributedCache();
         var policies = new CountingPolicies();
         var cache = new ProviderCatalogCache(
-            distributedCache,
-            policies,
-            NullLogger<ProviderCatalogCache>.Instance);
+            Wrap(distributedCache),
+            policies);
 
         var first = await cache.GetAsync();
         var second = await cache.GetAsync();
@@ -38,9 +37,8 @@ public sealed class ProviderCatalogCacheTests
     {
         var policies = new CountingPolicies();
         var cache = new ProviderCatalogCache(
-            new DisabledDistributedCacheProxy(),
-            policies,
-            NullLogger<ProviderCatalogCache>.Instance);
+            Wrap(new DisabledDistributedCacheProxy()),
+            policies);
 
         await cache.GetAsync();
         await cache.GetAsync();
@@ -56,9 +54,8 @@ public sealed class ProviderCatalogCacheTests
         await distributedCache.SetStringAsync("provider-catalog", "{invalid-json");
         var policies = new CountingPolicies();
         var cache = new ProviderCatalogCache(
-            distributedCache,
-            policies,
-            NullLogger<ProviderCatalogCache>.Instance);
+            Wrap(distributedCache),
+            policies);
 
         var result = await cache.GetAsync();
 
@@ -71,9 +68,8 @@ public sealed class ProviderCatalogCacheTests
     {
         var policies = new CountingPolicies();
         var cache = new ProviderCatalogCache(
-            new CancellingDistributedCache(),
-            policies,
-            NullLogger<ProviderCatalogCache>.Instance);
+            Wrap(new CancellingDistributedCache()),
+            policies);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
@@ -87,9 +83,8 @@ public sealed class ProviderCatalogCacheTests
     {
         var policies = new CountingPolicies();
         var cache = new ProviderCatalogCache(
-            new WriteFailingDistributedCache(),
-            policies,
-            NullLogger<ProviderCatalogCache>.Instance);
+            Wrap(new WriteFailingDistributedCache()),
+            policies);
 
         var result = await cache.GetAsync();
 
@@ -97,6 +92,9 @@ public sealed class ProviderCatalogCacheTests
         Assert.Equal(1, policies.EnumerationCount);
     }
 
+
+    private static ResilientDistributedCache Wrap(IDistributedCache cache) =>
+        new(cache, NullLogger<ResilientDistributedCache>.Instance);
 
     private sealed class CancellingDistributedCache : Microsoft.Extensions.Caching.Distributed.IDistributedCache
     {
