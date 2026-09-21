@@ -6,6 +6,7 @@ WITH evaluation AS
         r.Name,
         r.Provider,
         r.Status,
+        r.Threshold,
         r.WindowMinutes,
         r.RepeatMode,
         r.RepeatIntervalMinutes,
@@ -28,7 +29,6 @@ WITH evaluation AS
       AND r.DeletedAt IS NULL
       AND r.Status=@Status
       AND (r.Provider IS NULL OR r.Provider=@Provider)
-      AND COALESCE(counts.MatchCount, 0) >= r.Threshold
     FOR UPDATE OF r
 ),
 fired AS
@@ -47,7 +47,10 @@ fired AS
         @OccurredAtUtc,
         FALSE
     FROM evaluation
-    WHERE NOT IsTriggered
+    WHERE MatchCount >= Threshold
+      AND
+      (
+       NOT IsTriggered
        OR
        (
            RepeatMode=2
@@ -57,6 +60,7 @@ fired AS
                OR LastTriggeredAt <= @OccurredAtUtc - make_interval(mins => RepeatIntervalMinutes)
            )
        )
+      )
     RETURNING RuleId
 )
 UPDATE AlertRules r
