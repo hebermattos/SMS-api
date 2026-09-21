@@ -1,20 +1,37 @@
+using System.Text.Json;
 using Dapper;
+using Microsoft.Extensions.Caching.Distributed;
 using Sms.Application.Messages;
 
 namespace Sms.Infrastructure.Persistence;
 
-public sealed class TenantAiSettingsRepository(SqlConnectionFactory connectionFactory) : ITenantAiSettingsRepository
+public sealed class TenantAiSettingsRepository(
+    SqlConnectionFactory connectionFactory,
+    IDistributedCache cache) : ITenantAiSettingsRepository
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public const string DefaultImprovePrompt = "Improve this SMS. Keep the meaning, make it concise and professional, preserve every {{variableName}} exactly, do not add facts. Return only the improved SMS.";
     public const string DefaultValidatePrompt = "Review this SMS or message template and give concise, actionable suggestions to improve clarity, spelling, tone, length, and ambiguous wording. Check broken {{variableName}} placeholders and preserve variables exactly. Do not rewrite the message and do not judge legal compliance. Return JSON only: {\"isValid\":true,\"issues\":[\"...\"]}. Set isValid to false when you have improvement suggestions.";
 
     public async Task<TenantAiSettings> GetAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
+        var key = CacheKey(tenantId);
+        var cached = await cache.GetStringAsync(key, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(cached))
+        {
+            var value = JsonSerializer.Deserialize<TenantAiSettings>(cached, JsonOptions);
+            if (value is not null) return value;
+        }
+
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<TenantAiSettings>(new CommandDefinition(
+        var settings = await connection.QuerySingleOrDefaultAsync<TenantAiSettings>(new CommandDefinition(
             Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantAiSettingsRepository.GetAsync.01.sql"),
             new { TenantId = tenantId }, cancellationToken: cancellationToken))
             ?? new(DefaultImprovePrompt, DefaultValidatePrompt);
+
+        await cache.SetStringAsync(key, JsonSerializer.Serialize(settings, JsonOptions), cancellationToken);
+        return settings;
     }
 
     public async Task SaveAsync(Guid tenantId, TenantAiSettings settings, CancellationToken cancellationToken = default)
@@ -24,5 +41,9 @@ public sealed class TenantAiSettingsRepository(SqlConnectionFactory connectionFa
             Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantAiSettingsRepository.SaveAsync.01.sql"),
             new { TenantId = tenantId, settings.ImprovePrompt, settings.ValidatePrompt, UpdatedAt = DateTimeOffset.UtcNow },
             cancellationToken: cancellationToken));
+
+        await cache.RemoveAsync(CacheKey(tenantId), CancellationToken.None);
     }
+
+    private static string CacheKey(Guid tenantId) => $"tenant-config:ai:{tenantId:N}";
 }
