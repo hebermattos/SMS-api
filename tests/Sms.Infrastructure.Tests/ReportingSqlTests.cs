@@ -68,13 +68,17 @@ public sealed class ReportingSqlTests
                 """, new { TenantId = tenantId })).AsList();
 
             Assert.Equal(2, events.Count);
+            Assert.True(events[1].OccurredAtUtc >= events[0].OccurredAtUtc);
             eventIds.AddRange(events.Select(x => x.EventId));
             Assert.Equal((1L, 1L), (events[0].OutboundDelta, events[0].PendingDelta));
             Assert.Equal((1L, -1L), (events[1].DeliveredDelta, events[1].PendingDelta));
 
-            await consumer.ApplyAsync(events[1]);
-            await consumer.ApplyAsync(events[1]);
-            await consumer.ApplyAsync(events[0]);
+            var olderEvent = events[0] with { OccurredAtUtc = events[0].OccurredAtUtc.AddMilliseconds(-1) };
+            var newerEvent = events[1] with { OccurredAtUtc = events[1].OccurredAtUtc.AddMilliseconds(1) };
+
+            await consumer.ApplyAsync(newerEvent);
+            await consumer.ApplyAsync(newerEvent);
+            await consumer.ApplyAsync(olderEvent);
 
             var counters = await reporting.QuerySingleAsync<(long Outbound, long Inbound, long Delivered, long Failed, long Pending)>(
                 "SELECT Outbound, Inbound, Delivered, Failed, Pending FROM TenantSmsOverview WHERE TenantId=@TenantId;",
