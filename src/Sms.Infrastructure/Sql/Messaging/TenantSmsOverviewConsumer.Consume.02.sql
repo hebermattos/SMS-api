@@ -75,19 +75,8 @@ DO UPDATE SET
     Status=EXCLUDED.Status, UpdatedAtUtc=EXCLUDED.UpdatedAtUtc
 WHERE EXCLUDED.UpdatedAtUtc >= ReportingSmsMessages.UpdatedAtUtc;
 
--- Older events are kept for delta counters and idempotency, but must not rewrite current-state aggregates.
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM ReportingSmsMessages
-        WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc
-          AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction
-          AND QueueStatus=@QueueStatus AND Status=@Status
-    ) THEN
-        RETURN;
-    END IF;
-END $$;
-
+-- Older events are kept for delta counters and idempotency; the INSERT ... SELECT statements below
+-- only add a row when this event still matches the current message state.
 -- Add the new current state to each reporting grain.
 INSERT INTO TenantSmsDailyOverview
     (ReportDate,TenantId,TenantName,TotalMessages,Scheduled,Queued,Sent,Delivered,Failed,Received,Outbound,Inbound,Pending,UpdatedAtUtc)
@@ -98,7 +87,7 @@ SELECT CAST(CreatedAtUtc AT TIME ZONE 'UTC' AS date),TenantId,TenantName,1,
     CASE WHEN Direction=1 THEN 1 ELSE 0 END,CASE WHEN Direction=2 THEN 1 ELSE 0 END,
     CASE WHEN Status=1 THEN 1 ELSE 0 END,UpdatedAtUtc
 FROM ReportingSmsMessages
-WHERE MessageId=@MessageId AND UpdatedAtUtc>=@OccurredAtUtc
+WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc
   AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction AND QueueStatus=@QueueStatus AND Status=@Status
 ON CONFLICT (ReportDate,TenantId) DO UPDATE SET
     TenantName=EXCLUDED.TenantName,TotalMessages=TenantSmsDailyOverview.TotalMessages+1,
@@ -117,7 +106,7 @@ SELECT CAST(CreatedAtUtc AT TIME ZONE 'UTC' AS date),TenantId,TenantName,Provide
     CASE WHEN Direction=1 THEN 1 ELSE 0 END,CASE WHEN Direction=2 THEN 1 ELSE 0 END,
     CASE WHEN Status=1 THEN 1 ELSE 0 END,UpdatedAtUtc
 FROM ReportingSmsMessages
-WHERE MessageId=@MessageId AND UpdatedAtUtc>=@OccurredAtUtc
+WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc
   AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction AND QueueStatus=@QueueStatus AND Status=@Status
 ON CONFLICT (ReportDate,TenantId,Provider) DO UPDATE SET
     TenantName=EXCLUDED.TenantName,TotalMessages=ProviderSmsDailyOverview.TotalMessages+1,
@@ -136,7 +125,7 @@ SELECT TenantId,UserId,COALESCE(Username,''),CAST(CreatedAtUtc AT TIME ZONE 'UTC
     CASE WHEN Direction=1 THEN 1 ELSE 0 END,CASE WHEN Direction=2 THEN 1 ELSE 0 END,
     CASE WHEN Status=1 THEN 1 ELSE 0 END,UpdatedAtUtc
 FROM ReportingSmsMessages
-WHERE MessageId=@MessageId AND UpdatedAtUtc>=@OccurredAtUtc AND UserId IS NOT NULL
+WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc AND UserId IS NOT NULL
   AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction AND QueueStatus=@QueueStatus AND Status=@Status
 ON CONFLICT (TenantId,UserId,ReportDate) DO UPDATE SET
     Username=EXCLUDED.Username,TotalMessages=UserSmsOverview.TotalMessages+1,
