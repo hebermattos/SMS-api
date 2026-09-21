@@ -58,7 +58,7 @@ public sealed class AlertRepository(
         await connection.ExecuteAsync(new CommandDefinition(sql, new { TenantId = tenantId }, cancellationToken: cancellationToken));
     }
 
-    public async Task EvaluateAsync(Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default)
+    public async Task EvaluateAsync(Guid eventId, Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default)
     {
         var rules = (await ListRulesAsync(tenantId, cancellationToken))
             .Where(r => r.IsActive && r.Status == status && (r.Provider is null || r.Provider == provider));
@@ -85,6 +85,7 @@ public sealed class AlertRepository(
             await application.ExecuteAsync(new CommandDefinition(fireSql, new
             {
                 TenantId = tenantId,
+                EventId = eventId,
                 RuleId = rule.Id,
                 RuleName = rule.Name,
                 Provider = rule.Provider,
