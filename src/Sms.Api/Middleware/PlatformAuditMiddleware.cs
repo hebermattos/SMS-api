@@ -39,7 +39,7 @@ public sealed class PlatformAuditMiddleware(
             : targetAdministrator is not null ? "PlatformAdministrator"
             : null;
 
-        if (status >= 400)
+        if (status >= 500)
         {
             logger.LogError(
                 "Platform operation {Action} failed. HTTP {StatusCode}. {RequestMethod} {RequestPath}. Target tenant {TargetTenantId}, client {TargetClientId}, administrator {TargetAdministratorId}",
