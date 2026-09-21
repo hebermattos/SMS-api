@@ -6,27 +6,14 @@ namespace Sms.Infrastructure.Messaging;
 public sealed class TenantSmsOverviewOutboxPublisher(
     ITenantSmsOverviewOutbox outbox,
     ITenantSmsOverviewEventPublisher eventPublisher,
-    ILogger<TenantSmsOverviewOutboxPublisher> logger) : BackgroundService
+    ILogger<TenantSmsOverviewOutboxPublisher> logger) : PollingBackgroundService(PollingInterval, logger)
 {
     private static readonly TimeSpan PollingInterval = TimeSpan.FromMinutes(5);
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await PublishBatchAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Failed to publish tenant SMS overview outbox batch.");
-            }
+    protected override string FailureMessage => "Failed to publish tenant SMS overview outbox batch.";
 
-            await Task.Delay(PollingInterval, stoppingToken);
-        }
-    }
+    protected override async Task ExecuteIterationAsync(CancellationToken stoppingToken) =>
+        await PublishBatchAsync(stoppingToken);
 
     public async Task<int> PublishBatchAsync(CancellationToken cancellationToken = default)
     {
