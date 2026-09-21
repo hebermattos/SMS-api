@@ -105,8 +105,8 @@ public sealed class PortalSecurityTests
         await PortalSecurity.ValidateTenantAsync(missingSubject); Assert.NotNull(missingSubject.Result?.Failure);
         var malformed = Context(repo, new("tenant_id", "invalid"), new("sub", "client"));
         await PortalSecurity.ValidateTenantAsync(malformed); Assert.NotNull(malformed.Result?.Failure);
-        var admin = Context(repo, new Claim(PortalSecurity.AdminClaim, "true"));
-        await PortalSecurity.ValidateTenantAsync(admin); Assert.NotNull(admin.Result?.Failure);
+        var platformWithoutSubject = Context(repo, new Claim(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext), new Claim(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole));
+        await PortalSecurity.ValidateTenantAsync(platformWithoutSubject); Assert.NotNull(platformWithoutSubject.Result?.Failure);
     }
 
     [Theory]
