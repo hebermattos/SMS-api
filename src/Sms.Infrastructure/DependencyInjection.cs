@@ -92,6 +92,7 @@ public static class DependencyInjection
                 });
                 rabbit.ReceiveEndpoint(rabbitMq.Queue, endpoint =>
                 {
+                    endpoint.SetQuorumQueue(3);
                     endpoint.PrefetchCount = 1;
                     endpoint.ConcurrentMessageLimit = 1;
                     endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
@@ -99,6 +100,7 @@ public static class DependencyInjection
                 });
                 rabbit.ReceiveEndpoint(rabbitMq.SendQueue, endpoint =>
                 {
+                    endpoint.SetQuorumQueue(3);
                     endpoint.PrefetchCount = 1;
                     endpoint.ConcurrentMessageLimit = 1;
                     endpoint.UseMessageRetry(retry =>
@@ -114,6 +116,7 @@ public static class DependencyInjection
                 });
                 rabbit.ReceiveEndpoint(rabbitMq.ReportingQueue, endpoint =>
                 {
+                    endpoint.SetQuorumQueue(3);
                     endpoint.PrefetchCount = 1;
                     endpoint.ConcurrentMessageLimit = 1;
                     endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
