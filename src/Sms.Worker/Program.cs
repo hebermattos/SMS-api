@@ -44,6 +44,7 @@ builder.Services.AddInfrastructure(builder.Configuration, registerConsumers: tru
 builder.Services.AddInfrastructureWorkers();
 
 builder.Services.AddHostedService<AlertEvaluationOutboxPublisher>();
+builder.Services.AddHostedService<AlertIncidentStateWorker>();
 builder.Services.AddHostedService<SmsQueuePublisherWorker>();
 
 await builder.Build().RunAsync();
