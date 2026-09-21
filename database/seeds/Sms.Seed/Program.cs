@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Sms.Infrastructure.Persistence;
+using Sms.Infrastructure.Caching;
 using Sms.Infrastructure.Security;
 using Sms.Seed;
 using Sms.Application.Auth;
@@ -35,10 +36,12 @@ if (await portalUsers.GetActiveByUsernameAsync(username.Trim(), "platform", null
     }
 }
 Console.WriteLine("Initial platform administrator is configured. Existing passwords are not overwritten.");
+var distributedCache = new ResilientDistributedCache(
+    new SeedDistributedCache(),
+    NullLogger<ResilientDistributedCache>.Instance);
 var configurationCache = new TenantConfigurationCache(
     connectionFactory,
-    new SeedDistributedCache(),
-    NullLogger<TenantConfigurationCache>.Instance);
+    distributedCache);
 var providers = new TenantSmsProviderRepository(
     connectionFactory,
     new AesGcmSecretProtector(configuration),
