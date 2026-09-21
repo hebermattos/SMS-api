@@ -93,6 +93,7 @@ public static class DependencyInjection
             }
 
             bus.AddConsumer<AlertEvaluationConsumer>();
+            bus.AddConsumer<AlertRuleEvaluationConsumer>();
             bus.AddConsumer<SmsSendConsumer>();
             bus.AddConsumer<TenantSmsOverviewConsumer>();
             bus.UsingRabbitMq((context, rabbit) =>
@@ -109,6 +110,14 @@ public static class DependencyInjection
                     endpoint.ConcurrentMessageLimit = 1;
                     endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
                     endpoint.ConfigureConsumer<AlertEvaluationConsumer>(context);
+                });
+                rabbit.ReceiveEndpoint(rabbitMq.RuleEvaluationQueue, endpoint =>
+                {
+                    endpoint.SetQuorumQueue(3);
+                    endpoint.PrefetchCount = 8;
+                    endpoint.ConcurrentMessageLimit = 8;
+                    endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
+                    endpoint.ConfigureConsumer<AlertRuleEvaluationConsumer>(context);
                 });
                 rabbit.ReceiveEndpoint(rabbitMq.SendQueue, endpoint =>
                 {
