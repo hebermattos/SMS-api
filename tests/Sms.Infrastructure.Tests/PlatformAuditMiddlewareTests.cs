@@ -21,7 +21,7 @@ public sealed class PlatformAuditMiddlewareTests
         await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new PlatformAuditMiddleware(new PlatformActivities(), logger));
         Assert.Equal(LogLevel.Error, logger.Level);
         Assert.Equal("Administration.SaveProvider", logger.Values["Action"]);
-        Assert.Equal(tenant, logger.Values["TargetTenantId"]);
+        Assert.Equal(tenant.ToString(), logger.Values["TargetTenantId"]);
         Assert.False(logger.Values.ContainsKey("TenantId"));
     }
 
