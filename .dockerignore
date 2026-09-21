@@ -10,3 +10,6 @@
 **/dist
 .env.*
 **/appsettings.Development.json
+
+# Runtime backup volume; never send it to Docker build contexts
+backups
