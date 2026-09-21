@@ -15,7 +15,7 @@ jobs:
         image: postgres:17-alpine
         env:
           POSTGRES_USER: sms
-          POSTGRES_PASSWORD: 'SmsApi_Local_2026!'
+          POSTGRES_PASSWORD: 'TextRelay_Local_2026!'
           POSTGRES_DB: postgres
         ports:
           - 5432:5432
@@ -23,8 +23,8 @@ jobs:
           --health-cmd="pg_isready -U sms -d postgres"
           --health-interval=5s --health-timeout=5s --health-retries=20 --health-start-period=10s
     env:
-      SMS_TEST_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_webhook_tests;Username=sms;Password=SmsApi_Local_2026!'
-      SMS_TEST_REPORTING_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_reporting_tests;Username=sms;Password=SmsApi_Local_2026!'
+      SMS_TEST_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_webhook_tests;Username=sms;Password=TextRelay_Local_2026!'
+      SMS_TEST_REPORTING_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_reporting_tests;Username=sms;Password=TextRelay_Local_2026!'
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
@@ -39,7 +39,7 @@ jobs:
           docker exec "$POSTGRES_CONTAINER" createdb -U sms sms_api_reporting_tests
           docker exec -i "$POSTGRES_CONTAINER" psql -v ON_ERROR_STOP=1 -U sms -d sms_api_reporting_tests < database/reporting-schema.sql
       - name: Verify webhook and administration persistence against PostgreSQL
-        run: dotnet test Sms.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests|FullyQualifiedName~AlertSqlTests|FullyQualifiedName~ReportingSqlTests|FullyQualifiedName~ExampleProviderSeedSqlTests'
+        run: dotnet test TextRelay.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests|FullyQualifiedName~AlertSqlTests|FullyQualifiedName~ReportingSqlTests|FullyQualifiedName~ExampleProviderSeedSqlTests'
 
   compose-integration:
     name: Docker Compose end-to-end test
