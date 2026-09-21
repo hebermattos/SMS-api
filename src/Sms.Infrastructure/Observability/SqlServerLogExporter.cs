@@ -11,6 +11,7 @@ public sealed class PostgresLogExporter(string connectionString) : BaseExporter<
     private static readonly HashSet<string> ActivityCategories =
     [
         "Sms.Api.Middleware.ClientLoginAuditMiddleware",
+        "Sms.Api.Middleware.PortalLoginAuditMiddleware",
         "Sms.Api.Middleware.PlatformAuditMiddleware",
         "Sms.Api.Middleware.RequestAuditMiddleware"
     ];
