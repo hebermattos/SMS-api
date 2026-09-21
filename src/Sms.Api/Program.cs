@@ -54,6 +54,7 @@ builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<PortalExceptionFilter>();
 builder.Services.AddScoped<IAuditPipelineStep, ClientLoginAuditMiddleware>();
+builder.Services.AddScoped<IAuditPipelineStep, PortalLoginAuditMiddleware>();
 builder.Services.AddScoped<IAuditPipelineStep, PlatformAuditMiddleware>();
 builder.Services.AddScoped<IAuditPipelineStep, RequestAuditMiddleware>();
 builder.Services.AddEndpointsApiExplorer();
