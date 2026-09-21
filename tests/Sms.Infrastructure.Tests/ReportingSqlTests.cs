@@ -50,9 +50,9 @@ public sealed class ReportingSqlTests
                 VALUES (@UserId, @TenantId, 'report-user', 'report@example.com', decode('00','hex'), decode('00','hex'), 600000, 'tenant', 'user', TRUE, CURRENT_TIMESTAMP);
 
                 INSERT SmsMessages
-                    (Id, TenantId, UserId, "From", "To", Body, Provider, Direction, Status, CreatedAt)
+                    (Id, TenantId, UserId, "From", "To", Body, Provider, Direction, QueueStatus, Status, CreatedAt)
                 VALUES
-                    (@MessageId, @TenantId, @UserId, 'encrypted-from', 'encrypted-to', 'encrypted-body', 'Mock', 1, 1, CURRENT_TIMESTAMP);
+                    (@MessageId, @TenantId, @UserId, 'encrypted-from', 'encrypted-to', 'encrypted-body', 'Mock', 1, 2, 1, CURRENT_TIMESTAMP);
 
                 UPDATE SmsMessages
                 SET Status = 3, UpdatedAt = CURRENT_TIMESTAMP
@@ -60,8 +60,8 @@ public sealed class ReportingSqlTests
                 """, new { TenantId = tenantId, MessageId = messageId, UserId = userId });
 
             var events = (await application.QueryAsync<TenantSmsOverviewEvent>("""
-                SELECT EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta,
-                       FailedDelta, PendingDelta, OccurredAtUtc
+                SELECT EventId, TenantId, UserId, MessageId, TenantName, Username, Provider, Direction, QueueStatus, Status,
+                       CreatedAtUtc, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc
                 FROM TenantSmsOverviewOutbox
                 WHERE TenantId = @TenantId
                 ORDER BY SequenceNumber;
@@ -90,7 +90,7 @@ public sealed class ReportingSqlTests
         {
             if (eventIds.Count > 0)
                 await reporting.ExecuteAsync("DELETE TenantSmsOverviewInbox WHERE EventId IN @EventIds;", new { EventIds = eventIds });
-            await reporting.ExecuteAsync("DELETE UserSmsOverview WHERE TenantId=@TenantId; DELETE TenantSmsOverview WHERE TenantId=@TenantId;", new { TenantId = tenantId });
+            await reporting.ExecuteAsync("DELETE ReportingSmsMessages WHERE TenantId=@TenantId; DELETE UserSmsOverview WHERE TenantId=@TenantId; DELETE TenantSmsOverview WHERE TenantId=@TenantId;", new { TenantId = tenantId });
             await application.ExecuteAsync("""
                 DELETE TenantSmsOverviewOutbox WHERE TenantId=@TenantId;
                 DELETE SmsMessageStatusHistory WHERE TenantId=@TenantId;
