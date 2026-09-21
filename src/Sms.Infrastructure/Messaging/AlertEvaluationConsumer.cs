@@ -7,7 +7,8 @@ namespace Sms.Infrastructure.Messaging;
 
 public sealed class AlertEvaluationConsumer(
     ReportingSqlConnectionFactory reportingConnectionFactory,
-    IAlertRepository alerts) : IConsumer<AlertEvaluationEvent>
+    IAlertRepository alerts,
+    IPublishEndpoint publishEndpoint) : IConsumer<AlertEvaluationEvent>
 {
     public async Task Consume(ConsumeContext<AlertEvaluationEvent> context)
     {
@@ -23,7 +24,15 @@ public sealed class AlertEvaluationConsumer(
             Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationConsumer.Consume.02.sql"),
             cancellationToken: context.CancellationToken));
 
-        await alerts.ProcessEventAsync(
-            message.EventId, message.TenantId, message.Status, message.Provider, message.OccurredAtUtc, context.CancellationToken);
+        var rules = await alerts.ListRulesAsync(message.TenantId, context.CancellationToken);
+        foreach (var rule in rules.Where(rule =>
+                     rule.IsActive &&
+                     rule.Status == message.Status &&
+                     (rule.Provider is null || rule.Provider == message.Provider)))
+        {
+            await publishEndpoint.Publish(
+                new EvaluateAlertRuleEvent(message.EventId, rule.Id, message.TenantId, message.OccurredAtUtc),
+                context.CancellationToken);
+        }
     }
 }
