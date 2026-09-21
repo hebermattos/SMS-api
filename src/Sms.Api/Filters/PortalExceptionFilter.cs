@@ -14,8 +14,7 @@ public sealed class PortalExceptionFilter : IExceptionFilter
         {
             ArgumentException exception => (400, exception.Message),
             KeyNotFoundException => (404, "Record not found."),
-            LastActiveAdministratorException => (409, "The last active administrator cannot be deactivated."),
-            AdministratorConflictException => (409, "An administrator with this username already exists."),
+            PortalUserConflictException => (409, "A user with this username or email already exists."),
             AdministrationConflictException => (409, "A record with these identifiers already exists."),
             BlockedRecipientException exception => (409, exception.Message),
             _ => (0, string.Empty)
