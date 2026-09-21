@@ -1,4 +1,3 @@
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Sms.Application;
@@ -10,23 +9,7 @@ using Sms.Worker;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Logging.AddSimpleConsole(options =>
-{
-    options.SingleLine = true;
-    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss 'UTC' ";
-    options.UseUtcTimestamp = true;
-});
-
-var logsConnectionString = builder.Configuration.GetConnectionString("LogsPostgres")
-    ?? throw new InvalidOperationException("Connection string 'LogsPostgres' is not configured.");
-
-builder.Logging.AddOpenTelemetry(options =>
-{
-    options.IncludeFormattedMessage = true;
-    options.ParseStateValues = true;
-    options.AddProcessor(new BatchLogRecordExportProcessor(new PostgresLogExporter(logsConnectionString)));
-    options.AddOtlpExporter();
-});
+builder.AddSmsLogging();
 
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing.AddOtlpExporter())
