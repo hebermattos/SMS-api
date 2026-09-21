@@ -11,8 +11,9 @@ SELECT
     SUM(Outbound)::BIGINT AS Outbound,
     SUM(Inbound)::BIGINT AS Inbound,
     SUM(Pending)::BIGINT AS Pending
-FROM TenantSmsDailyOverview
+FROM ProviderSmsDailyOverview
 WHERE (@From IS NULL OR ReportDate >= CAST(@From AT TIME ZONE 'UTC' AS date))
   AND (@To IS NULL OR ReportDate < CAST(@To AT TIME ZONE 'UTC' AS date))
+  AND (@Provider IS NULL OR Provider=@Provider)
 GROUP BY TenantId
 ORDER BY MAX(TenantName);
