@@ -42,7 +42,7 @@ public sealed class RabbitMqMonitoringService(
                 Unacknowledged.Record(result.MessagesUnacknowledged, tags);
                 Consumers.Record(result.Consumers, tags);
 
-                if (result.Consumers == 0 || result.MessagesReady > 0)
+                if (result.Consumers == 0)
                     logger.LogWarning("RabbitMQ queue {Queue}: {Ready} ready, {Unacknowledged} unacknowledged, {Consumers} consumers.",
                         queue, result.MessagesReady, result.MessagesUnacknowledged, result.Consumers);
             }
