@@ -10,8 +10,9 @@ public sealed class PortalUserManagementService(
     IPortalUserManagementRepository repository)
 {
     public Task<IReadOnlyList<PortalUserSummary>> ListPlatformUsersAsync(
+        int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null,
         CancellationToken cancellationToken = default) =>
-        repository.ListPlatformUsersAsync(cancellationToken);
+        repository.ListPlatformUsersAsync(skip, take, search, role, isActive, cancellationToken);
 
     public async Task<Guid> CreatePlatformUserAsync(
         string username,
