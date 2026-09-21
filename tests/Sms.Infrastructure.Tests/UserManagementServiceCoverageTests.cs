@@ -114,7 +114,7 @@ public sealed class UserManagementServiceCoverageTests
         public NewPortalUser? User { get; private set; }
         public bool Found { get; set; }
         public bool PasswordReset { get; private set; }
-        public Task<IReadOnlyList<PortalUserSummary>> ListPlatformUsersAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PortalUserSummary>>([]);
+        public Task<IReadOnlyList<PortalUserSummary>> ListPlatformUsersAsync(int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PortalUserSummary>>([]);
         public Task<Guid> CreatePlatformUserAsync(NewPortalUser user, CancellationToken cancellationToken = default) { User = user; return Task.FromResult(user.Id); }
         public Task<bool> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default) => Task.FromResult(Found);
         public Task<bool> ResetPasswordAsync(Guid id, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken = default) { PasswordReset = true; return Task.FromResult(Found); }
@@ -128,7 +128,7 @@ public sealed class UserManagementServiceCoverageTests
         public string? Username { get; private set; }
         public string? Email { get; private set; }
         public string? Role { get; private set; }
-        public Task<IReadOnlyList<PortalUserSummary>> ListAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PortalUserSummary>>([]);
+        public Task<IReadOnlyList<PortalUserSummary>> ListAsync(Guid tenantId, int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PortalUserSummary>>([]);
         public Task<Guid> CreateAsync(NewPortalUser user, CancellationToken cancellationToken = default) { User = user; return Task.FromResult(user.Id); }
         public Task<bool> UpdateAsync(Guid tenantId, Guid id, string username, string email, string role, CancellationToken cancellationToken = default) { Username = username; Email = email; Role = role; return Task.FromResult(Found); }
         public Task<bool> SetActiveAsync(Guid tenantId, Guid id, bool isActive, CancellationToken cancellationToken = default) => Task.FromResult(Found);

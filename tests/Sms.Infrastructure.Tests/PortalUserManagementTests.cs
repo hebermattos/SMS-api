@@ -83,7 +83,7 @@ public sealed class PortalUserManagementTests
         public bool Active { get; private set; } = true;
         public byte[] Hash { get; private set; } = [];
         public byte[] Salt { get; private set; } = [];
-        public Task<IReadOnlyList<PortalUserSummary>> ListPlatformUsersAsync(CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<PortalUserSummary>> ListPlatformUsersAsync(int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<PortalUserSummary>>(User is null ? [] : [Summary(User)]);
         public Task<Guid> CreatePlatformUserAsync(NewPortalUser user, CancellationToken cancellationToken = default) { User = user; return Task.FromResult(user.Id); }
         public Task<bool> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default)
@@ -97,7 +97,7 @@ public sealed class PortalUserManagementTests
         public NewPortalUser? User { get; private set; }
         public bool Active { get; private set; } = true;
         public Guid LastTenantId { get; private set; }
-        public Task<IReadOnlyList<PortalUserSummary>> ListAsync(Guid tenantId, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<PortalUserSummary>> ListAsync(Guid tenantId, int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<PortalUserSummary>>(User is null || User.TenantId != tenantId ? [] : [Summary(User)]);
         public Task<Guid> CreateAsync(NewPortalUser user, CancellationToken cancellationToken = default) { User = user; return Task.FromResult(user.Id); }
         public Task<bool> UpdateAsync(Guid tenantId, Guid id, string username, string email, string role, CancellationToken cancellationToken = default)

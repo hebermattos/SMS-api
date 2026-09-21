@@ -15,11 +15,13 @@ public sealed record PortalUserPasswordRequest(string Password);
 public sealed class PlatformUsersController(PortalUserManagementService users) : ControllerBase
 {
     [HttpGet]
-    public async Task<IReadOnlyList<PortalUserSummary>> List(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PortalUserSummary>> List(
+        int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null,
+        CancellationToken cancellationToken = default)
     {
         if (skip < 0) throw new ArgumentException("Invalid pagination.");
         take = Math.Clamp(take, 1, 200);
-        return (await users.ListPlatformUsersAsync(cancellationToken)).Skip(skip).Take(take).ToList();
+        return await users.ListPlatformUsersAsync(skip, take, search, role, isActive, cancellationToken);
     }
 
     [HttpPost]

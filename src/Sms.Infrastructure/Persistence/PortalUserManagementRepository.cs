@@ -8,10 +8,14 @@ public sealed class PortalUserManagementRepository(SqlConnectionFactory connecti
     : IPortalUserManagementRepository
 {
     public async Task<IReadOnlyList<PortalUserSummary>> ListPlatformUsersAsync(
+        int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null,
         CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return (await connection.QueryAsync<PortalUserSummary>(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/PortalUserManagementRepository.ListPlatformUsersAsync.01.sql"), cancellationToken: cancellationToken))).AsList();
+        return (await connection.QueryAsync<PortalUserSummary>(new CommandDefinition(
+            Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/PortalUserManagementRepository.ListPlatformUsersAsync.01.sql"),
+            new { Skip = skip, Take = take, Search = search, Role = role, IsActive = isActive },
+            cancellationToken: cancellationToken))).AsList();
     }
 
     public async Task<Guid> CreatePlatformUserAsync(
