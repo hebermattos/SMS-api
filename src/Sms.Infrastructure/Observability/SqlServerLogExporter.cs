@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
+using System.Diagnostics;
 
 namespace Sms.Infrastructure.Observability;
 
@@ -52,8 +53,12 @@ public sealed class PostgresLogExporter(string connectionString) : BaseExporter<
             transaction.Commit();
             return ExportResult.Success;
         }
-        catch
+        catch (Exception exception)
         {
+            // Do not use ILogger here: that would feed the failed exporter again and recurse.
+            // Trace is emitted to the process stderr/console listener and remains visible even
+            // when the logs database itself is unavailable.
+            Trace.TraceError("Postgres log export failed: {0}: {1}", exception.GetType().Name, exception.Message);
             return ExportResult.Failure;
         }
     }
