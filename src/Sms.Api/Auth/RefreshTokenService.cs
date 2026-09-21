@@ -35,13 +35,11 @@ public sealed class RefreshTokenService(
             Hash(refreshToken), Hash(replacement), replacementId, replacementExpiresAt, cancellationToken);
         if (session is null) return null;
 
-        {
-            var user = await portalUsers.GetActiveByIdAsync(session.UserId, cancellationToken);
+        var user = await portalUsers.GetActiveByIdAsync(session.UserId, cancellationToken);
             if (user is null
                 || user.Context != session.Context
                 || user.Role != session.Role
                 || user.TenantId != session.TenantId) return null;
-        }
 
         return Build(session with { Id = replacementId, ExpiresAt = replacementExpiresAt }, replacement);
     }
