@@ -38,9 +38,9 @@ public sealed class PostgresLogExporter(string connectionString) : BaseExporter<
                     Severity = record.LogLevel.ToString(),
                     Category = Limit(record.CategoryName, 256),
                     Message = Limit(GetStoredMessage(record, attributes), 4000),
-                    TraceId = record.TraceId == default ? null : record.TraceId.ToHexString(),
-                    SpanId = record.SpanId == default ? null : record.SpanId.ToHexString(),
-                    Attributes = LogAttributeSanitizer.Serialize(attributes)
+                    TraceId = IsActivity(record.CategoryName) || record.TraceId == default ? null : record.TraceId.ToHexString(),
+                    SpanId = IsActivity(record.CategoryName) || record.SpanId == default ? null : record.SpanId.ToHexString(),
+                    Attributes = IsActivity(record.CategoryName) ? null : LogAttributeSanitizer.Serialize(attributes)
                 };
 
                 if (IsActivity(record.CategoryName))
