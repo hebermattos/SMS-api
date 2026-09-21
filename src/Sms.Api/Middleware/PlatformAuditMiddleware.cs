@@ -30,10 +30,12 @@ public sealed class PlatformAuditMiddleware(ILogger<PlatformAuditMiddleware> log
         Guid? targetClient = Guid.TryParse(context.Request.RouteValues["clientId"]?.ToString(), out var client) ? client : null;
         Guid? targetAdministrator = Guid.TryParse(context.Request.RouteValues["administratorId"]?.ToString(), out var targetAdmin) ? targetAdmin : null;
 
-        logger.Log(status >= 500 ? LogLevel.Error : status >= 400 ? LogLevel.Warning : LogLevel.Information,
-            "Platform action {Action} by {Actor}: {Outcome}, HTTP {StatusCode}. Target tenant {TargetTenantId}, client {TargetClientId}, administrator {TargetAdministratorId}",
-            $"{action.ControllerName}.{action.ActionName}", actor,
-            status < 400 ? "Succeeded" : "Failed", status, targetTenant, targetClient, targetAdministrator);
+        // Platform activity is not tenant activity and must never be stored in UserActivityLogs.
+        // Keep only failures here as technical system telemetry.
+        if (status >= 400)
+            logger.LogError(
+                "Platform operation {Action} failed. HTTP {StatusCode}. Target tenant {TargetTenantId}, client {TargetClientId}, administrator {TargetAdministratorId}",
+                $"{action.ControllerName}.{action.ActionName}", status, targetTenant, targetClient, targetAdministrator);
 
         return Task.CompletedTask;
     }
