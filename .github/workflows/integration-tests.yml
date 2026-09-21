@@ -39,7 +39,7 @@ jobs:
           docker exec "$POSTGRES_CONTAINER" createdb -U sms sms_api_reporting_tests
           docker exec -i "$POSTGRES_CONTAINER" psql -v ON_ERROR_STOP=1 -U sms -d sms_api_reporting_tests < database/reporting-schema.sql
       - name: Verify webhook and administration persistence against PostgreSQL
-        run: dotnet test Sms.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests|FullyQualifiedName~AlertSqlTests|FullyQualifiedName~ReportingSqlTests|FullyQualifiedName~ExampleProviderSeedSqlTests|FullyQualifiedName~AdministratorSqlTests'
+        run: dotnet test Sms.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests|FullyQualifiedName~AlertSqlTests|FullyQualifiedName~ReportingSqlTests|FullyQualifiedName~ExampleProviderSeedSqlTests'
 
   compose-integration:
     name: Docker Compose end-to-end test
@@ -58,8 +58,8 @@ jobs:
             IF to_regclass('public.alertrules') IS NULL THEN RAISE EXCEPTION 'Alert rules schema is missing.'; END IF;
             IF to_regclass('public.alerts') IS NULL THEN RAISE EXCEPTION 'Alerts schema is missing.'; END IF;
             IF NOT EXISTS (
-              SELECT 1 FROM PlatformAdministrators
-              WHERE Username='platform' AND IsActive
+              SELECT 1 FROM PortalUsers
+              WHERE Username='platform' AND Context='platform' AND Role='administrator' AND TenantId IS NULL AND IsActive
                 AND octet_length(PasswordHash)=32 AND octet_length(PasswordSalt)=32
                 AND PasswordIterations=600000
             ) THEN RAISE EXCEPTION 'Initial administrator is missing or password hashing is invalid.'; END IF;

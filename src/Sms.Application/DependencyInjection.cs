@@ -14,7 +14,6 @@ public static class DependencyInjection
     {
         services.AddScoped<SendSmsService>();
         services.AddScoped<SendSmsValidator>();
-        services.AddScoped<AdministratorAuthenticationService>();
         services.AddScoped<AdministrationService>();
         services.AddScoped<ReceiveSmsWebhookService>();
         services.AddScoped<TenantProvisioningService>();

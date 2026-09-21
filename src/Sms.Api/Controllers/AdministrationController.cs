@@ -12,16 +12,13 @@ public sealed record UpdateTenantRateLimitsRequest(int RequestsPerMinute, int Sm
 public sealed record UpdateTenantAiSettingsRequest(string ImprovePrompt, string ValidatePrompt);
 public sealed record CreateClientRequest(string? ClientId);
 public sealed record ClientStateRequest(bool IsActive);
-public sealed record CreateAdministratorRequest(string Username, string Email, string Password);
-public sealed record AdministratorStateRequest(bool IsActive);
-public sealed record ResetAdministratorPasswordRequest(string Password);
 
 [ApiController]
 [Authorize(Policy = PortalSecurity.AdminPolicy)]
 [ServiceFilter(typeof(PortalExceptionFilter))]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/admin")]
-public sealed class AdministrationController(AdministrationService service, AdministratorAuthenticationService administrators, Sms.Application.Messages.ITenantAiSettingsRepository aiSettings, Sms.Application.Messages.SmsRetryOptions retryOptions) : ControllerBase
+public sealed class AdministrationController(AdministrationService service, Sms.Application.Messages.ITenantAiSettingsRepository aiSettings, Sms.Application.Messages.SmsRetryOptions retryOptions) : ControllerBase
 {
     [HttpGet("sms-retry")]
     public IActionResult GetSmsRetry() => Ok(new
@@ -30,35 +27,6 @@ public sealed class AdministrationController(AdministrationService service, Admi
         retryOptions.InitialIntervalSeconds,
         Strategy = "Exponential"
     });
-
-    [HttpGet("administrators")]
-    public async Task<IActionResult> ListAdministrators(int skip = 0, int take = 20, CancellationToken cancellationToken = default)
-    {
-        if (skip < 0) return BadRequest(new { error = "skip must be zero or greater." });
-        take = Math.Clamp(take, 1, 200);
-        return Ok((await administrators.ListAsync(cancellationToken)).Skip(skip).Take(take));
-    }
-
-    [HttpPost("administrators")]
-    public async Task<IActionResult> CreateAdministrator(CreateAdministratorRequest request, CancellationToken cancellationToken)
-    {
-        var id = await administrators.CreateAsync(request.Username, request.Email, request.Password, cancellationToken);
-        return Created($"/api/v1/admin/administrators/{id}", new { id });
-    }
-
-    [HttpPut("administrators/{administratorId:guid}/state")]
-    public async Task<IActionResult> SetAdministratorState(Guid administratorId, AdministratorStateRequest request, CancellationToken cancellationToken)
-    {
-        await administrators.SetActiveAsync(administratorId, request.IsActive, cancellationToken);
-        return NoContent();
-    }
-
-    [HttpPost("administrators/{administratorId:guid}/reset-password")]
-    public async Task<IActionResult> ResetAdministratorPassword(Guid administratorId, ResetAdministratorPasswordRequest request, CancellationToken cancellationToken)
-    {
-        await administrators.ResetPasswordAsync(administratorId, request.Password, cancellationToken);
-        return NoContent();
-    }
 
     [HttpGet("tenants")]
     public async Task<IActionResult> ListTenants(int skip = 0, int take = 20, CancellationToken cancellationToken = default) =>

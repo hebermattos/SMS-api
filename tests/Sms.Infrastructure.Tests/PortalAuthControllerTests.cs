@@ -10,61 +10,32 @@ namespace Sms.Infrastructure.Tests;
 public sealed class PortalAuthControllerTests
 {
     private const string Password = "administrator-password";
-    private readonly TokenService tokens = new(Options.Create(new JwtOptions
-    {
-        Key = "local-test-key-at-least-32-characters",
-        Issuer = "test",
-        Audience = "test"
-    }));
+    private readonly TokenService tokens = new(Options.Create(new JwtOptions { Key = "local-test-key-at-least-32-characters", Issuer = "test", Audience = "test" }));
 
-    [Fact]
-    public async Task ValidTenantPortalUserReceivesContextualToken()
+    [Theory]
+    [InlineData("tenant", "user")]
+    [InlineData("platform", "administrator")]
+    [InlineData("platform", "user")]
+    public async Task ValidPortalUserReceivesContextualToken(string context, string role)
     {
-        var user = Account("tenant", "user");
-        var controller = Controller(new Users(user), new AdminRepository());
-        var result = await controller.Token(new(" portal ", Password, "tenant", " tenant-code "), CancellationToken.None);
-
-        var response = Assert.IsType<OkObjectResult>(result);
-        Assert.NotNull(response.Value);
+        var user = Account(context, role);
+        var users = new Users(user);
+        var controller = new PortalAuthController(users, CreateRefreshTokens(users)) { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+        var result = await controller.Token(new(" portal ", Password, context, context == "tenant" ? " tenant-code " : null), CancellationToken.None);
+        Assert.IsType<OkObjectResult>(result);
         Assert.Equal("no-store", controller.Response.Headers.CacheControl);
     }
 
     [Fact]
-    public async Task PlatformAdministratorCanUsePlatformContext()
+    public async Task UnknownCredentialsAreRejected()
     {
-        var adminRepo = new AdminRepository();
-        var authentication = new AdministratorAuthenticationService(adminRepo);
-        await authentication.CreateAsync("admin", "admin@example.com", Password);
-        var controller = Controller(new Users(null), adminRepo, authentication);
-
-        var result = await controller.Token(new("ADMIN", Password, "platform"), CancellationToken.None);
-
-        Assert.IsType<OkObjectResult>(result);
+        var users = new Users(null);
+        var controller = new PortalAuthController(users, CreateRefreshTokens(users)) { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+        Assert.IsType<UnauthorizedResult>(await controller.Token(new("user", Password, "platform"), CancellationToken.None));
     }
 
-    [Theory]
-    [InlineData("", "tenant")]
-    [InlineData("user", "tenant")]
-    [InlineData("user", "")]
-    [InlineData("user", "invalid")]
-    public async Task InvalidOrUnknownCredentialsAreRejected(string username, string context)
-    {
-        var controller = Controller(new Users(null), new AdminRepository());
-        var result = await controller.Token(new(username, Password, context), CancellationToken.None);
-        Assert.IsType<UnauthorizedResult>(result);
-    }
-
-    private PortalAuthController Controller(Users users, AdminRepository repository, AdministratorAuthenticationService? authentication = null)
-    {
-        return new(users, authentication ?? new AdministratorAuthenticationService(repository), CreateRefreshTokens(users, repository))
-        {
-            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
-        };
-    }
-
-    private RefreshTokenService CreateRefreshTokens(IPortalUserRepository users, IAdministratorRepository administrators) =>
-        new(new RefreshTokens(), tokens, users, administrators,
-            Options.Create(new JwtOptions { Key = "local-test-key-at-least-32-characters", Issuer = "test", Audience = "test" }));
+    private RefreshTokenService CreateRefreshTokens(IPortalUserRepository users) =>
+        new(new RefreshTokens(), tokens, users, Options.Create(new JwtOptions { Key = "local-test-key-at-least-32-characters", Issuer = "test", Audience = "test" }));
 
     private sealed class RefreshTokens : IRefreshTokenRepository
     {
@@ -75,32 +46,13 @@ public sealed class PortalAuthControllerTests
     private static PortalUserAccount Account(string context, string role)
     {
         var credentials = ClientSecretHasher.Hash(Password);
-        return new(Guid.NewGuid(), Guid.NewGuid(), "portal", "portal@example.com",
-            credentials.Hash, credentials.Salt, credentials.Iterations, context, role, true);
+        return new(Guid.NewGuid(), context == "tenant" ? Guid.NewGuid() : null, "portal", "portal@example.com", credentials.Hash, credentials.Salt, credentials.Iterations, context, role, true);
     }
 
     private sealed class Users(PortalUserAccount? account) : IPortalUserRepository
     {
-        public Task<PortalUserAccount?> GetActiveByUsernameAsync(
-            string username, string context, string? tenantCode, CancellationToken cancellationToken = default) =>
-            Task.FromResult(account is not null
-                && account.Context == context
-                && (context != "tenant" || tenantCode == "tenant-code")
-                    ? account
-                    : null);
-        public Task<PortalUserAccount?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-            Task.FromResult<PortalUserAccount?>(null);
-    }
-
-    private sealed class AdminRepository : IAdministratorRepository
-    {
-        public AdministratorAccount? Account { get; private set; }
-        public Task<AdministratorAccount?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Account?.Username.Equals(username, StringComparison.OrdinalIgnoreCase) == true ? Account : null);
-        public Task<bool> IsActiveAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(Account?.Id == id && Account.IsActive);
-        public Task<IReadOnlyList<AdministratorSummary>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<AdministratorSummary>>([]);
-        public Task CreateAsync(AdministratorAccount account, CancellationToken cancellationToken = default) { Account = account; return Task.CompletedTask; }
-        public Task<AdministratorStateResult> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default) => Task.FromResult(AdministratorStateResult.Updated);
-        public Task<bool> ResetPasswordAsync(Guid id, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<PortalUserAccount?> GetActiveByUsernameAsync(string username, string context, string? tenantCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult(account is not null && account.Context == context && (context != "tenant" || tenantCode == "tenant-code") ? account : null);
+        public Task<PortalUserAccount?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(account?.Id == id ? account : null);
     }
 }

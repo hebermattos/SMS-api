@@ -13,7 +13,6 @@ public sealed record RefreshTokenRequest(string RefreshToken);
 [Route("api/v1/portal/auth")]
 public sealed class PortalAuthController(
     IPortalUserRepository users,
-    AdministratorAuthenticationService administrators,
     RefreshTokenService refreshTokens) : ControllerBase
 {
     [AllowAnonymous]
@@ -44,19 +43,6 @@ public sealed class PortalAuthController(
                 user.Id, user.Username, user.TenantId, user.Context, user.Role,
                 cancellationToken: cancellationToken);
             return Ok(ToResponse(issued));
-        }
-
-        if (request.Context == PortalSecurity.PlatformContext)
-        {
-            var administrator = await administrators.AuthenticateAsync(
-                request.Username.Trim(), request.Password, cancellationToken);
-            if (administrator is not null)
-            {
-                var issued = await refreshTokens.IssueAsync(
-                    administrator.Id, administrator.Username, null,
-                    PortalSecurity.PlatformContext, PortalSecurity.AdministratorRole, true, cancellationToken);
-                return Ok(ToResponse(issued));
-            }
         }
 
         return Unauthorized();

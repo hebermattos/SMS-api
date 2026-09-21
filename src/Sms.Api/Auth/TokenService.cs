@@ -8,21 +8,6 @@ namespace Sms.Api.Auth;
 
 public sealed class TokenService(IOptions<JwtOptions> options)
 {
-    public string CreateAdministrator(Guid administratorId, string username)
-    {
-        var settings = options.Value;
-        var token = new JwtSecurityToken(settings.Issuer, settings.Audience,
-            [
-                new Claim(JwtRegisteredClaimNames.Sub, administratorId.ToString()),
-                new Claim("admin_username", username),
-                new Claim(PortalSecurity.AdminClaim, "true"),
-                new Claim(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext),
-                new Claim(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole)
-            ],
-            expires: DateTime.UtcNow.AddMinutes(settings.ExpirationMinutes), signingCredentials: SigningCredentials(settings));
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
     public string CreatePortalUser(
         Guid userId,
         string username,
