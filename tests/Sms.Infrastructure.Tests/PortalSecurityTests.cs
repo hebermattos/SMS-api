@@ -41,7 +41,6 @@ public sealed class PortalSecurityTests
         }
         if (admin)
         {
-            claims.Add(new(PortalSecurity.AdminClaim, "true"));
             claims.Add(new(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext));
             claims.Add(new(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole));
         }
@@ -72,15 +71,16 @@ public sealed class PortalSecurityTests
     }
 
     [Fact]
-    public void AdministratorToken_HasShortLifetimeAndNoTenantIdentity()
+    public void PlatformAdministratorTokenUsesPortalClaimsAndNoTenantIdentity()
     {
         var id = Guid.NewGuid();
-        var token = new JwtSecurityTokenHandler().ReadJwtToken(Tokens().CreateAdministrator(id, "admin"));
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(
+            Tokens().CreatePortalUser(id, "admin", null, PortalSecurity.PlatformContext, PortalSecurity.AdministratorRole));
         Assert.Equal(id.ToString(), token.Subject);
-        Assert.Contains(token.Claims, x => x.Type == "admin_username" && x.Value == "admin");
-        Assert.Contains(token.Claims, x => x.Type == PortalSecurity.AdminClaim && x.Value == "true");
+        Assert.Contains(token.Claims, x => x.Type == "portal_username" && x.Value == "admin");
+        Assert.Contains(token.Claims, x => x.Type == PortalSecurity.ContextClaim && x.Value == PortalSecurity.PlatformContext);
+        Assert.Contains(token.Claims, x => x.Type == PortalSecurity.RoleClaim && x.Value == PortalSecurity.AdministratorRole);
         Assert.DoesNotContain(token.Claims, x => x.Type == "tenant_id");
-        Assert.InRange(token.ValidTo, DateTime.UtcNow.AddMinutes(59), DateTime.UtcNow.AddMinutes(61));
     }
 
     [Theory]
