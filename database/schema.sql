@@ -42,7 +42,6 @@ CREATE UNIQUE INDEX UX_PortalUsers_PlatformUsername
     ON PortalUsers(Username) WHERE Context = 'platform';
 CREATE UNIQUE INDEX UX_PortalUsers_TenantUsername
     ON PortalUsers(TenantId, Username) WHERE Context = 'tenant';
-CREATE INDEX IX_PortalUsers_TenantId ON PortalUsers(TenantId) WHERE TenantId IS NOT NULL;
 CREATE UNIQUE INDEX UX_PortalUsers_TenantId_Id ON PortalUsers(TenantId, Id);
 
 CREATE TABLE TenantRateLimits
@@ -106,8 +105,6 @@ CREATE TABLE SmsMessages
 );
 CREATE INDEX IX_SmsMessages_TenantId_CreatedAt ON SmsMessages(TenantId, CreatedAt DESC, Id DESC);
 CREATE INDEX IX_SmsMessages_Tenant_User_CreatedAt ON SmsMessages(TenantId, UserId, CreatedAt DESC, Id DESC) WHERE UserId IS NOT NULL;
-CREATE INDEX IX_SmsMessages_CreatedAt ON SmsMessages(CreatedAt DESC, Id DESC)
-    INCLUDE (TenantId, Provider, Direction, QueueStatus, Status);
 CREATE INDEX IX_SmsMessages_Scheduled ON SmsMessages(ScheduledAtUtc, Id)
     INCLUDE (TenantId) WHERE QueueStatus = 3;
 CREATE INDEX IX_SmsMessages_QueuedScheduledRetry ON SmsMessages(UpdatedAt, ScheduledAtUtc, Id)
@@ -319,26 +316,27 @@ BEGIN
     INSERT INTO TenantSmsOverviewOutbox
         (EventId, TenantId, UserId, MessageId, TenantName, Username, Provider, Direction, QueueStatus, Status, CreatedAtUtc,
          OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
-    VALUES
-        (
-            gen_random_uuid(),
-            NEW.TenantId,
-            NEW.UserId,
-            NEW.Id,
-            (SELECT Name FROM Tenants WHERE Id = NEW.TenantId),
-            (SELECT Username::text FROM PortalUsers WHERE TenantId = NEW.TenantId AND Id = NEW.UserId),
-            NEW.Provider,
-            NEW.Direction,
-            NEW.QueueStatus,
-            NEW.Status,
-            NEW.CreatedAt,
-            CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END,
-            CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END,
-            CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END,
-            CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END,
-            CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2) THEN 1 ELSE 0 END,
-            CURRENT_TIMESTAMP
-        );
+    SELECT
+        gen_random_uuid(),
+        NEW.TenantId,
+        NEW.UserId,
+        NEW.Id,
+        t.Name,
+        u.Username::text,
+        NEW.Provider,
+        NEW.Direction,
+        NEW.QueueStatus,
+        NEW.Status,
+        NEW.CreatedAt,
+        CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END,
+        CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END,
+        CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END,
+        CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END,
+        CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2) THEN 1 ELSE 0 END,
+        CURRENT_TIMESTAMP
+    FROM Tenants t
+    LEFT JOIN PortalUsers u ON u.TenantId = NEW.TenantId AND u.Id = NEW.UserId
+    WHERE t.Id = NEW.TenantId;
     RETURN NEW;
 END;
 $$;
@@ -356,26 +354,27 @@ BEGIN
         INSERT INTO TenantSmsOverviewOutbox
             (EventId, TenantId, UserId, MessageId, TenantName, Username, Provider, Direction, QueueStatus, Status, CreatedAtUtc,
              OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
-        VALUES
-            (
-                gen_random_uuid(),
-                NEW.TenantId,
-                NEW.UserId,
-                NEW.Id,
-                (SELECT Name FROM Tenants WHERE Id = NEW.TenantId),
-                (SELECT Username::text FROM PortalUsers WHERE TenantId = NEW.TenantId AND Id = NEW.UserId),
-                NEW.Provider,
-                NEW.Direction,
-                NEW.QueueStatus,
-                NEW.Status,
-                NEW.CreatedAt,
-                (CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 THEN 1 ELSE 0 END),
-                (CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 2 THEN 1 ELSE 0 END),
-                (CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 3 THEN 1 ELSE 0 END),
-                (CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 4 THEN 1 ELSE 0 END),
-                (CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2) THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status IN (1, 2) THEN 1 ELSE 0 END),
-                CURRENT_TIMESTAMP
-            );
+        SELECT
+            gen_random_uuid(),
+            NEW.TenantId,
+            NEW.UserId,
+            NEW.Id,
+            t.Name,
+            u.Username::text,
+            NEW.Provider,
+            NEW.Direction,
+            NEW.QueueStatus,
+            NEW.Status,
+            NEW.CreatedAt,
+            (CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 THEN 1 ELSE 0 END),
+            (CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 2 THEN 1 ELSE 0 END),
+            (CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 3 THEN 1 ELSE 0 END),
+            (CASE WHEN NEW.Direction = 1 AND NEW.Status = 4 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 4 THEN 1 ELSE 0 END),
+            (CASE WHEN NEW.Direction = 1 AND NEW.Status IN (1, 2) THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status IN (1, 2) THEN 1 ELSE 0 END),
+            CURRENT_TIMESTAMP
+        FROM Tenants t
+        LEFT JOIN PortalUsers u ON u.TenantId = NEW.TenantId AND u.Id = NEW.UserId
+        WHERE t.Id = NEW.TenantId;
     END IF;
     RETURN NEW;
 END;
