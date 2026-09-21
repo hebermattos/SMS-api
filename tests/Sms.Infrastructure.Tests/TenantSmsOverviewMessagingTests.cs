@@ -62,6 +62,18 @@ public sealed class TenantSmsOverviewMessagingTests
         await publisher.StopAsync(default);
     }
 
+    [Fact]
+    public async Task BackgroundPublisher_HandlesOutboxFailureUntilStopped()
+    {
+        var publisher = new TenantSmsOverviewOutboxPublisher(
+            new FailingOutbox(), new EventPublisher(), NullLogger<TenantSmsOverviewOutboxPublisher>.Instance);
+        using var cancellation = new CancellationTokenSource();
+
+        await publisher.StartAsync(cancellation.Token);
+        await Task.Delay(25);
+        await publisher.StopAsync(default);
+    }
+
     private static TenantSmsOverviewEvent CreateEvent()
     {
         var now = DateTimeOffset.UtcNow;
@@ -105,6 +117,15 @@ public sealed class TenantSmsOverviewMessagingTests
             Marked.Add(eventId);
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FailingOutbox : ITenantSmsOverviewOutbox
+    {
+        public Task<IReadOnlyList<TenantSmsOverviewEvent>> GetPendingAsync(CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Expected test failure.");
+
+        public Task MarkPublishedAsync(Guid eventId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class EventPublisher : ITenantSmsOverviewEventPublisher
