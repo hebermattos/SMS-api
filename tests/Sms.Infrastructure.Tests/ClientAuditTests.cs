@@ -31,7 +31,7 @@ public sealed class ClientAuditTests
         {
             var result = await controller.Token(new TokenRequest("untrusted-input", valid ? "correct-secret" : "wrong-secret"), default);
             c.Response.StatusCode = result is OkObjectResult ? 200 : 401;
-        }, new ClientLoginAuditMiddleware(logger));
+        }, new ClientLoginAuditMiddleware(new ActivityRecorder()));
         Assert.Equal(valid ? "verified-client" : null, logger.Values["ClientId"]);
         Assert.Equal(valid ? credential.TenantId : (Guid?)null, logger.Values["TenantId"]);
         Assert.DoesNotContain("secret", logger.Message);
@@ -51,7 +51,7 @@ public sealed class ClientAuditTests
         context.Request.Headers["ClientId"] = "forged-client";
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "Overview", ActionName = "Get" }), "activity"));
         var logger = new Recorder<RequestAuditMiddleware>();
-        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(logger));
+        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(new ActivityRecorder()));
         Assert.Equal("client-1", logger.Values["ActorId"]);
         Assert.Equal(tenant, logger.Values["TenantId"]);
         Assert.DoesNotContain("forged-client", logger.Message);
@@ -94,7 +94,7 @@ public sealed class ClientAuditTests
         {
             c.Response.StatusCode = status;
             return Task.CompletedTask;
-        }, new RequestAuditMiddleware(logger));
+        }, new RequestAuditMiddleware(new ActivityRecorder()));
 
         Assert.StartsWith(expected, logger.Message);
         Assert.Equal(expected, logger.Values["Activity"]);
@@ -110,7 +110,7 @@ public sealed class ClientAuditTests
         context.Request.Method = "GET";
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "NewPage", ActionName = "Get" }), "activity"));
         var logger = new Recorder<RequestAuditMiddleware>();
-        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(logger));
+        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(new ActivityRecorder()));
         Assert.Empty(logger.Values);
     }
 
@@ -128,7 +128,7 @@ public sealed class ClientAuditTests
         context.Request.Method = method;
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "NewFeature", ActionName = "Save" }), "activity"));
         var logger = new Recorder<RequestAuditMiddleware>();
-        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(logger));
+        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(new ActivityRecorder()));
         Assert.Empty(logger.Values);
     }
 
@@ -141,7 +141,7 @@ public sealed class ClientAuditTests
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(
             new ControllerActionDescriptor { ControllerName = "Auth", ActionName = "Token" }), "login"));
         var logger = new Recorder<ClientLoginAuditMiddleware>();
-        await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new ClientLoginAuditMiddleware(logger));
+        await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new ClientLoginAuditMiddleware(new ActivityRecorder()));
         Assert.Null(logger.Values["TenantId"]);
         Assert.Null(logger.Values["ClientId"]);
         Assert.Equal("Failed", logger.Values["Outcome"]);
@@ -154,6 +154,12 @@ public sealed class ClientAuditTests
     {
         public Task<ApiClientCredential?> GetActiveByClientIdAsync(string clientId, CancellationToken cancellationToken = default) => Task.FromResult<ApiClientCredential?>(credential);
         public Task CreateAsync(CreateApiClient client, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class ActivityRecorder : IUserActivityWriter
+    {
+        public UserActivity? Activity { get; private set; }
+        public Task WriteAsync(UserActivity activity, CancellationToken cancellationToken = default) { Activity = activity; return Task.CompletedTask; }
     }
 
     private sealed class Recorder<T> : ILogger<T>
