@@ -44,7 +44,7 @@ public static class PortalSecurity
             .RequireAssertion(context => !context.User.HasClaim(x => x.Type == "tenant_id")));
 
         options.AddPolicy(AdminPolicy, policy => policy.RequireAuthenticatedUser()
-            .RequireClaim(AdminClaim, "true")
+            .RequireClaim(ContextClaim, PlatformContext)
             .RequireClaim(RoleClaim, AdministratorRole)
             .RequireAssertion(context => !context.User.HasClaim(x => x.Type == "tenant_id")));
     }
@@ -62,20 +62,6 @@ public static class PortalSecurity
         var subject = principal.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
         var portalContext = principal.FindFirstValue(ContextClaim);
-
-        if (principal.HasClaim(AdminClaim, "true"))
-        {
-            if (tenantClaim is not null || !Guid.TryParse(subject, out var administratorId))
-            {
-                context.Fail("Invalid administrator identity.");
-                return;
-            }
-
-            var administrators = context.HttpContext.RequestServices.GetRequiredService<IAdministratorRepository>();
-            if (!await administrators.IsActiveAsync(administratorId, context.HttpContext.RequestAborted))
-                context.Fail("Inactive administrator.");
-            return;
-        }
 
         if (portalContext is not null && Guid.TryParse(subject, out var portalUserId))
         {
