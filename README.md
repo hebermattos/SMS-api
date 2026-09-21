@@ -1,7 +1,7 @@
 # TextRelay
 
-[![CI](https://github.com/hebermattos/SMS-api/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hebermattos/SMS-api/actions/workflows/ci.yml)
-[![Integration Tests](https://github.com/hebermattos/SMS-api/actions/workflows/integration-tests.yml/badge.svg?branch=main)](https://github.com/hebermattos/SMS-api/actions/workflows/integration-tests.yml)
+[![CI](https://github.com/hebermattos/TextRelay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hebermattos/TextRelay/actions/workflows/ci.yml)
+[![Integration Tests](https://github.com/hebermattos/TextRelay/actions/workflows/integration-tests.yml/badge.svg?branch=main)](https://github.com/hebermattos/TextRelay/actions/workflows/integration-tests.yml)
 ![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen?style=flat-square)
 [![Proudly Vibe Coded](https://vibecoded.fyi/badges/flat/main/proudly-vibe-coded.svg)](https://vibecoded.fyi/)
 ![Built with Codex](https://img.shields.io/badge/Built%20with-Codex-000000?style=flat-square&logo=openai&logoColor=white)
