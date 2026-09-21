@@ -140,8 +140,7 @@ public sealed class TenantConfigurationCacheTests
 
         return new TenantConfigurationCache(
             new SqlConnectionFactory(configuration),
-            cache,
-            NullLogger<TenantConfigurationCache>.Instance);
+            new ResilientDistributedCache(cache, NullLogger<ResilientDistributedCache>.Instance));
     }
 
     private static string ApiClientKey(string clientId) =>
