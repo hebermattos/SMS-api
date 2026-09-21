@@ -10,27 +10,27 @@ namespace Sms.Infrastructure.Tests;
 public sealed class PlatformAuditMiddlewareTests
 {
     [Theory]
-    [InlineData(204, LogLevel.Information, "Succeeded")]
-    [InlineData(403, LogLevel.Warning, "Failed")]
-    [InlineData(500, LogLevel.Error, "Failed")]
-    public async Task RecordsSafeActionMetadataWithoutCustomerTenant(int status, LogLevel level, string outcome)
+    [InlineData(403)]
+    [InlineData(500)]
+    public async Task FailedPlatformOperationsAreSystemErrorsWithoutCustomerTenant(int status)
     {
         var context = Context("Administration", "SaveProvider");
         var tenant = Guid.NewGuid();
         context.Request.RouteValues["tenantId"] = tenant.ToString();
-        context.Request.RouteValues["provider"] = "secret-phone-number";
-        context.Request.Headers.Authorization = "Bearer secret-token";
-        var administratorId = Guid.NewGuid().ToString();
-        context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext), new Claim(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole), new Claim(ClaimTypes.NameIdentifier, administratorId)], "test"));
         var logger = new RecordingLogger();
         await RunPipelineAsync(context, c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new PlatformAuditMiddleware(logger));
-        Assert.Equal(level, logger.Level);
+        Assert.Equal(LogLevel.Error, logger.Level);
         Assert.Equal("Administration.SaveProvider", logger.Values["Action"]);
-        Assert.Equal(administratorId, logger.Values["Actor"]);
-        Assert.Equal(outcome, logger.Values["Outcome"]);
         Assert.Equal(tenant, logger.Values["TargetTenantId"]);
         Assert.False(logger.Values.ContainsKey("TenantId"));
-        Assert.DoesNotContain("secret", logger.Message);
+    }
+
+    [Fact]
+    public async Task SuccessfulPlatformOperationIsNotWrittenAsSystemLog()
+    {
+        var logger = new RecordingLogger();
+        await RunPipelineAsync(Context("Administration", "SaveProvider"), c => { c.Response.StatusCode = 204; return Task.CompletedTask; }, new PlatformAuditMiddleware(logger));
+        Assert.Empty(logger.Values);
     }
 
     [Fact]
@@ -44,19 +44,13 @@ public sealed class PlatformAuditMiddlewareTests
     }
 
     [Theory]
-    [InlineData("AdminAuth", 200, "verified-admin-id")]
-    [InlineData("AdminAuth", 401, "unauthenticated")]
-    [InlineData("AdminAuth", 429, "unauthenticated")]
-    [InlineData("AdminTenants", 201, "bootstrap-key")]
-    public async Task IdentifiesLoginAndBootstrapOutcomes(string controller, int status, string actor)
+    [InlineData("AdminAuth", 200)]
+    [InlineData("AdminTenants", 201)]
+    public async Task SuccessfulPlatformActionsAreNotTenantOrSystemLogs(string controller, int status)
     {
         var logger = new RecordingLogger();
-        await RunPipelineAsync(Context(controller, "Token"), c => {
-            c.Response.StatusCode = status;
-            if (status == 200) c.Items[PortalSecurity.AdministratorLoginIdentityKey] = "verified-admin-id";
-            return Task.CompletedTask;
-        }, new PlatformAuditMiddleware(logger));
-        Assert.Equal(actor, logger.Values["Actor"]);
+        await RunPipelineAsync(Context(controller, "Token"), c => { c.Response.StatusCode = status; return Task.CompletedTask; }, new PlatformAuditMiddleware(logger));
+        Assert.Empty(logger.Values);
     }
 
     [Fact]
