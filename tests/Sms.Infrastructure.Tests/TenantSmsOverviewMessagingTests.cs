@@ -18,6 +18,14 @@ public sealed class TenantSmsOverviewMessagingTests
         Assert.Equal(item.EventId, projection.Applied!.EventId);
         Assert.Equal(item.TenantId, projection.Applied.TenantId);
         Assert.Equal(item.UserId, projection.Applied.UserId);
+        Assert.Equal(item.MessageId, projection.Applied.MessageId);
+        Assert.Equal("Tenant", projection.Applied.TenantName);
+        Assert.Equal("user", projection.Applied.Username);
+        Assert.Equal("Mock", projection.Applied.Provider);
+        Assert.Equal(1, projection.Applied.Direction);
+        Assert.Equal(2, projection.Applied.QueueStatus);
+        Assert.Equal(3, projection.Applied.Status);
+        Assert.NotEqual(default, projection.Applied.CreatedAtUtc);
         Assert.Equal(1, item.OutboundDelta);
         Assert.Equal(2, item.InboundDelta);
         Assert.Equal(3, item.DeliveredDelta);
@@ -54,8 +62,28 @@ public sealed class TenantSmsOverviewMessagingTests
         await publisher.StopAsync(default);
     }
 
-    private static TenantSmsOverviewEvent CreateEvent() => new(
-        Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, 2, 3, 4, 5, DateTimeOffset.UtcNow);
+    private static TenantSmsOverviewEvent CreateEvent()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Tenant",
+            "user",
+            "Mock",
+            1,
+            2,
+            3,
+            now,
+            1,
+            2,
+            3,
+            4,
+            5,
+            now);
+    }
 
     private sealed class Projection : ITenantSmsOverviewProjection
     {
