@@ -34,6 +34,6 @@ public sealed class AdministratorSqlTests
             Assert.False(await repository.IsActiveAsync(Guid.NewGuid()));
             Assert.Null(await authentication.AuthenticateAsync(username, "local-admin-test-password"));
         }
-        finally { await connection.ExecuteAsync("DELETE PlatformAdministrators WHERE Id=@Id;", new { Id = id }); }
+        finally { await connection.ExecuteAsync("DELETE FROM PlatformAdministrators WHERE Id=@Id;", new { Id = id }); }
     }
 }
