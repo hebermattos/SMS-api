@@ -86,13 +86,15 @@ public sealed class ReportingSqlTests
                 new { TenantId = tenantId, UserId = userId });
             Assert.Equal((1L, 1L, 0L, 0L), userCounters);
 
-            var dailyCounters = await reporting.QuerySingleAsync<(long TotalMessages, long Delivered)>("""
-                SELECT SUM(TotalMessages)::BIGINT AS TotalMessages,
-                       SUM(CASE WHEN Status=3 THEN TotalMessages ELSE 0 END)::BIGINT AS Delivered
-                FROM SmsDailyOverview
-                WHERE TenantId=@TenantId AND ReportDate=CURRENT_DATE;
-                """, new { TenantId = tenantId });
-            Assert.Equal((1L, 1L), dailyCounters);
+            var tenantDaily = await reporting.QuerySingleAsync<(long TotalMessages, long Delivered, long Outbound)>(
+                "SELECT TotalMessages, Delivered, Outbound FROM TenantSmsDailyOverview WHERE TenantId=@TenantId AND ReportDate=CURRENT_DATE;",
+                new { TenantId = tenantId });
+            Assert.Equal((1L, 1L, 1L), tenantDaily);
+
+            var providerDaily = await reporting.QuerySingleAsync<(long TotalMessages, long Delivered, long Outbound)>(
+                "SELECT TotalMessages, Delivered, Outbound FROM ProviderSmsDailyOverview WHERE TenantId=@TenantId AND Provider='Mock' AND ReportDate=CURRENT_DATE;",
+                new { TenantId = tenantId });
+            Assert.Equal((1L, 1L, 1L), providerDaily);
         }
         finally
         {
