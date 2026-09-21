@@ -12,37 +12,32 @@ public sealed class AlertServiceTests
         var tenantId = Guid.NewGuid();
         var service = new AlertService(repository, new AlertRuleFactory(TimeProvider.System));
 
-        var id = await service.CreateRuleAsync(tenantId,
-            new(" Failure spike ", " Twilio ", SmsStatus.Failed, 10, 15, AlertRepeatMode.Once, 99, true));
+        var id = await service.CreateRuleAsync(tenantId, new(" Failure spike ", " Twilio ", SmsStatus.Failed, 15, true));
 
         Assert.Equal(id, repository.Rule!.Id);
         Assert.Equal(tenantId, repository.Rule.TenantId);
         Assert.Equal("Failure spike", repository.Rule.Name);
         Assert.Equal("Twilio", repository.Rule.Provider);
-        Assert.Null(repository.Rule.RepeatIntervalMinutes);
+        Assert.Equal(15, repository.Rule.WindowMinutes);
     }
 
     [Theory]
-    [InlineData("", 10, 15, AlertRepeatMode.Once, null)]
-    [InlineData("Rule", 0, 15, AlertRepeatMode.Once, null)]
-    [InlineData("Rule", 10, 0, AlertRepeatMode.Once, null)]
-    [InlineData("Rule", 10, 15, AlertRepeatMode.Repeating, null)]
-    [InlineData("Rule", 10, 15, AlertRepeatMode.Repeating, 0)]
-    public async Task CreateRule_RejectsInvalidConfiguration(
-        string name, int threshold, int window, AlertRepeatMode mode, int? interval)
+    [InlineData("", 15)]
+    [InlineData("Rule", 0)]
+    [InlineData("Rule", 1441)]
+    public async Task CreateRule_RejectsInvalidConfiguration(string name, int window)
     {
         var service = new AlertService(new FakeAlertRepository(), new AlertRuleFactory(TimeProvider.System));
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateRuleAsync(Guid.NewGuid(),
-            new(name, null, SmsStatus.Failed, threshold, window, mode, interval, true)));
+            new(name, null, SmsStatus.Failed, window, true)));
     }
 
     [Fact]
     public async Task CreateRule_RejectsUndefinedStatus()
     {
         var service = new AlertService(new FakeAlertRepository(), new AlertRuleFactory(TimeProvider.System));
-
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateRuleAsync(Guid.NewGuid(),
-            new("Invalid", null, (SmsStatus)99, 1, 5, AlertRepeatMode.Once, null, true)));
+            new("Invalid", null, (SmsStatus)99, 5, true)));
     }
 
     [Fact]
@@ -50,7 +45,7 @@ public sealed class AlertServiceTests
     {
         var service = new AlertService(new FakeAlertRepository(), new AlertRuleFactory(TimeProvider.System));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateRuleAsync(Guid.NewGuid(), Guid.NewGuid(),
-            new("Rule", null, SmsStatus.Failed, 1, 5, AlertRepeatMode.Once, null, true)));
+            new("Rule", null, SmsStatus.Failed, 5, true)));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.DeleteRuleAsync(Guid.NewGuid(), Guid.NewGuid()));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.MarkReadAsync(Guid.NewGuid(), Guid.NewGuid()));
     }
@@ -65,6 +60,6 @@ public sealed class AlertServiceTests
         public Task<IReadOnlyList<AlertNotification>> ListAlertsAsync(Guid tenantId, bool unreadOnly, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<AlertNotification>>([]);
         public Task<bool> MarkReadAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task MarkAllReadAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task EvaluateAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task EvaluateAsync(Guid eventId, Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

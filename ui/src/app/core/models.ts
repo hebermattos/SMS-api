@@ -32,11 +32,9 @@ export interface SmsReportSummary { totalMessages: number; scheduled: number; qu
 export interface PlatformSmsReportTenantSummary { tenantId: string; tenantName: string; totalMessages: number; scheduled: number; queued: number; sent: number; delivered: number; failed: number; received: number; outbound: number; inbound: number; pending: number; }
 export interface PlatformSmsReportSummary { totalMessages: number; scheduled: number; queued: number; sent: number; delivered: number; failed: number; received: number; outbound: number; inbound: number; pending: number; byTenant: PlatformSmsReportTenantSummary[]; }
 
-export type AlertRepeatMode = 1 | 2;
 export interface AlertRule {
-  id: string; name: string; provider: string | null; status: number; threshold: number;
-  windowMinutes: number; repeatMode: AlertRepeatMode; repeatIntervalMinutes: number | null;
-  isActive: boolean; isTriggered: boolean; lastTriggeredAt: string | null; createdAt: string;
+  id: string; name: string; provider: string | null; status: number;
+  windowMinutes: number; isActive: boolean; createdAt: string; updatedAt: string | null;
 }
 export interface AlertNotification {
   id: string; ruleId: string; ruleName: string; provider: string | null; status: number;

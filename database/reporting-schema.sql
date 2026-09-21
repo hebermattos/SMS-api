@@ -107,3 +107,22 @@ CREATE TABLE UserSmsOverview
 
 CREATE INDEX IX_UserSmsOverview_Tenant_Total
     ON UserSmsOverview(TenantId, ReportDate DESC, TotalMessages DESC, UserId);
+
+CREATE TABLE AlertMessageWindow
+(
+    EventId UUID PRIMARY KEY,
+    TenantId UUID NOT NULL,
+    Provider VARCHAR(50) NOT NULL,
+    Status INTEGER NOT NULL,
+    OccurredAtUtc TIMESTAMPTZ NOT NULL,
+    ExpiresAtUtc TIMESTAMPTZ NOT NULL,
+    CHECK (Status BETWEEN 1 AND 5),
+    CHECK (ExpiresAtUtc = OccurredAtUtc + INTERVAL '24 hours')
+);
+
+CREATE INDEX IX_AlertMessageWindow_Tenant_Status_Occurred
+    ON AlertMessageWindow(TenantId, Status, OccurredAtUtc DESC)
+    INCLUDE (Provider, ExpiresAtUtc);
+
+CREATE INDEX IX_AlertMessageWindow_Expires
+    ON AlertMessageWindow(ExpiresAtUtc);
