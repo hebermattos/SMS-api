@@ -9,6 +9,7 @@ internal static class LogAttributeSanitizer
         "Activity",
         "ActivityType",
         "ActorId",
+        "Page",
         "TenantId",
         "MessageId",
         "Provider",
