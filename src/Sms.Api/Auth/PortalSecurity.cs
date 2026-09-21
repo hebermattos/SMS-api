@@ -60,8 +60,14 @@ public static class PortalSecurity
             ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
         var portalContext = principal.FindFirstValue(ContextClaim);
 
-        if (portalContext is not null && Guid.TryParse(subject, out var portalUserId))
+        if (portalContext is not null)
         {
+            if (!Guid.TryParse(subject, out var portalUserId))
+            {
+                context.Fail("Invalid portal user identity.");
+                return;
+            }
+
             var portalUsers = context.HttpContext.RequestServices.GetRequiredService<IPortalUserRepository>();
             var portalUser = await portalUsers.GetActiveByIdAsync(portalUserId, context.HttpContext.RequestAborted);
             if (portalUser is null
