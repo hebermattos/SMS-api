@@ -8,8 +8,9 @@ public sealed class TenantPortalUserManagementService(
     ITenantPortalUserManagementRepository repository)
 {
     public Task<IReadOnlyList<PortalUserSummary>> ListAsync(
-        Guid tenantId, CancellationToken cancellationToken = default) =>
-        repository.ListAsync(tenantId, cancellationToken);
+        Guid tenantId, int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null,
+        CancellationToken cancellationToken = default) =>
+        repository.ListAsync(tenantId, skip, take, search, role, isActive, cancellationToken);
 
     public async Task<Guid> CreateAsync(
         Guid tenantId, string username, string email, string password, string role,
