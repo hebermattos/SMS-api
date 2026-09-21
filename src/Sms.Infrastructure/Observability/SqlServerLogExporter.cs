@@ -9,15 +9,6 @@ namespace Sms.Infrastructure.Observability;
 
 public sealed class PostgresLogExporter(string connectionString) : BaseExporter<LogRecord>
 {
-    private static readonly HashSet<string> ActivityCategories =
-    [
-        "Sms.Api.Middleware.ClientLoginAuditMiddleware",
-        "Sms.Api.Middleware.PortalLoginAuditMiddleware",
-        "Sms.Api.Middleware.PlatformAuditMiddleware",
-        "Sms.Api.Middleware.RequestAuditMiddleware"
-    ];
-
-    private static readonly string InsertActivitySql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerLogExporter.SqlServerLogExporter.01.sql");
     private static readonly string InsertSystemSql = Sms.Infrastructure.Sql.SqlQuery.Load("Observability/SqlServerLogExporter.SqlServerLogExporter.02.sql");
 
     public override ExportResult Export(in Batch<LogRecord> batch)
@@ -38,13 +29,10 @@ public sealed class PostgresLogExporter(string connectionString) : BaseExporter<
                     Severity = record.LogLevel.ToString(),
                     Category = Limit(record.CategoryName, 256),
                     Message = Limit(GetStoredMessage(record, attributes), 4000),
-                    TraceId = IsActivity(record.CategoryName) || record.TraceId == default ? null : record.TraceId.ToHexString(),
-                    SpanId = IsActivity(record.CategoryName) || record.SpanId == default ? null : record.SpanId.ToHexString(),
-                    Attributes = IsActivity(record.CategoryName) ? null : LogAttributeSanitizer.Serialize(attributes)
+                    TraceId = record.TraceId == default ? null : record.TraceId.ToHexString(),
+                    SpanId = record.SpanId == default ? null : record.SpanId.ToHexString(),
+                    Attributes = LogAttributeSanitizer.Serialize(attributes)
                 };
-
-                if (IsActivity(record.CategoryName))
-                    connection.Execute(InsertActivitySql, values, transaction);
 
                 if (record.LogLevel is LogLevel.Error or LogLevel.Critical)
                     connection.Execute(InsertSystemSql, values, transaction);
@@ -63,23 +51,10 @@ public sealed class PostgresLogExporter(string connectionString) : BaseExporter<
         }
     }
 
-    internal static bool IsActivity(string? category) =>
-        category is not null && ActivityCategories.Contains(category);
-
     private static string GetStoredMessage(
         LogRecord record,
         IReadOnlyDictionary<string, object?>? attributes)
     {
-        if (IsActivity(record.CategoryName))
-        {
-            if (attributes is not null
-                && attributes.TryGetValue("Activity", out var activity)
-                && activity is string description)
-                return description;
-
-            return record.FormattedMessage ?? record.Body?.ToString() ?? string.Empty;
-        }
-
         if (attributes is not null
             && attributes.TryGetValue("{OriginalFormat}", out var template)
             && template is string messageTemplate)

@@ -1,34 +1,33 @@
-using System.Diagnostics;
 using System.Security.Claims;
 
 namespace Sms.Api.Middleware;
 
-public sealed class RequestAuditMiddleware(ILogger<RequestAuditMiddleware> logger) : IAuditPipelineStep
+public sealed class RequestAuditMiddleware(IUserActivityWriter activities) : IAuditPipelineStep
 {
-    public Task AuditAsync(AuditPipelineContext audit)
+    public async Task AuditAsync(AuditPipelineContext audit)
     {
         var context = audit.HttpContext;
         var tenantId = context.User.FindFirstValue("tenant_id");
         if (context.User.Identity?.IsAuthenticated != true || !Guid.TryParse(tenantId, out var parsedTenantId))
-            return Task.CompletedTask;
+            return;
 
-        var description = UserActivityMessageFormatter.Format(
-            audit.Action?.ControllerName, audit.Action?.ActionName);
-        if (description is null)
-            return Task.CompletedTask;
+        var controller = audit.Action?.ControllerName;
+        var action = audit.Action?.ActionName;
+        var description = UserActivityMessageFormatter.Format(controller, action);
+        if (description is null || controller is null || action is null)
+            return;
 
         var status = audit.Failed ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
-        var activity = status < 400 ? description.Success : description.Failure;
-
-        logger.LogInformation(
-            "{Activity} Activity type {ActivityType}. HTTP {StatusCode} in {ElapsedMilliseconds} ms for user {ActorId}, tenant {TenantId}.",
-            activity,
-            description.Kind.ToString(),
-            status,
-            Stopwatch.GetElapsedTime(audit.StartedTimestamp).TotalMilliseconds,
+        var succeeded = status < 400;
+        await activities.WriteAsync(new UserActivity(
+            parsedTenantId,
             context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.User.FindFirstValue("sub"),
-            parsedTenantId);
-
-        return Task.CompletedTask;
+            description.Kind.ToString(),
+            action,
+            controller,
+            context.Request.RouteValues["id"]?.ToString(),
+            succeeded ? description.Success : description.Failure,
+            succeeded ? "Succeeded" : "Failed"),
+            context.RequestAborted);
     }
 }
