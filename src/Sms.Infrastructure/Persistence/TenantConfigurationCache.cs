@@ -143,7 +143,7 @@ public sealed class TenantConfigurationCache(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Unable to read tenant configuration cache.");
+            logger.LogError(exception, "Unable to read tenant configuration cache {CacheKey}.", key);
             return null;
         }
     }
@@ -160,7 +160,7 @@ public sealed class TenantConfigurationCache(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Unable to write tenant configuration cache.");
+            logger.LogError(exception, "Unable to write tenant configuration cache {CacheKey}.", key);
         }
     }
 
@@ -176,7 +176,7 @@ public sealed class TenantConfigurationCache(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Unable to invalidate tenant configuration cache.");
+            logger.LogError(exception, "Unable to invalidate tenant configuration cache {CacheKey}.", key);
         }
     }
 

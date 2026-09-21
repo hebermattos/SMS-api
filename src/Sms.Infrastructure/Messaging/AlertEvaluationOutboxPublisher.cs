@@ -24,7 +24,7 @@ public sealed class AlertEvaluationOutboxPublisher(
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Failed to publish alert evaluation outbox.");
+                logger.LogError(exception, "Failed to publish alert evaluation outbox batch.");
             }
 
             await Task.Delay(PollingInterval, stoppingToken);
