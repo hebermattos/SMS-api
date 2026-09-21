@@ -1,5 +1,8 @@
 using MassTransit;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sms.Application.Auth;
@@ -30,17 +33,20 @@ public static class DependencyInjection
         retryOptions.Validate();
         services.AddSingleton(retryOptions);
 
+        var redisConnectionString = configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("Connection string 'Redis' is required.");
+
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+
         if (CacheConfiguration.IsEnabled(configuration))
         {
-            var redisConnectionString = configuration.GetConnectionString("Redis");
-            if (string.IsNullOrWhiteSpace(redisConnectionString))
-                throw new InvalidOperationException("Connection string 'Redis' is not configured when cache is enabled.");
-
-            services.AddStackExchangeRedisCache(options =>
-            {
-                options.Configuration = redisConnectionString;
-                options.InstanceName = "sms-api:";
-            });
+            services.AddOptions<RedisCacheOptions>()
+                .Configure<IConnectionMultiplexer>((options, redis) =>
+                {
+                    options.ConnectionMultiplexerFactory = () => Task.FromResult(redis);
+                    options.InstanceName = "sms-api:";
+                });
+            services.AddSingleton<IDistributedCache, RedisCache>();
         }
         else
         {
