@@ -122,10 +122,10 @@ public sealed class AdministrationSqlTests
                        (@OtherTenant, 'Other integrity tenant', TRUE, CURRENT_TIMESTAMP);
 
                 INSERT INTO SmsMessages
-                    (Id, TenantId, "From", "To", Body, Provider, ProviderMessageId, Direction, Status, CreatedAt)
+                    (Id, TenantId, "From", "To", Body, Provider, ProviderMessageId, Direction, QueueStatus, Status, CreatedAt)
                 VALUES
                     (@MessageId, @Tenant, 'encrypted-from', 'encrypted-to', 'encrypted-body',
-                     'Mock', NULL, 1, 1, CURRENT_TIMESTAMP);
+                     'Mock', NULL, 1, 2, 1, CURRENT_TIMESTAMP);
                 """, new { Tenant = tenant, OtherTenant = otherTenant, MessageId = messageId });
 
             var invalidUser = await Assert.ThrowsAsync<PostgresException>(() => connection.ExecuteAsync("""
