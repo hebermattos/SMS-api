@@ -11,70 +11,57 @@ namespace Sms.Infrastructure.Tests;
 public sealed class AlertSqlTests
 {
     [PostgresFact]
-    public async Task OnceRule_FiresOncePerIncidentAndPreservesTenantIsolation()
+    public async Task MatchingEvents_AlwaysFireAndPreserveTenantIsolation()
     {
+        var connectionString = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES");
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:Postgres"] = Environment.GetEnvironmentVariable("SMS_TEST_POSTGRES")
+            ["ConnectionStrings:Postgres"] = connectionString,
+            ["ConnectionStrings:ReportingPostgres"] = connectionString
         }).Build();
-        var repository = new AlertRepository(new SqlConnectionFactory(configuration));
-        var tenantId = Guid.NewGuid(); var otherTenantId = Guid.NewGuid();
-        var ruleId = Guid.NewGuid(); var message1 = Guid.NewGuid(); var message2 = Guid.NewGuid();
-        using var connection = new NpgsqlConnection(configuration.GetConnectionString("Postgres"));
+        var repository = new AlertRepository(new SqlConnectionFactory(configuration), new ReportingSqlConnectionFactory(configuration));
+        var tenantId = Guid.NewGuid();
+        var otherTenantId = Guid.NewGuid();
+        var ruleId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
         try
         {
             await connection.ExecuteAsync("""
+                CREATE TABLE IF NOT EXISTS AlertMessageWindow
+                (
+                    EventId UUID PRIMARY KEY,
+                    TenantId UUID NOT NULL,
+                    Provider VARCHAR(50) NOT NULL,
+                    Status INTEGER NOT NULL,
+                    OccurredAtUtc TIMESTAMPTZ NOT NULL,
+                    ExpiresAtUtc TIMESTAMPTZ NOT NULL
+                );
                 INSERT INTO Tenants(Id,Name,IsActive,CreatedAt) VALUES
                     (@Tenant,'Alert tenant',TRUE,CURRENT_TIMESTAMP),(@Other,'Other tenant',TRUE,CURRENT_TIMESTAMP);
-                INSERT INTO SmsMessages(Id,TenantId,"From","To",Body,Provider,Direction,QueueStatus,Status,CreatedAt) VALUES
-                    (@Message1,@Tenant,'x','x','x','Twilio',1,2,4,CURRENT_TIMESTAMP),
-                    (@Message2,@Tenant,'x','x','x','Twilio',1,2,4,CURRENT_TIMESTAMP);
-                INSERT INTO SmsMessageStatusHistory(Id,TenantId,MessageId,Status,CreatedAt) VALUES
-                    (gen_random_uuid(),@Tenant,@Message1,4,CURRENT_TIMESTAMP),
-                    (gen_random_uuid(),@Tenant,@Message2,4,CURRENT_TIMESTAMP);
-                INSERT INTO AlertStatusCounters(TenantId,Provider,Status,BucketStartUtc,MessageCount,UpdatedAtUtc)
-                VALUES (@Tenant,'Twilio',4,date_trunc('minute', CURRENT_TIMESTAMP),2,CURRENT_TIMESTAMP);
-                """, new { Tenant = tenantId, Other = otherTenantId, Message1 = message1, Message2 = message2 });
+                """, new { Tenant = tenantId, Other = otherTenantId });
 
-            await repository.CreateRuleAsync(new(ruleId, tenantId, "Failures", "Twilio", SmsStatus.Failed,
-                2, 15, AlertRepeatMode.Once, null, true, false, null, DateTimeOffset.UtcNow, null));
-            await repository.EvaluateAsync(tenantId);
-            await repository.EvaluateAsync(tenantId);
-
-            Assert.Single(await repository.ListAlertsAsync(tenantId, false, 0, 20));
-            Assert.Empty(await repository.ListAlertsAsync(otherTenantId, false, 0, 20));
+            await repository.CreateRuleAsync(new(ruleId, tenantId, "Failures", "Twilio", SmsStatus.Failed, 15, true, now, null));
 
             await connection.ExecuteAsync("""
-                UPDATE SmsMessageStatusHistory
-                SET CreatedAt=CURRENT_TIMESTAMP - INTERVAL '1 hour'
-                WHERE TenantId=@Tenant;
-                UPDATE AlertStatusCounters
-                SET BucketStartUtc=BucketStartUtc - INTERVAL '1 hour', UpdatedAtUtc=CURRENT_TIMESTAMP - INTERVAL '1 hour'
-                WHERE TenantId=@Tenant;
-                """, new { Tenant = tenantId });
-            await repository.EvaluateAsync(tenantId);
+                INSERT INTO AlertMessageWindow(EventId,TenantId,Provider,Status,OccurredAtUtc,ExpiresAtUtc)
+                VALUES(gen_random_uuid(),@Tenant,'Twilio',4,@Now,@Now + INTERVAL '24 hours');
+                """, new { Tenant = tenantId, Now = now });
 
-            await connection.ExecuteAsync("""
-                UPDATE SmsMessageStatusHistory
-                SET CreatedAt=CURRENT_TIMESTAMP
-                WHERE TenantId=@Tenant;
-                UPDATE AlertStatusCounters
-                SET BucketStartUtc=date_trunc('minute', CURRENT_TIMESTAMP),
-                    UpdatedAtUtc=CURRENT_TIMESTAMP
-                WHERE TenantId=@Tenant;
-                """, new { Tenant = tenantId });
-            await repository.EvaluateAsync(tenantId);
+            await repository.EvaluateAsync(tenantId, SmsStatus.Failed, "Twilio", now);
+            await repository.EvaluateAsync(tenantId, SmsStatus.Failed, "Twilio", now);
 
             Assert.Equal(2, (await repository.ListAlertsAsync(tenantId, false, 0, 20)).Count);
+            Assert.Empty(await repository.ListAlertsAsync(otherTenantId, false, 0, 20));
         }
         finally
         {
             await connection.ExecuteAsync("""
+                DELETE FROM AlertMessageWindow WHERE TenantId IN (@Tenant,@Other);
                 DELETE FROM Alerts WHERE TenantId IN (@Tenant,@Other);
                 DELETE FROM AlertRules WHERE TenantId IN (@Tenant,@Other);
-                DELETE FROM SmsMessageStatusHistory WHERE TenantId IN (@Tenant,@Other);
-                DELETE FROM SmsMessages WHERE TenantId IN (@Tenant,@Other);
                 DELETE FROM Tenants WHERE Id IN (@Tenant,@Other);
                 """, new { Tenant = tenantId, Other = otherTenantId });
         }
