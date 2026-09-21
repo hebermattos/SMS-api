@@ -90,7 +90,7 @@ jobs:
           SQL
       - name: Verify administrator password login and tenant separation over HTTP
         run: |
-          docker compose up -d --wait rabbitmq
+          docker compose up -d --wait rabbitmq-1 rabbitmq-2 rabbitmq-3 rabbitmq-lb
           docker compose up -d --build --no-deps api
           python3 - <<'PY'
           import json, time, urllib.request, urllib.error
@@ -121,7 +121,7 @@ jobs:
           PY
       - name: Show initialization logs
         if: failure()
-        run: docker compose logs postgres db-init provider-init rabbitmq api
+        run: docker compose logs postgres db-init provider-init rabbitmq-1 rabbitmq-2 rabbitmq-3 rabbitmq-lb api
       - name: Clean up
         if: always()
         run: docker compose down --remove-orphans --volumes
