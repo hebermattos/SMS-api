@@ -50,8 +50,8 @@ public sealed class AlertSqlTests
                 VALUES(gen_random_uuid(),@Tenant,'Twilio',4,@Now,@Now + INTERVAL '24 hours');
                 """, new { Tenant = tenantId, Now = now });
 
-            await repository.EvaluateAsync(tenantId, SmsStatus.Failed, "Twilio", now);
-            await repository.EvaluateAsync(tenantId, SmsStatus.Failed, "Twilio", now);
+            await repository.EvaluateAsync(Guid.NewGuid(), tenantId, SmsStatus.Failed, "Twilio", now);
+            await repository.EvaluateAsync(Guid.NewGuid(), tenantId, SmsStatus.Failed, "Twilio", now);
 
             Assert.Equal(2, (await repository.ListAlertsAsync(tenantId, false, 0, 20)).Count);
             Assert.Empty(await repository.ListAlertsAsync(otherTenantId, false, 0, 20));
