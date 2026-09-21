@@ -41,7 +41,6 @@ public sealed class SendSmsService(
         await repository.InsertAsync(message, cancellationToken);
         if (!scheduledAtUtc.HasValue)
         {
-            await eventPublisher.PublishAsync(message.TenantId, message.Id, cancellationToken);
             await repository.UpdateQueueStatusAsync(
                 message.TenantId,
                 message.Id,
@@ -49,6 +48,10 @@ public sealed class SendSmsService(
                 clock.GetUtcNow(),
                 cancellationToken);
             queueStatus = SmsQueueStatus.Queued;
+
+            // Persist Queued before publishing. If publishing fails, the recovery worker
+            // can safely find and publish the queued message later.
+            await eventPublisher.PublishAsync(message.TenantId, message.Id, cancellationToken);
         }
 
         return new SendSmsResult(message.Id, provider.Name, null, queueStatus.ToString(), scheduledAtUtc);
