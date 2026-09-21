@@ -30,7 +30,7 @@ public sealed class ProviderCatalogCache(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Unable to read provider catalog cache.");
+            logger.LogError(exception, "Unable to read {CacheArea} cache.", "ProviderCatalog");
         }
 
         var catalog = policies.Select(policy => policy.Definition).ToArray();
@@ -45,7 +45,7 @@ public sealed class ProviderCatalogCache(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Unable to write provider catalog cache.");
+            logger.LogError(exception, "Unable to write {CacheArea} cache.", "ProviderCatalog");
         }
 
         return catalog;
