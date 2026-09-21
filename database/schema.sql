@@ -194,32 +194,20 @@ CREATE TABLE AlertRules
     Name VARCHAR(120) NOT NULL,
     Provider VARCHAR(50) NULL,
     Status INTEGER NOT NULL,
-    Threshold INTEGER NOT NULL,
     WindowMinutes INTEGER NOT NULL,
-    RepeatMode INTEGER NOT NULL,
-    RepeatIntervalMinutes INTEGER NULL,
     IsActive BOOLEAN NOT NULL,
-    IsTriggered BOOLEAN NOT NULL DEFAULT FALSE,
-    LastTriggeredAt TIMESTAMPTZ NULL,
     CreatedAt TIMESTAMPTZ NOT NULL,
     UpdatedAt TIMESTAMPTZ NULL,
     DeletedAt TIMESTAMPTZ NULL,
     UNIQUE (TenantId, Id),
     CHECK (Status BETWEEN 1 AND 5),
-    CHECK (Threshold BETWEEN 1 AND 1000000),
-    CHECK (WindowMinutes BETWEEN 1 AND 43200),
-    CHECK (RepeatMode IN (1, 2)),
-    CHECK
-    (
-        (RepeatMode = 1 AND RepeatIntervalMinutes IS NULL)
-        OR (RepeatMode = 2 AND RepeatIntervalMinutes BETWEEN 1 AND 43200)
-    )
+    CHECK (WindowMinutes BETWEEN 1 AND 1440)
 );
 CREATE UNIQUE INDEX UX_AlertRules_Tenant_Name
     ON AlertRules(TenantId, Name) WHERE DeletedAt IS NULL;
 CREATE INDEX IX_AlertRules_Active
     ON AlertRules(IsActive, TenantId)
-    INCLUDE (Status, Provider, Threshold, WindowMinutes)
+    INCLUDE (Status, Provider, WindowMinutes)
     WHERE DeletedAt IS NULL;
 
 CREATE TABLE Alerts
@@ -250,25 +238,6 @@ CREATE INDEX IX_Alerts_Tenant_Unread_CreatedAt ON Alerts(TenantId, CreatedAt DES
     INCLUDE (RuleId, RuleName, Provider, Status, MatchCount, WindowMinutes)
     WHERE NOT IsRead;
 
-CREATE TABLE AlertStatusCounters
-(
-    TenantId UUID NOT NULL,
-    Provider VARCHAR(50) NOT NULL,
-    Status INTEGER NOT NULL,
-    BucketStartUtc TIMESTAMPTZ NOT NULL,
-    MessageCount INTEGER NOT NULL CHECK (MessageCount > 0),
-    UpdatedAtUtc TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (TenantId, Provider, Status, BucketStartUtc),
-    FOREIGN KEY (TenantId) REFERENCES Tenants(Id) ON DELETE CASCADE,
-    CHECK (Status BETWEEN 1 AND 5)
-);
-CREATE INDEX IX_AlertStatusCounters_Tenant_Status_Bucket
-    ON AlertStatusCounters(TenantId, Status, BucketStartUtc)
-    INCLUDE (Provider, MessageCount);
-CREATE INDEX IX_AlertStatusCounters_Tenant_Provider_Status_Bucket
-    ON AlertStatusCounters(TenantId, Provider, Status, BucketStartUtc)
-    INCLUDE (MessageCount);
-
 CREATE TABLE AlertEvaluationOutbox
 (
     Id UUID PRIMARY KEY,
@@ -289,14 +258,6 @@ CREATE INDEX IX_AlertEvaluationOutbox_Pending
 CREATE INDEX IX_AlertEvaluationOutbox_PublishedAtUtc
     ON AlertEvaluationOutbox(PublishedAtUtc, Id)
     WHERE PublishedAtUtc IS NOT NULL;
-
-CREATE TABLE AlertEvaluationInbox
-(
-    EventId UUID PRIMARY KEY,
-    ProcessedAtUtc TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IX_AlertEvaluationInbox_ProcessedAtUtc
-    ON AlertEvaluationInbox(ProcessedAtUtc, EventId);
 
 CREATE TABLE TenantSmsOverviewOutbox
 (
