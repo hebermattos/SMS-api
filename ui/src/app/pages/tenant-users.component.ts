@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
@@ -21,22 +21,30 @@ import { IconComponent } from '../shared/icon.component';
 
   <section class="panel">
     <div class="panel-heading"><div><h2>Workspace access</h2><p>Users can access only this tenant's data.</p></div><button class="button compact" (click)="load()" [disabled]="loading()"><sms-icon name="refresh"/>Refresh</button></div>
-    <div class="padded"><div class="form-grid"><div><label for="user-search">Search</label><input id="user-search" name="search" [(ngModel)]="search" (ngModelChange)="page.set(1)" placeholder="Username or email"/></div><div><label for="role-filter">Role</label><select id="role-filter" name="roleFilter" [(ngModel)]="roleFilter" (ngModelChange)="page.set(1)"><option value="">All roles</option><option value="user">User</option><option value="administrator">Administrator</option></select></div><div><label for="status-filter">Status</label><select id="status-filter" name="statusFilter" [(ngModel)]="statusFilter" (ngModelChange)="page.set(1)"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div></div></div>
-    @if (loading()) { <div class="loading-state" role="status"><span class="spinner"></span>Loading users…</div> } @else if (pagedUsers().length) { <div class="table-scroll"><table><thead><tr><th>User</th><th>Role</th><th>Access</th><th>Created at</th><th>Actions</th></tr></thead><tbody>@for (user of pagedUsers(); track user.id) { <tr><td><div class="company-cell"><span class="company-avatar">{{ user.username.slice(0,2).toUpperCase() }}</span><div><strong>{{ user.username }}</strong><small class="cell-secondary">{{ user.email }}</small></div></div></td><td>{{ user.role === 'administrator' ? 'Administrator' : 'User' }}</td><td><span class="badge" [class.success]="user.isActive" [class.danger]="!user.isActive"><i class="status-dot"></i>{{ user.isActive ? 'Active' : 'Inactive' }}</span></td><td class="muted">{{ user.createdAt | date:'MM/dd/yyyy' }}</td><td><div class="button-row"><button class="button compact" (click)="startEdit(user)" [disabled]="saving()">Edit</button><button class="button compact" (click)="startReset(user)" [disabled]="saving()"><sms-icon name="key"/>Reset password</button><button class="button compact" [class.destructive]="user.isActive" (click)="setActive(user)" [disabled]="saving()">{{ user.isActive ? 'Deactivate' : 'Activate' }}</button></div></td></tr> }</tbody></table></div>
-      <div class="panel-heading"><p>Showing {{ pageStart() }}–{{ pageEnd() }} of {{ filteredUsers().length }} users</p><div class="button-row"><button class="button compact" (click)="previousPage()" [disabled]="page() === 1">Previous</button><button class="button compact" (click)="nextPage()" [disabled]="page() >= totalPages()">Next</button></div></div>
+    <div class="padded"><div class="form-grid"><div><label for="user-search">Search</label><input id="user-search" name="search" [(ngModel)]="search" (change)="filtersChanged()" placeholder="Username or email"/></div><div><label for="role-filter">Role</label><select id="role-filter" name="roleFilter" [(ngModel)]="roleFilter" (change)="filtersChanged()"><option value="">All roles</option><option value="user">User</option><option value="administrator">Administrator</option></select></div><div><label for="status-filter">Status</label><select id="status-filter" name="statusFilter" [(ngModel)]="statusFilter" (change)="filtersChanged()"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div></div></div>
+    @if (loading()) { <div class="loading-state" role="status"><span class="spinner"></span>Loading users…</div> } @else if (users().length) { <div class="table-scroll"><table><thead><tr><th>User</th><th>Role</th><th>Access</th><th>Created at</th><th>Actions</th></tr></thead><tbody>@for (user of users(); track user.id) { <tr><td><div class="company-cell"><span class="company-avatar">{{ user.username.slice(0,2).toUpperCase() }}</span><div><strong>{{ user.username }}</strong><small class="cell-secondary">{{ user.email }}</small></div></div></td><td>{{ user.role === 'administrator' ? 'Administrator' : 'User' }}</td><td><span class="badge" [class.success]="user.isActive" [class.danger]="!user.isActive"><i class="status-dot"></i>{{ user.isActive ? 'Active' : 'Inactive' }}</span></td><td class="muted">{{ user.createdAt | date:'MM/dd/yyyy' }}</td><td><div class="button-row"><button class="button compact" (click)="startEdit(user)" [disabled]="saving()">Edit</button><button class="button compact" (click)="startReset(user)" [disabled]="saving()"><sms-icon name="key"/>Reset password</button><button class="button compact" [class.destructive]="user.isActive" (click)="setActive(user)" [disabled]="saving()">{{ user.isActive ? 'Deactivate' : 'Activate' }}</button></div></td></tr> }</tbody></table></div>
+      <div class="panel-heading"><p>Showing {{ pageStart() }}–{{ pageEnd() }}</p><div class="button-row"><button class="button compact" (click)="previousPage()" [disabled]="page() === 1">Previous</button><button class="button compact" (click)="nextPage()" [disabled]="!hasNext()">Next</button></div></div>
     } @else { <div class="empty-state"><span class="empty-icon"><sms-icon name="users"/></span><h3>No users found.</h3><p>Adjust the filters or create a user.</p></div> }
   </section>` })
 export class TenantUsersComponent {
   private readonly http = inject(HttpClient); private readonly destroyRef = inject(DestroyRef);
-  readonly users = signal<PortalUser[]>([]); readonly loading = signal(false); readonly saving = signal(false); readonly creating = signal(false); readonly editing = signal<PortalUser | null>(null); readonly resetting = signal<PortalUser | null>(null); readonly error = signal(''); readonly success = signal(''); readonly page = signal(1);
+  readonly users = signal<PortalUser[]>([]); readonly loading = signal(false); readonly saving = signal(false); readonly creating = signal(false); readonly editing = signal<PortalUser | null>(null); readonly resetting = signal<PortalUser | null>(null); readonly error = signal(''); readonly success = signal(''); readonly page = signal(1); readonly hasNext = signal(false);
   username = ''; email = ''; password = ''; newPassword = ''; role: PortalPermissionRole = 'user'; editUsername = ''; editEmail = ''; editRole: PortalPermissionRole = 'user'; search = ''; roleFilter = ''; statusFilter = ''; readonly pageSize = 20;
-  readonly filteredUsers = computed(() => { const term = this.search.trim().toLowerCase(); return this.users().filter(user => (!term || user.username.toLowerCase().includes(term) || user.email.toLowerCase().includes(term)) && (!this.roleFilter || user.role === this.roleFilter) && (!this.statusFilter || (this.statusFilter === 'active') === user.isActive)); });
-  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredUsers().length / this.pageSize)));
-  readonly pagedUsers = computed(() => { const start = (this.page() - 1) * this.pageSize; return this.filteredUsers().slice(start, start + this.pageSize); });
-  readonly pageStart = computed(() => this.filteredUsers().length ? (this.page() - 1) * this.pageSize + 1 : 0);
-  readonly pageEnd = computed(() => Math.min(this.page() * this.pageSize, this.filteredUsers().length));
+  pageStart() { return this.users().length ? (this.page() - 1) * this.pageSize + 1 : 0; }
+  pageEnd() { return this.pageStart() + this.users().length - 1; }
   constructor() { this.load(); }
-  load() { this.loading.set(true); this.error.set(''); this.http.get<PortalUser[]>('/api/v1/tenant/users?take=200').pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({ next: rows => { this.users.set(rows); this.page.set(1); }, error: error => this.error.set(errorMessage(error)) }); }
+  load() {
+    this.loading.set(true); this.error.set('');
+    let params = new HttpParams().set('skip', (this.page() - 1) * this.pageSize).set('take', this.pageSize);
+    if (this.search.trim()) params = params.set('search', this.search.trim());
+    if (this.roleFilter) params = params.set('role', this.roleFilter);
+    if (this.statusFilter) params = params.set('isActive', this.statusFilter === 'active');
+    this.http.get<PortalUser[]>('/api/v1/tenant/users', { params }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
+      next: rows => { this.users.set(rows); this.hasNext.set(rows.length === this.pageSize); },
+      error: error => this.error.set(errorMessage(error))
+    });
+  }
+  filtersChanged() { this.page.set(1); this.load(); }
   openCreate() { this.cancelEdit(); this.cancelReset(); this.username = ''; this.email = ''; this.password = ''; this.role = 'user'; this.error.set(''); this.success.set(''); this.creating.set(true); }
   cancelCreate() { this.creating.set(false); this.username = ''; this.email = ''; this.password = ''; }
   create() { if (this.saving()) return; this.saving.set(true); this.error.set(''); this.success.set(''); this.http.post('/api/v1/tenant/users', { username: this.username.trim(), email: this.email.trim(), password: this.password, role: this.role }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({ next: () => { this.cancelCreate(); this.success.set('User created.'); this.load(); }, error: error => this.error.set(errorMessage(error)) }); }
@@ -47,6 +55,6 @@ export class TenantUsersComponent {
   cancelReset() { this.resetting.set(null); this.newPassword = ''; }
   resetPassword() { const user = this.resetting(); if (!user || this.saving()) return; this.saving.set(true); this.error.set(''); this.success.set(''); this.http.post(`/api/v1/tenant/users/${user.id}/reset-password`, { password: this.newPassword }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({ next: () => { this.cancelReset(); this.success.set(`Password reset for ${user.username}.`); }, error: error => this.error.set(errorMessage(error)) }); }
   setActive(user: PortalUser) { if (this.saving()) return; const action = user.isActive ? 'deactivate' : 'activate'; if (!confirm(`Do you want to ${action} ${user.username}?`)) return; this.saving.set(true); this.error.set(''); this.success.set(''); this.http.put(`/api/v1/tenant/users/${user.id}/state`, { isActive: !user.isActive }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.saving.set(false))).subscribe({ next: () => { this.success.set(`${user.username} ${user.isActive ? 'deactivated' : 'activated'}.`); this.load(); }, error: error => this.error.set(errorMessage(error)) }); }
-  previousPage() { if (this.page() > 1) this.page.update(value => value - 1); }
-  nextPage() { if (this.page() < this.totalPages()) this.page.update(value => value + 1); }
+  previousPage() { if (this.page() > 1) { this.page.update(value => value - 1); this.load(); } }
+  nextPage() { if (this.hasNext()) { this.page.update(value => value + 1); this.load(); } }
 }
