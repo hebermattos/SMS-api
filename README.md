@@ -77,6 +77,36 @@ Database backups are stored outside Docker volumes in `./backups` by default, so
 
 > Docker is intended for local testing only. Never use fallback Compose credentials outside development. Resource reservations and limits are defined directly in `docker-compose.yml`; treat that file as the source of truth. The current limits are intentionally sized for integration testing and a single-user local environment; Ollama is excluded from the default stack through the `ai` profile to reduce idle resource usage.
 
+### Docker resource limits
+
+The local Compose stack uses explicit CPU and memory limits to keep development resource usage predictable. `docker-compose.yml` remains the source of truth.
+
+| Service | CPU limit | Memory reservation | Memory limit |
+| --- | ---: | ---: | ---: |
+| API 1 | 0.50 | 256 MB | 256 MB |
+| API 2 | 0.50 | 256 MB | 256 MB |
+| Worker | 0.50 | 256 MB | 256 MB |
+| PostgreSQL | 0.75 | 128 MB | 384 MB |
+| Redis | 0.20 | 64 MB | 64 MB |
+| RabbitMQ 1 | 0.40 | 256 MB | 384 MB |
+| RabbitMQ 2 | 0.40 | 256 MB | 384 MB |
+| RabbitMQ 3 | 0.40 | 256 MB | 384 MB |
+| RabbitMQ HAProxy | 0.20 | 32 MB | 48 MB |
+| API HAProxy | 0.20 | 32 MB | 48 MB |
+| ClickStack | 0.75 | 512 MB | 768 MB |
+| OpenTelemetry Collector | 0.25 | 128 MB | 128 MB |
+| HyperDX auth proxy | 0.25 | 32 MB | 64 MB |
+| UI | 0.20 | 32 MB | 64 MB |
+| PostgreSQL backup | 0.25 | 64 MB | 128 MB |
+| DB initialization | 0.50 | 128 MB | 256 MB |
+| Provider initialization | 0.50 | 128 MB | 256 MB |
+| Backup initialization | 0.25 | — | 64 MB |
+| Ollama (optional) | 0.75 | 768 MB | 1,024 MB |
+| Ollama initialization (optional) | 0.50 | — | 256 MB |
+| Webhook tests (optional) | 1.00 | 256 MB | 768 MB |
+
+The default stack, excluding optional `ai` and `tests` profiles and short-lived initialization containers, has configured memory limits totaling approximately **3.5 GB**. Reservations are not preallocated memory; they represent the preferred minimum available to the containers, while `mem_limit` is the enforced per-container ceiling. CPU values are fractions of one logical CPU and are per container.
+
 ## Features
 
 ### Tenant
