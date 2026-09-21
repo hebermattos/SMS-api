@@ -21,7 +21,7 @@ public sealed class TenantSmsOverviewOutboxPublisher(
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Failed to publish tenant SMS overview events.");
+                logger.LogError(exception, "Failed to publish tenant SMS overview outbox batch.");
             }
 
             await Task.Delay(PollingInterval, stoppingToken);
