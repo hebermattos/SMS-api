@@ -58,7 +58,7 @@ public sealed class AlertRepository(
         await connection.ExecuteAsync(new CommandDefinition(sql, new { TenantId = tenantId }, cancellationToken: cancellationToken));
     }
 
-    public async Task EvaluateAsync(Guid eventId, Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default)
+    public async Task ProcessEventAsync(Guid eventId, Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default)
     {
         var rules = (await ListRulesAsync(tenantId, cancellationToken))
             .Where(r => r.IsActive && r.Status == status && (r.Provider is null || r.Provider == provider));
