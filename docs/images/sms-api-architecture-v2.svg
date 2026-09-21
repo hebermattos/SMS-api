@@ -24,7 +24,7 @@
 <path d="M1235 228H1160V285H720V216H695" class="line"/><text x="1130" y="255" text-anchor="middle" class="mini">Webhooks → API</text>
 
 <rect x="40" y="330" width="210" height="115" fill="#f7f1ff" stroke="#8b5cf6" class="box"/><text x="145" y="370" text-anchor="middle" class="h">Ollama</text><text x="145" y="398" text-anchor="middle" class="s">Qwen2.5 0.5B</text><text x="145" y="425" text-anchor="middle" class="mini">Optional · profile: ai</text>
-<rect x="290" y="330" width="210" height="115" fill="#effdf3" stroke="#16a34a" class="box"/><text x="395" y="374" text-anchor="middle" class="h">Redis</text><text x="395" y="402" text-anchor="middle" class="s">Cache</text><text x="395" y="428" text-anchor="middle" class="mini">localhost:6379</text>
+<rect x="290" y="330" width="210" height="115" fill="#effdf3" stroke="#16a34a" class="box"/><text x="395" y="370" text-anchor="middle" class="h">Redis</text><text x="395" y="398" text-anchor="middle" class="s">Cache + rate limits</text><text x="395" y="424" text-anchor="middle" class="mini">shared counters · token/config cache</text>
 <rect x="520" y="320" width="280" height="145" fill="#fff8e7" stroke="#f59e0b" class="box"/>
 <text x="660" y="348" text-anchor="middle" class="h">RabbitMQ HA Cluster</text>
 <rect x="545" y="362" width="230" height="28" fill="#f8fafc" stroke="#64748b" class="box"/><text x="660" y="382" text-anchor="middle" class="mini">HAProxy AMQP · localhost:5672</text>
@@ -32,7 +32,7 @@
 <text x="660" y="438" text-anchor="middle" class="mini">4 quorum queues · 3 members · 1-node tolerance</text><text x="660" y="458" text-anchor="middle" class="mini">sms.send · sms.alert.evaluation · sms.alert.rule-evaluation · reporting</text>
 <rect x="820" y="330" width="240" height="115" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="940" y="374" text-anchor="middle" class="h">PostgreSQL 17</text><text x="940" y="402" text-anchor="middle" class="s">Database server</text><text x="940" y="428" text-anchor="middle" class="mini">localhost:5432</text>
 <rect x="1100" y="330" width="205" height="115" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="1202" y="370" text-anchor="middle" class="h">OTel Collector</text><text x="1202" y="399" text-anchor="middle" class="s">OTLP :4318</text><text x="1202" y="425" text-anchor="middle" class="mini">Internal only</text>
-<rect x="1340" y="330" width="220" height="115" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="1450" y="370" text-anchor="middle" class="h">ClickStack</text><text x="1450" y="398" text-anchor="middle" class="s">ClickHouse + HyperDX</text><text x="1450" y="425" text-anchor="middle" class="mini">HyperDX via Caddy :8081</text>
+<rect x="1340" y="330" width="220" height="115" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="1450" y="366" text-anchor="middle" class="h">ClickStack</text><text x="1450" y="394" text-anchor="middle" class="s">ClickHouse telemetry</text><text x="1450" y="420" text-anchor="middle" class="mini">HyperDX UI via Caddy :8081</text>
 
 <path d="M520 247V290H145V330" class="line"/>
 <path d="M550 247V300H395V330" class="line"/>
@@ -51,7 +51,7 @@
 
 <rect x="545" y="505" width="665" height="215" class="group"/><text x="565" y="532" class="h">PostgreSQL Databases</text>
 <rect x="575" y="570" width="180" height="110" fill="#eef5ff" stroke="#2563eb" class="box"/><text x="665" y="610" text-anchor="middle" class="t">sms_api</text><text x="665" y="638" text-anchor="middle" class="mini">Application data</text>
-<rect x="785" y="570" width="180" height="110" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="875" y="610" text-anchor="middle" class="t">sms_api_logs</text><text x="875" y="638" text-anchor="middle" class="mini">Audit + error logs</text>
+<rect x="785" y="570" width="180" height="110" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="875" y="606" text-anchor="middle" class="t">sms_api_logs</text><text x="875" y="632" text-anchor="middle" class="mini">Tenant user activity</text><text x="875" y="652" text-anchor="middle" class="mini">Platform error logs only</text>
 <rect x="995" y="570" width="185" height="110" fill="#effcf3" stroke="#16a34a" class="box"/><text x="1087" y="610" text-anchor="middle" class="t">sms_api_reporting</text><text x="1087" y="638" text-anchor="middle" class="mini">Reports + aggregates</text>
 <path d="M940 445V520H665V570" class="line"/><path d="M940 520H875V570" class="line"/><path d="M940 520H1087V570" class="line"/>
 <path d="M480 622H575" class="dash"/>
