@@ -1,13 +1,15 @@
 using System.Text.Json;
 using Dapper;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using Sms.Application.Messages;
 
 namespace Sms.Infrastructure.Persistence;
 
 public sealed class TenantAiSettingsRepository(
     SqlConnectionFactory connectionFactory,
-    IDistributedCache cache) : ITenantAiSettingsRepository
+    IDistributedCache cache,
+    ILogger<TenantAiSettingsRepository> logger) : ITenantAiSettingsRepository
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -17,7 +19,7 @@ public sealed class TenantAiSettingsRepository(
     public async Task<TenantAiSettings> GetAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
         var key = CacheKey(tenantId);
-        var cached = await cache.GetStringAsync(key, cancellationToken);
+        var cached = await GetCachedAsync(key, cancellationToken);
         if (!string.IsNullOrWhiteSpace(cached))
         {
             var value = JsonSerializer.Deserialize<TenantAiSettings>(cached, JsonOptions);
@@ -30,7 +32,7 @@ public sealed class TenantAiSettingsRepository(
             new { TenantId = tenantId }, cancellationToken: cancellationToken))
             ?? new(DefaultImprovePrompt, DefaultValidatePrompt);
 
-        await cache.SetStringAsync(key, JsonSerializer.Serialize(settings, JsonOptions), cancellationToken);
+        await SetCachedAsync(key, JsonSerializer.Serialize(settings, JsonOptions), cancellationToken);
         return settings;
     }
 
@@ -42,7 +44,31 @@ public sealed class TenantAiSettingsRepository(
             new { TenantId = tenantId, settings.ImprovePrompt, settings.ValidatePrompt, UpdatedAt = DateTimeOffset.UtcNow },
             cancellationToken: cancellationToken));
 
-        await cache.RemoveAsync(CacheKey(tenantId), CancellationToken.None);
+        await RemoveCachedAsync(CacheKey(tenantId));
+    }
+
+    private async Task<string?> GetCachedAsync(string key, CancellationToken cancellationToken)
+    {
+        try { return await cache.GetStringAsync(key, cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to read tenant settings from distributed cache.");
+            return null;
+        }
+    }
+
+    private async Task SetCachedAsync(string key, string value, CancellationToken cancellationToken)
+    {
+        try { await cache.SetStringAsync(key, value, cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception exception) { logger.LogError(exception, "Failed to write tenant settings to distributed cache."); }
+    }
+
+    private async Task RemoveCachedAsync(string key)
+    {
+        try { await cache.RemoveAsync(key, CancellationToken.None); }
+        catch (Exception exception) { logger.LogError(exception, "Failed to invalidate tenant settings in distributed cache."); }
     }
 
     private static string CacheKey(Guid tenantId) => $"tenant-config:ai:{tenantId:N}";
