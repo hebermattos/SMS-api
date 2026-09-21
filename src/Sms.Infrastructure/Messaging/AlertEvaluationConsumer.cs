@@ -1,27 +1,31 @@
 using Dapper;
 using MassTransit;
+using Sms.Application.Alerts;
 using Sms.Infrastructure.Persistence;
 
 namespace Sms.Infrastructure.Messaging;
 
-public sealed class AlertEvaluationConsumer(SqlConnectionFactory connectionFactory) : IConsumer<AlertEvaluationEvent>
+public sealed class AlertEvaluationConsumer(
+    ReportingSqlConnectionFactory reportingConnectionFactory,
+    IAlertRepository alerts) : IConsumer<AlertEvaluationEvent>
 {
     public async Task Consume(ConsumeContext<AlertEvaluationEvent> context)
     {
         var message = context.Message;
-        using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction(System.Data.IsolationLevel.Serializable);
+        using var connection = reportingConnectionFactory.CreateConnection();
 
-        var inserted = await connection.ExecuteAsync(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationConsumer.Consume.01.sql"), new { message.EventId }, transaction, cancellationToken: context.CancellationToken));
-        if (inserted == 0) { transaction.Commit(); return; }
+        var inserted = await connection.ExecuteAsync(new CommandDefinition(
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationConsumer.Consume.01.sql"),
+            new { message.EventId, message.TenantId, message.Provider, message.Status, message.OccurredAtUtc },
+            cancellationToken: context.CancellationToken));
 
-        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationConsumer.Consume.02.sql");
-        await connection.ExecuteAsync(new CommandDefinition(sql, new
-        {
-            TenantId = message.TenantId, Provider = message.Provider, Status = message.Status,
-            OccurredAtUtc = message.OccurredAtUtc
-        }, transaction, cancellationToken: context.CancellationToken));
-        transaction.Commit();
+        await connection.ExecuteAsync(new CommandDefinition(
+            Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationConsumer.Consume.02.sql"),
+            cancellationToken: context.CancellationToken));
+
+        if (inserted == 0) return;
+
+        await alerts.EvaluateAsync(
+            message.TenantId, message.Status, message.Provider, message.OccurredAtUtc, context.CancellationToken);
     }
 }
