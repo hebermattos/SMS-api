@@ -7,6 +7,7 @@ using Sms.Application.Administration;
 using Sms.Application.Auth;
 using Sms.Application.Providers;
 using Sms.Infrastructure.Persistence;
+using Sms.Infrastructure.Caching;
 using Sms.Infrastructure.Providers;
 using Sms.Infrastructure.Security;
 
@@ -30,7 +31,7 @@ public sealed class AdministrationSqlTests
         var configurationCache = TenantConfigurationCacheTestFactory.Create(factory);
         var repository = new AdministrationRepository(factory, protector, configurationCache);
         var providers = new TenantSmsProviderRepository(factory, protector, configurationCache);
-        var service = new AdministrationService(repository, providers, [new TwilioSettingsPolicy(), new BandwidthSettingsPolicy()], new AdministrationServiceTests.TestProviderCatalogCache(), new TenantRateLimitRepository(factory, new TenantConfigurationCacheTestFactory.TestDistributedCache(), NullLogger<TenantRateLimitRepository>.Instance));
+        var service = new AdministrationService(repository, providers, [new TwilioSettingsPolicy(), new BandwidthSettingsPolicy()], new AdministrationServiceTests.TestProviderCatalogCache(), new TenantRateLimitRepository(factory, new ResilientDistributedCache(new TenantConfigurationCacheTestFactory.TestDistributedCache(), NullLogger<ResilientDistributedCache>.Instance)));
         var credentials = new ApiClientRepository(factory, configurationCache);
         var tenant = Guid.NewGuid(); var other = Guid.NewGuid(); var account = Guid.NewGuid().ToString("N");
         using var connection = new NpgsqlConnection(configuration.GetConnectionString("Postgres"));
