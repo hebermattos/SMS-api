@@ -5,8 +5,7 @@ using Sms.Domain.Messages;
 namespace Sms.Infrastructure.Persistence;
 
 public sealed class AlertRepository(
-    SqlConnectionFactory connectionFactory,
-) : IAlertRepository
+    SqlConnectionFactory connectionFactory) : IAlertRepository
 {
     public async Task<IReadOnlyList<AlertRule>> ListRulesAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
