@@ -25,14 +25,14 @@
 <path d="M207 550V530H525" class="dash"/><text x="335" y="545" class="mini">provider configuration</text>
 
 <rect x="35" y="675" width="980" height="330" class="group"/><text x="55" y="707" class="h">Alerts and evaluation</text>
-<rect x="70" y="750" width="235" height="100" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="187" y="782" text-anchor="middle" class="t">AlertRules</text><text x="187" y="807" text-anchor="middle" class="mini">PK Id · FK TenantId</text><text x="187" y="827" text-anchor="middle" class="mini">Provider · Status · Threshold · Window</text>
-<rect x="380" y="750" width="235" height="100" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="497" y="782" text-anchor="middle" class="t">Alerts</text><text x="497" y="807" text-anchor="middle" class="mini">PK Id · FK TenantId · FK RuleId</text><text x="497" y="827" text-anchor="middle" class="mini">Status · MatchCount · IsRead</text>
-<rect x="690" y="750" width="280" height="100" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="830" y="782" text-anchor="middle" class="t">AlertStatusCounters</text><text x="830" y="807" text-anchor="middle" class="mini">FK TenantId · Provider · Status</text><text x="830" y="827" text-anchor="middle" class="mini">BucketStartUtc · MessageCount</text>
+<rect x="70" y="750" width="235" height="100" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="187" y="782" text-anchor="middle" class="t">AlertRules</text><text x="187" y="807" text-anchor="middle" class="mini">PK Id · FK TenantId</text><text x="187" y="827" text-anchor="middle" class="mini">Provider? · Status · WindowMinutes · IsActive</text>
+<rect x="380" y="750" width="235" height="100" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="497" y="782" text-anchor="middle" class="t">Alerts</text><text x="497" y="807" text-anchor="middle" class="mini">PK Id · FK TenantId · FK RuleId</text><text x="497" y="827" text-anchor="middle" class="mini">EventId · Status · MatchCount · IsRead</text>
+<rect x="690" y="750" width="280" height="100" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="830" y="782" text-anchor="middle" class="t">RabbitMQ rule queue</text><text x="830" y="807" text-anchor="middle" class="mini">sms.alert.rule-evaluation</text><text x="830" y="827" text-anchor="middle" class="mini">one candidate rule per message</text>
 <rect x="175" y="890" width="285" height="90" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="317" y="922" text-anchor="middle" class="t">AlertEvaluationOutbox</text><text x="317" y="947" text-anchor="middle" class="mini">PK Id · FK TenantId · Status · PublishedAtUtc</text>
-<rect x="555" y="890" width="285" height="90" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="697" y="922" text-anchor="middle" class="t">AlertEvaluationInbox</text><text x="697" y="947" text-anchor="middle" class="mini">PK EventId · ProcessedAtUtc</text>
+<rect x="555" y="890" width="285" height="90" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="697" y="922" text-anchor="middle" class="t">AlertRuleEvaluationConsumer</text><text x="697" y="947" text-anchor="middle" class="mini">loads one rule · queries 24h read model</text>
 <path d="M305 800H380" class="line"/><text x="342" y="788" text-anchor="middle" class="mini">triggers</text>
-<path d="M830 850V870H317V890" class="dash"/><text x="580" y="870" text-anchor="middle" class="mini">evaluation pipeline</text>
-<path d="M460 935H555" class="dash"/><text x="507" y="923" text-anchor="middle" class="mini">consume</text>
+<path d="M830 850V870H317V890" class="dash"/><text x="580" y="870" text-anchor="middle" class="mini">sms.alert.evaluation</text>
+<path d="M460 935H555" class="dash"/><text x="507" y="923" text-anchor="middle" class="mini">one rule / message</text>
 
 <rect x="1050" y="675" width="515" height="330" class="group"/><text x="1070" y="707" class="h">Reporting projection pipeline</text>
 <rect x="1090" y="755" width="435" height="105" fill="#effcf3" stroke="#16a34a" class="box"/><text x="1307" y="787" text-anchor="middle" class="t">TenantSmsOverviewOutbox</text><text x="1307" y="812" text-anchor="middle" class="mini">PK SequenceNumber · UK EventId · FK TenantId</text><text x="1307" y="832" text-anchor="middle" class="mini">UserId · deltas · OccurredAtUtc · PublishedAtUtc</text>
@@ -40,7 +40,7 @@
 
 <rect x="35" y="1040" width="1530" height="125" class="group"/><text x="55" y="1072" class="h">Standalone and relationship notes</text>
 <rect x="80" y="1095" width="300" height="45" fill="#f8fafc" stroke="#64748b" class="box"/><text x="230" y="1123" text-anchor="middle" class="t">PortalUsers</text>
-<text x="420" y="1110" class="s">No foreign keys in the current schema.</text><text x="420" y="1135" class="mini">All tenant-owned tables reference Tenants directly or through composite message/rule relationships.</text>
+<text x="420" y="1110" class="s">Alert idempotency: UNIQUE (TenantId, RuleId, EventId).</text><text x="420" y="1135" class="mini">AlertMessageWindow is a temporary reporting read model retained for 24 hours.</text>
 
 <path d="M180 270V320H1450V365H1220V410" class="line"/><path d="M187 320V410" class="line"/><path d="M525 320V395" class="line"/><path d="M207 320V550" class="line"/>
 <path d="M460 270V345H525V395" class="line"/>
@@ -53,7 +53,7 @@
 <rect x="655" y="1260" width="245" height="100" fill="#effcf3" stroke="#16a34a" class="box"/><text x="777" y="1292" text-anchor="middle" class="t">TenantSmsDailyOverview</text><text x="777" y="1317" text-anchor="middle" class="mini">PK ReportDate + TenantId</text><text x="777" y="1337" text-anchor="middle" class="mini">Daily status + direction aggregates</text>
 <rect x="945" y="1260" width="260" height="100" fill="#effcf3" stroke="#16a34a" class="box"/><text x="1075" y="1292" text-anchor="middle" class="t">ProviderSmsDailyOverview</text><text x="1075" y="1317" text-anchor="middle" class="mini">PK ReportDate + TenantId + Provider</text><text x="1075" y="1337" text-anchor="middle" class="mini">Daily provider aggregates</text>
 <rect x="1250" y="1260" width="260" height="100" fill="#effcf3" stroke="#16a34a" class="box"/><text x="1380" y="1292" text-anchor="middle" class="t">UserSmsOverview</text><text x="1380" y="1317" text-anchor="middle" class="mini">PK TenantId + UserId + ReportDate</text><text x="1380" y="1337" text-anchor="middle" class="mini">Daily user aggregates</text>
-<rect x="365" y="1390" width="245" height="70" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="487" y="1420" text-anchor="middle" class="t">TenantSmsOverviewInbox</text><text x="487" y="1442" text-anchor="middle" class="mini">PK EventId · idempotency</text>
+<rect x="365" y="1390" width="245" height="70" fill="#f6efff" stroke="#7c3aed" class="box"/><text x="487" y="1420" text-anchor="middle" class="t">TenantSmsOverviewInbox</text><text x="487" y="1442" text-anchor="middle" class="mini">PK EventId · idempotency</text><rect x="945" y="1390" width="360" height="70" fill="#fff0f2" stroke="#ef476f" class="box"/><text x="1125" y="1420" text-anchor="middle" class="t">AlertMessageWindow</text><text x="1125" y="1442" text-anchor="middle" class="mini">PK EventId · TenantId · Provider · Status · ExpiresAtUtc (24h)</text>
 <path d="M320 1310H365" class="line"/><path d="M320 1325H655" class="dash"/><path d="M320 1340H945" class="dash"/><path d="M320 1355H1250" class="dash"/>
-<text x="790" y="1480" text-anchor="middle" class="mini">Projection flow: SmsMessages → TenantSmsOverviewOutbox → RabbitMQ → Worker → ReportingSmsMessages → aggregates</text>
+<text x="790" y="1480" text-anchor="middle" class="mini">Reports: SmsMessages → outbox → RabbitMQ → Worker → reporting aggregates · Alerts: event → AlertMessageWindow → one queued message per rule → Alerts</text>
 </svg>
