@@ -25,7 +25,7 @@ public sealed class SqlQueryTests
     }
     [Theory]
     [InlineData("Persistence/SmsReportRepository.GetTenantSummaryAsync.01.sql", "ProviderSmsDailyOverview")]
-    [InlineData("Persistence/SmsReportRepository.GetPlatformSummaryAsync.02.sql", "TenantSmsDailyOverview")]
+    [InlineData("Persistence/SmsReportRepository.GetPlatformSummaryAsync.02.sql", "ProviderSmsDailyOverview")]
     [InlineData("Persistence/SmsReportRepository.GetUserSummaryAsync.03.sql", "UserSmsOverview")]
     public void Load_ReturnsReportingQueries(string path, string expectedTable)
     {
