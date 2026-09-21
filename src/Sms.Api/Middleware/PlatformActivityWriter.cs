@@ -48,7 +48,7 @@ public sealed class PostgresPlatformActivityWriter(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Could not persist platform activity audit record.");
+            logger.LogError(exception, "Could not persist platform activity {Action} for user {UserId}, resource {ResourceType} {ResourceId}.", activity.Action, activity.UserId, activity.ResourceType, activity.ResourceId);
         }
     }
 }

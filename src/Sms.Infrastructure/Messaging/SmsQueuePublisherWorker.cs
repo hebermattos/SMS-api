@@ -54,7 +54,7 @@ public sealed class SmsQueuePublisherWorker(
             catch (Exception exception)
             {
                 await source.ReleaseAsync(row, cancellationToken);
-                logger.LogError(exception, "Failed to publish SMS message {MessageId}.", row.MessageId);
+                logger.LogError(exception, "Failed to publish SMS message {MessageId} for tenant {TenantId}.", row.MessageId, row.TenantId);
             }
         }
 
