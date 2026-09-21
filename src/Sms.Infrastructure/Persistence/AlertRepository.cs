@@ -6,7 +6,7 @@ namespace Sms.Infrastructure.Persistence;
 
 public sealed class AlertRepository(
     SqlConnectionFactory connectionFactory,
-    ReportingSqlConnectionFactory reportingConnectionFactory) : IAlertRepository
+) : IAlertRepository
 {
     public async Task<IReadOnlyList<AlertRule>> ListRulesAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
@@ -63,25 +63,11 @@ public sealed class AlertRepository(
         var rules = (await ListRulesAsync(tenantId, cancellationToken))
             .Where(r => r.IsActive && r.Status == status && (r.Provider is null || r.Provider == provider));
 
-        var countSql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AlertRepository.EvaluateAsync.05.sql");
         var fireSql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AlertRepository.FireAsync.09.sql");
-
-        using var reporting = reportingConnectionFactory.CreateConnection();
         using var application = connectionFactory.CreateConnection();
 
         foreach (var rule in rules)
         {
-            var matchCount = await reporting.ExecuteScalarAsync<int>(new CommandDefinition(countSql, new
-            {
-                TenantId = tenantId,
-                Status = status,
-                Provider = rule.Provider,
-                WindowMinutes = rule.WindowMinutes,
-                OccurredAtUtc = occurredAtUtc
-            }, cancellationToken: cancellationToken));
-
-            if (matchCount == 0) continue;
-
             await application.ExecuteAsync(new CommandDefinition(fireSql, new
             {
                 TenantId = tenantId,
@@ -90,7 +76,7 @@ public sealed class AlertRepository(
                 RuleName = rule.Name,
                 Provider = rule.Provider,
                 Status = rule.Status,
-                MatchCount = matchCount,
+                MatchCount = 1,
                 WindowMinutes = rule.WindowMinutes,
                 OccurredAtUtc = occurredAtUtc
             }, cancellationToken: cancellationToken));
