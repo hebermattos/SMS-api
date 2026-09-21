@@ -14,7 +14,7 @@ public sealed class AlertEvaluationConsumer(
         var message = context.Message;
         using var connection = reportingConnectionFactory.CreateConnection();
 
-        var inserted = await connection.ExecuteAsync(new CommandDefinition(
+        await connection.ExecuteAsync(new CommandDefinition(
             Sms.Infrastructure.Sql.SqlQuery.Load("Messaging/AlertEvaluationConsumer.Consume.01.sql"),
             new { message.EventId, message.TenantId, message.Provider, message.Status, message.OccurredAtUtc },
             cancellationToken: context.CancellationToken));
