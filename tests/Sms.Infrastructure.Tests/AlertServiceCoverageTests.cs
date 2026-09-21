@@ -95,6 +95,6 @@ public sealed class AlertServiceCoverageTests
         public Task<IReadOnlyList<AlertNotification>> ListAlertsAsync(Guid tenantId, bool unreadOnly, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<AlertNotification>>([]);
         public Task<bool> MarkReadAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default) => Task.FromResult(Found);
         public Task MarkAllReadAsync(Guid tenantId, CancellationToken cancellationToken = default) { MarkAllReadCalled = true; return Task.CompletedTask; }
-        public Task EvaluateAsync(Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task EvaluateAsync(Guid eventId, Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }
