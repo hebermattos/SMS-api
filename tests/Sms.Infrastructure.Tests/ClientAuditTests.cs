@@ -86,6 +86,7 @@ public sealed class ClientAuditTests
             new Claim("tenant_id", tenant.ToString()), new Claim("sub", "client-1")], "test"));
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(
             new ControllerActionDescriptor { ControllerName = controller, ActionName = action }), "activity"));
+        context.Request.Method = action.StartsWith("Get") || action is "List" or "Rules" or "Sms" ? "GET" : "POST";
         var logger = new Recorder<RequestAuditMiddleware>();
 
         await RunPipelineAsync(context, c =>
@@ -97,6 +98,33 @@ public sealed class ClientAuditTests
         Assert.StartsWith(expected, logger.Message);
         Assert.Equal(expected, logger.Values["Activity"]);
         Assert.Equal(status, logger.Values["StatusCode"]);
+    }
+
+    [Fact]
+    public async Task UnknownGetIsNotRecordedAsUserActivity()
+    {
+        var context = new DefaultHttpContext();
+        var tenant = Guid.NewGuid();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("tenant_id", tenant.ToString()), new Claim("sub", "client-1")], "test"));
+        context.Request.Method = "GET";
+        context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "NewPage", ActionName = "Get" }), "activity"));
+        var logger = new Recorder<RequestAuditMiddleware>();
+        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(logger));
+        Assert.Empty(logger.Values);
+    }
+
+    [Fact]
+    public async Task UnknownWriteIsStillRecorded()
+    {
+        var context = new DefaultHttpContext();
+        var tenant = Guid.NewGuid();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("tenant_id", tenant.ToString()), new Claim("sub", "client-1")], "test"));
+        context.Request.Method = "PUT";
+        context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "NewFeature", ActionName = "Save" }), "activity"));
+        var logger = new Recorder<RequestAuditMiddleware>();
+        await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(logger));
+        Assert.Equal("Updated account data.", logger.Values["Activity"]);
+        Assert.Equal("DataChange", logger.Values["ActivityType"]?.ToString());
     }
 
     [Theory]
