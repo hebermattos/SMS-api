@@ -23,7 +23,7 @@ UPDATE TenantSmsDailyOverview d SET
     Outbound=d.Outbound-CASE WHEN m.Direction=1 THEN 1 ELSE 0 END,
     Inbound=d.Inbound-CASE WHEN m.Direction=2 THEN 1 ELSE 0 END,
     Pending=d.Pending-CASE WHEN m.Status=1 THEN 1 ELSE 0 END,
-    UpdatedAtUtc=@OccurredAtUtc
+    UpdatedAtUtc=GREATEST(d.UpdatedAtUtc, @OccurredAtUtc)
 FROM ReportingSmsMessages m
 WHERE m.MessageId=@MessageId AND @OccurredAtUtc>=m.UpdatedAtUtc
   AND d.ReportDate=CAST(m.CreatedAtUtc AT TIME ZONE 'UTC' AS date) AND d.TenantId=m.TenantId;
@@ -39,7 +39,7 @@ UPDATE ProviderSmsDailyOverview d SET
     Outbound=d.Outbound-CASE WHEN m.Direction=1 THEN 1 ELSE 0 END,
     Inbound=d.Inbound-CASE WHEN m.Direction=2 THEN 1 ELSE 0 END,
     Pending=d.Pending-CASE WHEN m.Status=1 THEN 1 ELSE 0 END,
-    UpdatedAtUtc=@OccurredAtUtc
+    UpdatedAtUtc=GREATEST(d.UpdatedAtUtc, @OccurredAtUtc)
 FROM ReportingSmsMessages m
 WHERE m.MessageId=@MessageId AND @OccurredAtUtc>=m.UpdatedAtUtc
   AND d.ReportDate=CAST(m.CreatedAtUtc AT TIME ZONE 'UTC' AS date) AND d.TenantId=m.TenantId AND d.Provider=m.Provider;
@@ -55,7 +55,7 @@ UPDATE UserSmsOverview d SET
     Outbound=d.Outbound-CASE WHEN m.Direction=1 THEN 1 ELSE 0 END,
     Inbound=d.Inbound-CASE WHEN m.Direction=2 THEN 1 ELSE 0 END,
     Pending=d.Pending-CASE WHEN m.Status=1 THEN 1 ELSE 0 END,
-    UpdatedAtUtc=@OccurredAtUtc
+    UpdatedAtUtc=GREATEST(d.UpdatedAtUtc, @OccurredAtUtc)
 FROM ReportingSmsMessages m
 WHERE m.MessageId=@MessageId AND @OccurredAtUtc>=m.UpdatedAtUtc AND m.UserId IS NOT NULL
   AND d.ReportDate=CAST(m.CreatedAtUtc AT TIME ZONE 'UTC' AS date) AND d.TenantId=m.TenantId AND d.UserId=m.UserId;
@@ -83,9 +83,9 @@ SELECT CAST(CreatedAtUtc AT TIME ZONE 'UTC' AS date),TenantId,TenantName,1,
     CASE WHEN Status=2 THEN 1 ELSE 0 END,CASE WHEN Status=3 THEN 1 ELSE 0 END,
     CASE WHEN Status=4 THEN 1 ELSE 0 END,CASE WHEN Status=5 THEN 1 ELSE 0 END,
     CASE WHEN Direction=1 THEN 1 ELSE 0 END,CASE WHEN Direction=2 THEN 1 ELSE 0 END,
-    CASE WHEN Status=1 THEN 1 ELSE 0 END,@OccurredAtUtc
+    CASE WHEN Status=1 THEN 1 ELSE 0 END,UpdatedAtUtc
 FROM ReportingSmsMessages
-WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc
+WHERE MessageId=@MessageId AND UpdatedAtUtc>=@OccurredAtUtc
   AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction AND QueueStatus=@QueueStatus AND Status=@Status
 ON CONFLICT (ReportDate,TenantId) DO UPDATE SET
     TenantName=EXCLUDED.TenantName,TotalMessages=TenantSmsDailyOverview.TotalMessages+1,
@@ -102,9 +102,9 @@ SELECT CAST(CreatedAtUtc AT TIME ZONE 'UTC' AS date),TenantId,TenantName,Provide
     CASE WHEN Status=2 THEN 1 ELSE 0 END,CASE WHEN Status=3 THEN 1 ELSE 0 END,
     CASE WHEN Status=4 THEN 1 ELSE 0 END,CASE WHEN Status=5 THEN 1 ELSE 0 END,
     CASE WHEN Direction=1 THEN 1 ELSE 0 END,CASE WHEN Direction=2 THEN 1 ELSE 0 END,
-    CASE WHEN Status=1 THEN 1 ELSE 0 END,@OccurredAtUtc
+    CASE WHEN Status=1 THEN 1 ELSE 0 END,UpdatedAtUtc
 FROM ReportingSmsMessages
-WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc
+WHERE MessageId=@MessageId AND UpdatedAtUtc>=@OccurredAtUtc
   AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction AND QueueStatus=@QueueStatus AND Status=@Status
 ON CONFLICT (ReportDate,TenantId,Provider) DO UPDATE SET
     TenantName=EXCLUDED.TenantName,TotalMessages=ProviderSmsDailyOverview.TotalMessages+1,
@@ -121,9 +121,9 @@ SELECT TenantId,UserId,COALESCE(Username,''),CAST(CreatedAtUtc AT TIME ZONE 'UTC
     CASE WHEN Status=2 THEN 1 ELSE 0 END,CASE WHEN Status=3 THEN 1 ELSE 0 END,
     CASE WHEN Status=4 THEN 1 ELSE 0 END,CASE WHEN Status=5 THEN 1 ELSE 0 END,
     CASE WHEN Direction=1 THEN 1 ELSE 0 END,CASE WHEN Direction=2 THEN 1 ELSE 0 END,
-    CASE WHEN Status=1 THEN 1 ELSE 0 END,@OccurredAtUtc
+    CASE WHEN Status=1 THEN 1 ELSE 0 END,UpdatedAtUtc
 FROM ReportingSmsMessages
-WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc AND UserId IS NOT NULL
+WHERE MessageId=@MessageId AND UpdatedAtUtc>=@OccurredAtUtc AND UserId IS NOT NULL
   AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction AND QueueStatus=@QueueStatus AND Status=@Status
 ON CONFLICT (TenantId,UserId,ReportDate) DO UPDATE SET
     Username=EXCLUDED.Username,TotalMessages=UserSmsOverview.TotalMessages+1,
