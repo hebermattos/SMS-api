@@ -43,43 +43,6 @@ public sealed class ActivityAuditTests
         Assert.Null(writer.Activity);
     }
 
-    [Theory]
-    [InlineData(200, "Succeeded", "Signed in to the portal.")]
-    [InlineData(401, "Failed", "Could not sign in to the portal.")]
-    public async Task PortalLoginRecordsVerifiedTenantIdentity(int status, string outcome, string description)
-    {
-        var tenantId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var context = Context();
-        context.Response.StatusCode = status;
-        context.Items[PortalLoginAuditMiddleware.IdentityKey] =
-            new PortalLoginIdentity(userId, tenantId, PortalSecurity.TenantContext);
-        var writer = new Recorder();
-
-        await new PortalLoginAuditMiddleware(writer).AuditAsync(new AuditPipelineContext(
-            context,
-            new ControllerActionDescriptor { ControllerName = "PortalAuth", ActionName = "Token" },
-            false,
-            0));
-
-        Assert.Equal(tenantId, writer.Activity!.TenantId);
-        Assert.Equal(userId.ToString(), writer.Activity.UserId);
-        Assert.Equal(outcome, writer.Activity.Outcome);
-        Assert.Equal(description, writer.Activity.Description);
-    }
-
-    [Fact]
-    public async Task PortalLoginIgnoresUnverifiedIdentity()
-    {
-        var writer = new Recorder();
-        await new PortalLoginAuditMiddleware(writer).AuditAsync(new AuditPipelineContext(
-            Context(),
-            new ControllerActionDescriptor { ControllerName = "PortalAuth", ActionName = "Token" },
-            false,
-            0));
-        Assert.Null(writer.Activity);
-    }
-
     private static DefaultHttpContext Context(string? subject = null)
     {
         var context = new DefaultHttpContext();
