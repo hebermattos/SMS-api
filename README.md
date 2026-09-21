@@ -134,7 +134,7 @@ The provider is selected per request. All providers implement `ISmsProvider`, wh
 - **Twilio:** signed callbacks using `X-Twilio-Signature`.
 - **Bandwidth:** OAuth 2.0 Client Credentials and authenticated callbacks. OAuth access tokens are cached in Redis until shortly before their reported expiration.
 
-Tenant configuration is also cached in Redis. Tenant metadata, time zone, API-client authentication data, and SMS-provider configuration have no time-based cache expiration and are invalidated only after a persisted configuration change. Provider secrets remain encrypted while cached.
+Tenant configuration is also cached in Redis. Tenant metadata, time zone, API-client authentication data, SMS-provider configuration, rate-limit settings, and AI/Ollama prompts have no time-based cache expiration and are invalidated only after a persisted configuration change. Provider secrets remain encrypted while cached.
 
 Immediate messages are queued through RabbitMQ/MassTransit. Scheduled messages are stored in UTC and queued when due.
 
