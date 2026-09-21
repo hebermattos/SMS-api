@@ -15,8 +15,15 @@ public sealed class ProviderCatalogCache(
         var cached = await cache.GetStringAsync(CacheKey, "ProviderCatalog", null, cancellationToken);
         if (!string.IsNullOrWhiteSpace(cached))
         {
-            var definitions = JsonSerializer.Deserialize<ProviderDefinition[]>(cached, JsonOptions);
-            if (definitions is not null) return definitions;
+            try
+            {
+                var definitions = JsonSerializer.Deserialize<ProviderDefinition[]>(cached, JsonOptions);
+                if (definitions is not null) return definitions;
+            }
+            catch (JsonException)
+            {
+                // Treat invalid cached data as a cache miss and rebuild it from provider policies.
+            }
         }
 
         var catalog = policies.Select(policy => policy.Definition).ToArray();
