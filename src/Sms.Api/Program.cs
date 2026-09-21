@@ -57,7 +57,10 @@ builder.Services.AddScoped<IAuditPipelineStep, ClientLoginAuditMiddleware>();
 builder.Services.AddScoped<IAuditPipelineStep, PortalLoginAuditMiddleware>();
 builder.Services.AddScoped<IAuditPipelineStep, PlatformAuditMiddleware>();
 builder.Services.AddScoped<IAuditPipelineStep, RequestAuditMiddleware>();
-builder.Services.AddScoped<IUserActivityWriter>(_ => new PostgresUserActivityWriter(logsConnectionString, TimeProvider.System));
+builder.Services.AddScoped<IUserActivityWriter>(services => new PostgresUserActivityWriter(
+    logsConnectionString,
+    services.GetRequiredService<TimeProvider>(),
+    services.GetRequiredService<ILogger<PostgresUserActivityWriter>>()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddHttpContextAccessor();

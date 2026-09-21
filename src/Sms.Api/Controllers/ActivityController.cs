@@ -13,7 +13,7 @@ public sealed record PageActivityRequest(string Page);
 [Route("api/v1/activity")]
 public sealed class ActivityController(
     ITenantContext tenant,
-    ILogger<RequestAuditMiddleware> logger) : ControllerBase
+    IUserActivityWriter activities) : ControllerBase
 {
     private static readonly IReadOnlyDictionary<string, string> Pages =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -30,18 +30,21 @@ public sealed class ActivityController(
         };
 
     [HttpPost("page")]
-    public IActionResult Page([FromBody] PageActivityRequest request)
+    public async Task<IActionResult> Page([FromBody] PageActivityRequest request)
     {
         if (!Pages.TryGetValue(request.Page, out var page))
             return BadRequest(new { error = "Unknown page." });
 
-        logger.LogInformation(
-            "Opened {Page}. Activity type {ActivityType}. Outcome: {Outcome}. User {ActorId}, tenant {TenantId}.",
-            page,
-            UserActivityKind.PageView.ToString(),
-            "Succeeded",
+        await activities.WriteAsync(new UserActivity(
+            tenant.TenantId,
             User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"),
-            tenant.TenantId);
+            UserActivityKind.PageView.ToString(),
+            "PageOpened",
+            "Page",
+            request.Page,
+            $"Opened {page}.",
+            "Succeeded"),
+            HttpContext.RequestAborted);
 
         return NoContent();
     }

@@ -18,7 +18,7 @@ public sealed record UserActivity(
     string Description,
     string Outcome);
 
-public sealed class PostgresUserActivityWriter(string connectionString, TimeProvider timeProvider) : IUserActivityWriter
+public sealed class PostgresUserActivityWriter(string connectionString, TimeProvider timeProvider, ILogger<PostgresUserActivityWriter> logger) : IUserActivityWriter
 {
     private const string Sql = """
         INSERT INTO UserActivityLogs
@@ -29,18 +29,25 @@ public sealed class PostgresUserActivityWriter(string connectionString, TimeProv
 
     public async Task WriteAsync(UserActivity activity, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(connectionString);
-        await connection.ExecuteAsync(new CommandDefinition(Sql, new
+        try
         {
-            Timestamp = timeProvider.GetUtcNow(),
-            activity.TenantId,
-            activity.UserId,
-            activity.ActivityType,
-            activity.Action,
-            activity.ResourceType,
-            activity.ResourceId,
-            activity.Description,
-            activity.Outcome
-        }, cancellationToken: cancellationToken));
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.ExecuteAsync(new CommandDefinition(Sql, new
+            {
+                Timestamp = timeProvider.GetUtcNow(),
+                activity.TenantId,
+                activity.UserId,
+                activity.ActivityType,
+                activity.Action,
+                activity.ResourceType,
+                activity.ResourceId,
+                activity.Description,
+                activity.Outcome
+            }, cancellationToken: cancellationToken));
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Could not persist user activity audit record.");
+        }
     }
 }
