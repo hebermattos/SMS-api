@@ -43,6 +43,38 @@ public sealed class ActivityAuditTests
         Assert.Null(writer.Activity);
     }
 
+
+    [Fact]
+    public async Task TenantPortalLogoutRecordsAuditActivity()
+    {
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var writer = new Recorder();
+        var context = Context(userId.ToString());
+        context.User = new ClaimsPrincipal(new ClaimsIdentity([
+            new Claim("sub", userId.ToString()),
+            new Claim("tenant_id", tenantId.ToString()),
+            new Claim(PortalSecurity.ContextClaim, PortalSecurity.TenantContext)
+        ], "test"));
+        context.SetEndpoint(new Endpoint(_ => Task.CompletedTask,
+            new EndpointMetadataCollection(new ControllerActionDescriptor
+            {
+                ControllerName = "PortalAuth",
+                ActionName = "Logout"
+            }), "test"));
+
+        await new AuditPipelineMiddleware(c =>
+        {
+            c.Response.StatusCode = StatusCodes.Status204NoContent;
+            return Task.CompletedTask;
+        }).InvokeAsync(context, [new PortalLoginAuditMiddleware(writer)]);
+
+        Assert.Equal(tenantId, writer.Activity!.TenantId);
+        Assert.Equal(userId.ToString(), writer.Activity.UserId);
+        Assert.Equal("PortalSignedOut", writer.Activity.Action);
+        Assert.Equal("Succeeded", writer.Activity.Outcome);
+    }
+
     private static DefaultHttpContext Context(string? subject = null)
     {
         var context = new DefaultHttpContext();
