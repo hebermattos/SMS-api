@@ -44,6 +44,7 @@ public sealed class AlertsControllerTests
         public Task<IReadOnlyList<AlertNotification>> ListAlertsAsync(Guid tenantId, bool unreadOnly, int skip, int take, CancellationToken cancellationToken = default) { TenantId = tenantId; return Task.FromResult<IReadOnlyList<AlertNotification>>([]); }
         public Task<bool> MarkReadAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default) { TenantId = tenantId; return Task.FromResult(true); }
         public Task MarkAllReadAsync(Guid tenantId, CancellationToken cancellationToken = default) { TenantId = tenantId; return Task.CompletedTask; }
-        public Task ProcessEventAsync(Guid eventId, Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<AlertRule?> GetRuleAsync(Guid tenantId, Guid ruleId, CancellationToken cancellationToken = default) => Task.FromResult<AlertRule?>(Rule);
+        public Task EvaluateRuleAsync(Guid eventId, Guid ruleId, Guid tenantId, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }
