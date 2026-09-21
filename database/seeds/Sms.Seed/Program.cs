@@ -9,25 +9,15 @@ using Sms.Application.Auth;
 
 var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 var connectionFactory = new SqlConnectionFactory(configuration);
-var administrators = new AdministratorRepository(connectionFactory);
+var portalUsers = new PortalUserRepository(connectionFactory);
+var platformUsers = new PortalUserManagementRepository(connectionFactory);
 var username = configuration["Admin:Username"] ?? throw new InvalidOperationException("Admin:Username is required for local bootstrap.");
 var password = configuration["Admin:Password"] ?? throw new InvalidOperationException("Admin:Password is required for local bootstrap.");
 var email = configuration["Admin:Email"] ?? throw new InvalidOperationException("Admin:Email is required for local bootstrap.");
-if (await administrators.GetByUsernameAsync(username.Trim()) is null)
+if (await portalUsers.GetActiveByUsernameAsync(username.Trim(), "platform", null) is null)
 {
-    var allowInsecure = string.Equals(configuration["Admin:AllowInsecureBootstrapPassword"], "true", StringComparison.OrdinalIgnoreCase);
-    if (allowInsecure && !string.IsNullOrWhiteSpace(password) && password.Length < 15)
-    {
-        var salt = RandomNumberGenerator.GetBytes(32);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt,
-            AdministratorAuthenticationService.PasswordIterations, HashAlgorithmName.SHA256, 32);
-        await administrators.CreateAsync(new(Guid.NewGuid(), username.Trim(), email.Trim().ToLowerInvariant(),
-            hash, salt, AdministratorAuthenticationService.PasswordIterations, true));
-    }
-    else
-    {
-        await new AdministratorAuthenticationService(administrators).CreateAsync(username, email, password);
-    }
+    await new PortalUserManagementService(platformUsers)
+        .CreatePlatformUserAsync(username, email, password, "administrator");
 }
 Console.WriteLine("Initial platform administrator is configured. Existing passwords are not overwritten.");
 var configurationCache = new TenantConfigurationCache(
