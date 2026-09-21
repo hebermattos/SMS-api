@@ -8,10 +8,13 @@ public sealed class TenantPortalUserManagementRepository(SqlConnectionFactory co
     : ITenantPortalUserManagementRepository
 {
     public async Task<IReadOnlyList<PortalUserSummary>> ListAsync(
-        Guid tenantId, CancellationToken cancellationToken = default)
+        Guid tenantId, int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null,
+        CancellationToken cancellationToken = default)
     {
         using var connection = connections.CreateConnection();
-        return (await connection.QueryAsync<PortalUserSummary>(new CommandDefinition(Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantPortalUserManagementRepository.ListAsync.01.sql"), new { TenantId = tenantId },
+        return (await connection.QueryAsync<PortalUserSummary>(new CommandDefinition(
+            Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/TenantPortalUserManagementRepository.ListAsync.01.sql"),
+            new { TenantId = tenantId, Skip = skip, Take = take, Search = search, Role = role, IsActive = isActive },
             cancellationToken: cancellationToken))).AsList();
     }
 
