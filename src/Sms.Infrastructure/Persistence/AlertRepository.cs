@@ -1,9 +1,12 @@
 using Dapper;
 using Sms.Application.Alerts;
+using Sms.Domain.Messages;
 
 namespace Sms.Infrastructure.Persistence;
 
-public sealed class AlertRepository(SqlConnectionFactory connectionFactory) : IAlertRepository
+public sealed class AlertRepository(
+    SqlConnectionFactory connectionFactory,
+    ReportingSqlConnectionFactory reportingConnectionFactory) : IAlertRepository
 {
     public async Task<IReadOnlyList<AlertRule>> ListRulesAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
@@ -55,11 +58,41 @@ public sealed class AlertRepository(SqlConnectionFactory connectionFactory) : IA
         await connection.ExecuteAsync(new CommandDefinition(sql, new { TenantId = tenantId }, cancellationToken: cancellationToken));
     }
 
-    public async Task EvaluateAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    public async Task EvaluateAsync(Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default)
     {
-        var sql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AlertRepository.EvaluateAsync.05.sql");
-        using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
-            sql, new { TenantId = tenantId }, cancellationToken: cancellationToken));
+        var rules = (await ListRulesAsync(tenantId, cancellationToken))
+            .Where(r => r.IsActive && r.Status == status && (r.Provider is null || r.Provider == provider));
+
+        var countSql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AlertRepository.EvaluateAsync.05.sql");
+        var fireSql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/AlertRepository.FireAsync.09.sql");
+
+        using var reporting = reportingConnectionFactory.CreateConnection();
+        using var application = connectionFactory.CreateConnection();
+
+        foreach (var rule in rules)
+        {
+            var matchCount = await reporting.ExecuteScalarAsync<int>(new CommandDefinition(countSql, new
+            {
+                TenantId = tenantId,
+                Status = status,
+                Provider = rule.Provider,
+                WindowMinutes = rule.WindowMinutes,
+                OccurredAtUtc = occurredAtUtc
+            }, cancellationToken: cancellationToken));
+
+            if (matchCount == 0) continue;
+
+            await application.ExecuteAsync(new CommandDefinition(fireSql, new
+            {
+                TenantId = tenantId,
+                RuleId = rule.Id,
+                RuleName = rule.Name,
+                Provider = rule.Provider,
+                Status = rule.Status,
+                MatchCount = matchCount,
+                WindowMinutes = rule.WindowMinutes,
+                OccurredAtUtc = occurredAtUtc
+            }, cancellationToken: cancellationToken));
+        }
     }
 }
