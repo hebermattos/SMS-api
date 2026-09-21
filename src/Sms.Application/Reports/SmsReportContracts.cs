@@ -1,12 +1,8 @@
-using Sms.Domain.Messages;
-
-namespace Sms.Application.Reports;
+ namespace Sms.Application.Reports;
 
 public sealed record SmsReportFilter(
     DateTimeOffset? From,
     DateTimeOffset? To,
-    SmsStatus? Status,
-    SmsDirection? Direction,
     string? Provider);
 
 public sealed record SmsReportSummary(
