@@ -184,7 +184,7 @@ OTEL_EXPORTER_OTLP_PROTOCOL
 OTEL_SERVICE_NAME
 ```
 
-`Cache__Enabled` defaults to `true`. Set it to `false` to bypass all Redis-backed caching, including tenant configuration and Bandwidth OAuth tokens; when disabled, the Redis connection string is not required by the API. `Encryption__MasterKey` must be Base64 for exactly 32 bytes. Use HTTPS for real provider callbacks and outside local development. Redis should be reachable only from trusted application infrastructure.
+`Cache__Enabled` defaults to `true`. Set it to `false` to bypass Redis-backed caching, including tenant configuration and Bandwidth OAuth tokens. This setting does **not** disable distributed rate limiting: `ConnectionStrings__Redis` remains required by the API because rate-limit counters are always stored in Redis and shared by all API instances. `Encryption__MasterKey` must be Base64 for exactly 32 bytes. Use HTTPS for real provider callbacks and outside local development. Redis should be reachable only from trusted application infrastructure.
 
 ## Health
 
@@ -193,7 +193,7 @@ OTEL_SERVICE_NAME
 - `postgres.application` — application database; failure makes the API unhealthy.
 - `postgres.observability` — tenant activity and platform error-log database.
 - `postgres.reporting` — reporting database.
-- `redis` — Redis connectivity used by the caches; reports `Healthy` with `Cache is disabled.` when caching is disabled.
+- `redis` — Redis connectivity used by caching and distributed rate limiting. Redis remains an API dependency when `Cache__Enabled=false` because distributed rate-limit counters still use it.
 - `rabbitmq` — RabbitMQ AMQP load-balancer connectivity.
 - `twilio` — Twilio API reachability.
 - `bandwidth` — Bandwidth API reachability.
