@@ -23,7 +23,7 @@ public sealed record NewPortalUser(
 
 public interface IPortalUserManagementRepository
 {
-    Task<IReadOnlyList<PortalUserSummary>> ListPlatformUsersAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PortalUserSummary>> ListPlatformUsersAsync(int skip = 0, int take = 20, string? search = null, string? role = null, bool? isActive = null, CancellationToken cancellationToken = default);
     Task<Guid> CreatePlatformUserAsync(NewPortalUser user, CancellationToken cancellationToken = default);
     Task<bool> SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default);
     Task<bool> ResetPasswordAsync(Guid id, byte[] hash, byte[] salt, int iterations, CancellationToken cancellationToken = default);
