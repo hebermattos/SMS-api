@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sms.Application.Common;
 using Sms.Application.Reports;
-using Sms.Domain.Messages;
 
 namespace Sms.Api.Controllers;
 
@@ -15,14 +14,12 @@ public sealed class ReportsController(ITenantContext tenantContext, ISmsReportRe
     public async Task<SmsReportSummary> Sms(
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
-        [FromQuery] SmsStatus? status,
-        [FromQuery] SmsDirection? direction,
         [FromQuery] string? provider,
         CancellationToken cancellationToken)
     {
         var range = TenantDateRange.ToUtc(timeZones is null ? TimeZoneInfo.Utc : await timeZones.GetAsync(tenantContext.TenantId, cancellationToken), from, to);
         return await reports.GetTenantSummaryAsync(tenantContext.TenantId,
-            new(range.From, range.To, status, direction, NormalizeProvider(provider)), cancellationToken);
+            new(range.From, range.To, NormalizeProvider(provider)), cancellationToken);
     }
 
     [HttpGet("sms/users")]
