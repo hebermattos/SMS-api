@@ -1,7 +1,6 @@
 using Sms.Api.Controllers;
 using Sms.Application.Common;
 using Sms.Application.Reports;
-using Sms.Domain.Messages;
 
 namespace Sms.Infrastructure.Tests;
 
@@ -16,12 +15,10 @@ public sealed class ReportsControllerTests
         var from = new DateTimeOffset(2026, 9, 20, 8, 0, 0, TimeSpan.Zero);
         var to = from.AddHours(1);
 
-        await controller.Sms(from, to, SmsStatus.Delivered, SmsDirection.Outbound, " Twilio ", default);
+        await controller.Sms(from, to, " Twilio ", default);
 
         Assert.Equal(tenant.TenantId, reports.TenantId);
         Assert.Equal("Twilio", reports.Filter!.Provider);
-        Assert.Equal(SmsStatus.Delivered, reports.Filter.Status);
-        Assert.Equal(SmsDirection.Outbound, reports.Filter.Direction);
     }
 
     [Fact]
@@ -30,7 +27,7 @@ public sealed class ReportsControllerTests
         var tenant = new Tenant();
         var reports = new Reports();
         var controller = new ReportsController(tenant, reports);
-        await controller.Sms(null, null, null, null, "  ", default);
+        await controller.Sms(null, null, "  ", default);
         Assert.Null(reports.Filter!.Provider);
     }
 
@@ -56,9 +53,9 @@ public sealed class ReportsControllerTests
         public Guid UserTenantId { get; private set; }
         public SmsReportFilter? Filter { get; private set; }
         public Task<SmsReportSummary> GetTenantSummaryAsync(Guid tenantId, SmsReportFilter filter, CancellationToken cancellationToken = default)
-        { TenantId = tenantId; Filter = filter; return Task.FromResult(new SmsReportSummary(0,0,0,0,0,0,0,0,0,[])); }
+        { TenantId = tenantId; Filter = filter; return Task.FromResult(new SmsReportSummary(0,0,0,0,0,0,0,0,0,0,[])); }
         public Task<PlatformSmsReportSummary> GetPlatformSummaryAsync(SmsReportFilter filter, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new PlatformSmsReportSummary(0, 0, 0, 0, 0, 0, 0, []));
+            Task.FromResult(new PlatformSmsReportSummary(0,0,0,0,0,0,0,0,0,0,[]));
         public Task<IReadOnlyList<UserSmsReportSummary>> GetUserSummaryAsync(Guid tenantId, CancellationToken cancellationToken = default)
         { UserTenantId = tenantId; return Task.FromResult<IReadOnlyList<UserSmsReportSummary>>([]); }
     }

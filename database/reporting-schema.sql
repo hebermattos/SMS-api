@@ -40,35 +40,50 @@ CREATE INDEX IX_ReportingSmsMessages_Tenant_Created
     ON ReportingSmsMessages(TenantId, CreatedAtUtc DESC, MessageId)
     INCLUDE (Provider, Direction, QueueStatus, Status, UserId);
 
-CREATE INDEX IX_ReportingSmsMessages_Created
-    ON ReportingSmsMessages(CreatedAtUtc DESC, MessageId)
-    INCLUDE (TenantId, TenantName, Provider, Direction, QueueStatus, Status);
+CREATE TABLE TenantSmsDailyOverview
+(
+    ReportDate DATE NOT NULL,
+    TenantId UUID NOT NULL,
+    TenantName VARCHAR(200) NOT NULL,
+    TotalMessages BIGINT NOT NULL DEFAULT 0,
+    Scheduled BIGINT NOT NULL DEFAULT 0,
+    Queued BIGINT NOT NULL DEFAULT 0,
+    Sent BIGINT NOT NULL DEFAULT 0,
+    Delivered BIGINT NOT NULL DEFAULT 0,
+    Failed BIGINT NOT NULL DEFAULT 0,
+    Received BIGINT NOT NULL DEFAULT 0,
+    Outbound BIGINT NOT NULL DEFAULT 0,
+    Inbound BIGINT NOT NULL DEFAULT 0,
+    Pending BIGINT NOT NULL DEFAULT 0,
+    UpdatedAtUtc TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (ReportDate, TenantId)
+);
 
-CREATE TABLE SmsDailyOverview
+CREATE INDEX IX_TenantSmsDailyOverview_Tenant_Date
+    ON TenantSmsDailyOverview(TenantId, ReportDate DESC);
+
+CREATE TABLE ProviderSmsDailyOverview
 (
     ReportDate DATE NOT NULL,
     TenantId UUID NOT NULL,
     TenantName VARCHAR(200) NOT NULL,
     Provider VARCHAR(50) NOT NULL,
-    Direction INTEGER NOT NULL,
-    QueueStatus INTEGER NOT NULL,
-    Status INTEGER NOT NULL,
     TotalMessages BIGINT NOT NULL DEFAULT 0,
+    Scheduled BIGINT NOT NULL DEFAULT 0,
+    Queued BIGINT NOT NULL DEFAULT 0,
+    Sent BIGINT NOT NULL DEFAULT 0,
+    Delivered BIGINT NOT NULL DEFAULT 0,
+    Failed BIGINT NOT NULL DEFAULT 0,
+    Received BIGINT NOT NULL DEFAULT 0,
+    Outbound BIGINT NOT NULL DEFAULT 0,
+    Inbound BIGINT NOT NULL DEFAULT 0,
+    Pending BIGINT NOT NULL DEFAULT 0,
     UpdatedAtUtc TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (ReportDate, TenantId, Provider, Direction, QueueStatus, Status),
-    CHECK (Direction IN (1, 2)),
-    CHECK (QueueStatus BETWEEN 1 AND 4),
-    CHECK (Status BETWEEN 1 AND 5),
-    CHECK (TotalMessages >= 0)
+    PRIMARY KEY (ReportDate, TenantId, Provider)
 );
 
-CREATE INDEX IX_SmsDailyOverview_Tenant_Date
-    ON SmsDailyOverview(TenantId, ReportDate DESC)
-    INCLUDE (Provider, Direction, QueueStatus, Status, TotalMessages);
-
-CREATE INDEX IX_SmsDailyOverview_Date
-    ON SmsDailyOverview(ReportDate DESC)
-    INCLUDE (TenantId, TenantName, Provider, Direction, QueueStatus, Status, TotalMessages);
+CREATE INDEX IX_ProviderSmsDailyOverview_Tenant_Date
+    ON ProviderSmsDailyOverview(TenantId, ReportDate DESC, Provider);
 
 CREATE TABLE UserSmsOverview
 (
@@ -77,8 +92,14 @@ CREATE TABLE UserSmsOverview
     Username VARCHAR(200) NOT NULL,
     ReportDate DATE NOT NULL,
     TotalMessages BIGINT NOT NULL DEFAULT 0,
+    Scheduled BIGINT NOT NULL DEFAULT 0,
+    Queued BIGINT NOT NULL DEFAULT 0,
+    Sent BIGINT NOT NULL DEFAULT 0,
     Delivered BIGINT NOT NULL DEFAULT 0,
     Failed BIGINT NOT NULL DEFAULT 0,
+    Received BIGINT NOT NULL DEFAULT 0,
+    Outbound BIGINT NOT NULL DEFAULT 0,
+    Inbound BIGINT NOT NULL DEFAULT 0,
     Pending BIGINT NOT NULL DEFAULT 0,
     UpdatedAtUtc TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (TenantId, UserId, ReportDate)

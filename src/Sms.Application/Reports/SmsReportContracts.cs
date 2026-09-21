@@ -1,12 +1,8 @@
-using Sms.Domain.Messages;
-
-namespace Sms.Application.Reports;
+ namespace Sms.Application.Reports;
 
 public sealed record SmsReportFilter(
     DateTimeOffset? From,
     DateTimeOffset? To,
-    SmsStatus? Status,
-    SmsDirection? Direction,
     string? Provider);
 
 public sealed record SmsReportSummary(
@@ -19,13 +15,21 @@ public sealed record SmsReportSummary(
     long Received,
     long Outbound,
     long Inbound,
+    long Pending,
     IReadOnlyList<SmsReportProviderSummary> ByProvider);
 
 public sealed record SmsReportProviderSummary(
     string Provider,
     long TotalMessages,
+    long Scheduled,
+    long Queued,
+    long Sent,
     long Delivered,
-    long Failed);
+    long Failed,
+    long Received,
+    long Outbound,
+    long Inbound,
+    long Pending);
 
 public sealed record PlatformSmsReportSummary(
     long TotalMessages,
@@ -35,6 +39,9 @@ public sealed record PlatformSmsReportSummary(
     long Delivered,
     long Failed,
     long Received,
+    long Outbound,
+    long Inbound,
+    long Pending,
     IReadOnlyList<PlatformSmsReportTenantSummary> ByTenant);
 
 public sealed record PlatformSmsReportTenantSummary(
@@ -46,15 +53,23 @@ public sealed record PlatformSmsReportTenantSummary(
     long Sent,
     long Delivered,
     long Failed,
-    long Received);
-
+    long Received,
+    long Outbound,
+    long Inbound,
+    long Pending);
 
 public sealed record UserSmsReportSummary(
     Guid UserId,
     string Username,
     DateOnly ReportDate,
     long TotalMessages,
+    long Scheduled,
+    long Queued,
+    long Sent,
     long Delivered,
     long Failed,
+    long Received,
+    long Outbound,
+    long Inbound,
     long Pending,
     DateTimeOffset UpdatedAtUtc);
