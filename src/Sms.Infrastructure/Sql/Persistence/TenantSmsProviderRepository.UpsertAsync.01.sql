@@ -1,9 +1,8 @@
 WITH tenant_lock AS
 (
-    SELECT Id
+    SELECT pg_advisory_xact_lock(hashtextextended(@TenantId::text, 0))
     FROM Tenants
     WHERE Id=@TenantId
-    FOR UPDATE
 ),
 cleared_defaults AS
 (
