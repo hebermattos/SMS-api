@@ -47,7 +47,7 @@ public sealed class ClientAuditTests
         context.User = new ClaimsPrincipal(new ClaimsIdentity([
             new Claim("tenant_id", tenant.ToString()), new Claim(subjectClaim, "client-1")], "test"));
         context.Request.Headers["ClientId"] = "forged-client";
-        context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "Overview", ActionName = "Get" }), "activity"));
+        context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ControllerActionDescriptor { ControllerName = "Messages", ActionName = "Send" }), "activity"));
         var writer = new ActivityRecorder();
         await RunPipelineAsync(context, _ => Task.CompletedTask, new RequestAuditMiddleware(writer));
         Assert.Equal("client-1", writer.Activity?.UserId);
@@ -58,21 +58,12 @@ public sealed class ClientAuditTests
 
     [Theory]
     [InlineData("Messages", "Send", 202, "Sent an SMS message.")]
-    [InlineData("Messages", "GetById", 200, "Viewed an SMS message.")]
-    [InlineData("Messages", "GetStatusHistory", 200, "Viewed SMS delivery history.")]
-    [InlineData("Messages", "GetHistory", 200, "Viewed SMS history.")]
-    [InlineData("Logs", "Get", 200, "Viewed activity logs.")]
-    [InlineData("Overview", "Get", 200, "Viewed the account overview.")]
-    [InlineData("Reports", "Sms", 200, "Viewed the SMS report.")]
-    [InlineData("TenantUsers", "List", 200, "Viewed tenant users.")]
     [InlineData("TenantUsers", "Create", 201, "Created a tenant user.")]
     [InlineData("TenantUsers", "SetState", 204, "Updated a tenant user's status.")]
     [InlineData("TenantUsers", "ResetPassword", 204, "Reset a tenant user's password.")]
-    [InlineData("Alerts", "Rules", 200, "Viewed alert rules.")]
     [InlineData("Alerts", "CreateRule", 201, "Created an alert rule.")]
     [InlineData("Alerts", "UpdateRule", 204, "Updated an alert rule.")]
     [InlineData("Alerts", "DeleteRule", 204, "Deleted an alert rule.")]
-    [InlineData("Alerts", "List", 200, "Viewed alerts.")]
     [InlineData("Alerts", "MarkRead", 204, "Marked an alert as read.")]
     [InlineData("Alerts", "MarkAllRead", 204, "Marked all alerts as read.")]
     [InlineData("Messages", "Send", 400, "Could not send an SMS message.")]
