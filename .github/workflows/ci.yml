@@ -21,11 +21,11 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - name: Restore
-        run: dotnet restore Sms.Api.sln
+        run: dotnet restore TextRelay.Api.sln
       - name: Build
-        run: dotnet build Sms.Api.sln --configuration Release --no-restore
+        run: dotnet build TextRelay.Api.sln --configuration Release --no-restore
       - name: Test with coverage
-        run: dotnet test Sms.Api.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings --results-directory ./TestResults
+        run: dotnet test TextRelay.Api.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings --results-directory ./TestResults
       - name: Verify coverage report
         shell: pwsh
         run: |

@@ -11,18 +11,18 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 - Use C# and .NET 8 with ASP.NET Core controllers.
 - Use PostgreSQL and Dapper. Do not introduce Entity Framework.
 - Preserve the current dependency direction:
-  - `Sms.Domain`: domain models and enums with no infrastructure dependencies.
-  - `Sms.Application`: use cases and provider-independent interfaces.
-  - `Sms.Infrastructure`: Dapper repositories, encryption, observability, and provider integrations.
-  - `Sms.Api`: HTTP endpoints, authentication, authorization, middleware, and API composition root.
-  - `Sms.Worker`: independently deployable background-process host for RabbitMQ consumers, queue publishing, scheduling, retries, alerts, and messaging monitoring.
+  - `TextRelay.Domain`: domain models and enums with no infrastructure dependencies.
+  - `TextRelay.Application`: use cases and provider-independent interfaces.
+  - `TextRelay.Infrastructure`: Dapper repositories, encryption, observability, and provider integrations.
+  - `TextRelay.Api`: HTTP endpoints, authentication, authorization, middleware, and API composition root.
+  - `TextRelay.Worker`: independently deployable background-process host for RabbitMQ consumers, queue publishing, scheduling, retries, alerts, and messaging monitoring.
 - Keep controllers thin. Business rules belong in application services; external API and database details belong in infrastructure.
 - Use asynchronous APIs for HTTP and database I/O and propagate `CancellationToken`.
 - Keep the implementation as simple and readable as possible. Avoid unnecessary abstractions and complexity.
 
 ## Messaging and background processing
 
-- Keep HTTP request handling in `Sms.Api` and background execution in `Sms.Worker`; the API and Worker must remain independently deployable and scalable.
+- Keep HTTP request handling in `TextRelay.Api` and background execution in `TextRelay.Worker`; the API and Worker must remain independently deployable and scalable.
 - RabbitMQ messages for SMS sending carry message identity, not the full SMS payload. Consumers load the current message from PostgreSQL before sending.
 - Publish an SMS send event only when the persisted `SmsQueueStatus` is `Queued`.
 - Before calling an SMS provider, the consumer must atomically claim the persisted message from `Queued` to `Processing`. If the claim fails, do not send. This is the primary concurrency/idempotency guard against duplicate sends.
@@ -102,9 +102,9 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 - Run before opening a PR:
 
 ```bash
-dotnet restore Sms.Api.sln
-dotnet build Sms.Api.sln --configuration Release --no-restore
-dotnet test Sms.Api.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+dotnet restore TextRelay.Api.sln
+dotnet build TextRelay.Api.sln --configuration Release --no-restore
+dotnet test TextRelay.Api.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 ```
 
 - When persistence behavior changes, also validate it against PostgreSQL; unit tests alone are not sufficient for Dapper SQL correctness.

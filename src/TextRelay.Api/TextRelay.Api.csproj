@@ -11,7 +11,7 @@
     <PackageReference Include="StackExchange.Redis" Version="2.8.24" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Sms.Application\Sms.Application.csproj" />
-    <ProjectReference Include="..\Sms.Infrastructure\Sms.Infrastructure.csproj" />
+    <ProjectReference Include="..\TextRelay.Application\TextRelay.Application.csproj" />
+    <ProjectReference Include="..\TextRelay.Infrastructure\TextRelay.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

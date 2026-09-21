@@ -1,7 +1,7 @@
-# SMS API
+# TextRelay
 
-[![CI](https://github.com/hebermattos/SMS-api/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hebermattos/SMS-api/actions/workflows/ci.yml)
-[![Integration Tests](https://github.com/hebermattos/SMS-api/actions/workflows/integration-tests.yml/badge.svg?branch=main)](https://github.com/hebermattos/SMS-api/actions/workflows/integration-tests.yml)
+[![CI](https://github.com/hebermattos/text-relay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hebermattos/text-relay/actions/workflows/ci.yml)
+[![Integration Tests](https://github.com/hebermattos/text-relay/actions/workflows/integration-tests.yml/badge.svg?branch=main)](https://github.com/hebermattos/text-relay/actions/workflows/integration-tests.yml)
 ![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen?style=flat-square)
 [![Proudly Vibe Coded](https://vibecoded.fyi/badges/flat/main/proudly-vibe-coded.svg)](https://vibecoded.fyi/)
 ![Built with Codex](https://img.shields.io/badge/Built%20with-Codex-000000?style=flat-square&logo=openai&logoColor=white)
@@ -234,7 +234,7 @@ Provider checks validate network/API reachability only. They do not validate ten
 
 ## Database
 
-The project uses Dapper and does not use migrations. Runtime SQL is stored under `src/Sms.Infrastructure/Sql`.
+The project uses Dapper and does not use migrations. Runtime SQL is stored under `src/TextRelay.Infrastructure/Sql`.
 
 Fresh databases are initialized from:
 
@@ -293,7 +293,7 @@ Observability is deliberately split between **audit data** and **technical telem
 
 The API and Worker export technical telemetry over OTLP to a dedicated ClickStack OpenTelemetry Collector running in standalone mode. The collector writes directly to the ClickHouse instance bundled with ClickStack, while HyperDX remains the visualization UI. This keeps high-volume telemetry writes out of the PostgreSQL audit database while preserving the existing authorization and tenant-isolation model for user activity logs.
 
-In Docker Compose both API instances and the Worker send OTLP/HTTP protobuf to `http://otel-collector:4318`. Both API instances keep the logical OpenTelemetry service name `sms-api`, while `service.instance.id` identifies them individually as `api-1` and `api-2`. This allows HyperDX to aggregate the APIs as one service or filter logs, traces, metrics, latency, and errors by a specific instance. The collector is reachable only inside the Compose network, so its OTLP ports are not published to the host and local startup does not depend on a HyperDX-generated ingestion key. The collector writes to `http://clickstack:8123`. The local ClickStack container runs its HyperDX UI without built-in authentication and is reachable only inside the Compose network. A small Caddy proxy exposes HyperDX at `http://localhost:8081` with Basic Auth, defaulting to `HyperDX / HyperDX`; override those development defaults with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`. The ClickHouse HTTP endpoint is mapped to `18123`.
+In Docker Compose both API instances and the Worker send OTLP/HTTP protobuf to `http://otel-collector:4318`. Both API instances keep the logical OpenTelemetry service name `text-relay`, while `service.instance.id` identifies them individually as `api-1` and `api-2`. This allows HyperDX to aggregate the APIs as one service or filter logs, traces, metrics, latency, and errors by a specific instance. The collector is reachable only inside the Compose network, so its OTLP ports are not published to the host and local startup does not depend on a HyperDX-generated ingestion key. The collector writes to `http://clickstack:8123`. The local ClickStack container runs its HyperDX UI without built-in authentication and is reachable only inside the Compose network. A small Caddy proxy exposes HyperDX at `http://localhost:8081` with Basic Auth, defaulting to `HyperDX / HyperDX`; override those development defaults with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`. The ClickHouse HTTP endpoint is mapped to `18123`.
 
 ClickStack is technical infrastructure and must not be exposed as a tenant-facing log source. Secrets, access tokens, authorization headers, SMS bodies, and full phone numbers must never be emitted as telemetry.
 
@@ -314,7 +314,7 @@ ClickStack is technical infrastructure and must not be exposed as a tenant-facin
 Create the first platform administrator outside Compose:
 
 ```bash
-dotnet run --project tools/Sms.Provision -- --admin
+dotnet run --project tools/TextRelay.Provision -- --admin
 ```
 
 Provide `ConnectionStrings__Postgres`, `Admin__Username`, `Admin__Password`, and `Admin__Email` through the environment.
@@ -324,9 +324,9 @@ Tenants can then be created through the platform administration UI or API. Gener
 ## Tests and CI
 
 ```bash
-dotnet restore Sms.Api.sln
-dotnet build Sms.Api.sln --configuration Release
-dotnet test Sms.Api.sln --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+dotnet restore TextRelay.Api.sln
+dotnet build TextRelay.Api.sln --configuration Release
+dotnet test TextRelay.Api.sln --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 ```
 
 Pushes to `main` build and test the backend and Angular UI and require at least **80% backend line coverage**.
@@ -337,7 +337,7 @@ PostgreSQL integration tests and the Docker Compose bootstrap run only from a ma
 
 ### Docker Compose
 
-![SMS API Docker Compose architecture](docs/images/sms-api-architecture-v2.svg)
+![TextRelay Docker Compose architecture](docs/images/text-relay-architecture-v2.svg)
 
 Docker Compose runs two independent API instances behind HAProxy. HAProxy exposes `http://localhost:8080`, distributes requests using round-robin, and actively checks each API through `GET /health`; unhealthy instances are removed from rotation automatically. It forwards the original client IP, protocol, and host through `X-Forwarded-For`, `X-Forwarded-Proto`, and `X-Forwarded-Host`, which ASP.NET Core processes before rate limiting and authentication.
 
@@ -347,21 +347,21 @@ The diagram reflects the current Docker Compose topology and startup dependencie
 
 ### Database ER diagram
 
-![SMS API database ER diagram](docs/images/sms-api-er-diagram.svg)
+![TextRelay database ER diagram](docs/images/text-relay-er-diagram.svg)
 
 The diagram contains only persisted data structures from the transactional `sms_api` schema and the `sms_api_reporting` read model. Runtime components such as RabbitMQ queues and consumers are documented in the architecture and RabbitMQ sections instead of being modeled as database entities. `AlertEvaluationOutbox` and `TenantSmsOverviewOutbox` remain part of the transactional schema because they are persisted tables. The audit/error-log database remains separate.
 
 The two API containers and Worker are separate processes and can be deployed and scaled independently. HAProxy is the single host-facing API entry point; API containers are reachable only on the internal Compose network. The API handles HTTP, authentication, authorization, webhooks, and RabbitMQ publishing. The Worker owns RabbitMQ consumers, scheduled-message publishing, failed-publish retry, alert event publishing, per-rule alert evaluation, and RabbitMQ monitoring. Both wait for their required infrastructure dependencies before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
 
 ```text
-src/Sms.Api              HTTP, authentication, authorization, webhooks, RabbitMQ publishing
-src/Sms.Worker           RabbitMQ consumers and background workers
-src/Sms.Application      Use cases and contracts
-src/Sms.Domain           Domain models
-src/Sms.Infrastructure   SQL, providers, encryption, observability
+src/TextRelay.Api              HTTP, authentication, authorization, webhooks, RabbitMQ publishing
+src/TextRelay.Worker           RabbitMQ consumers and background workers
+src/TextRelay.Application      Use cases and contracts
+src/TextRelay.Domain           Domain models
+src/TextRelay.Infrastructure   SQL, providers, encryption, observability
 ui                       Angular UI
 database                 Database schemas and test seeds
-tools/Sms.Provision      Bootstrap provisioning
+tools/TextRelay.Provision      Bootstrap provisioning
 tests                    Unit and integration tests
 ```
 

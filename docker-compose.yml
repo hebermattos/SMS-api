@@ -8,7 +8,7 @@ services:
     environment: &rabbitmq-environment
       RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-sms}"
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:-sms}"
-      RABBITMQ_ERLANG_COOKIE: "${RABBITMQ_ERLANG_COOKIE:-sms-api-local-cluster-cookie}"
+      RABBITMQ_ERLANG_COOKIE: "${RABBITMQ_ERLANG_COOKIE:-text-relay-local-cluster-cookie}"
     ports: ["15672:15672"]
     volumes:
       - rabbitmq-1-data:/var/lib/rabbitmq
@@ -201,7 +201,7 @@ services:
       - archive_command=test ! -f /backups/wal/%f && cp %p /backups/wal/%f
     environment:
       POSTGRES_USER: "${POSTGRES_USER:-sms}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
       POSTGRES_DB: "postgres"
     ports: ["5432:5432"]
     volumes:
@@ -228,7 +228,7 @@ services:
       PGHOST: "postgres"
       PGPORT: "5432"
       PGUSER: "${POSTGRES_USER:-sms}"
-      PGPASSWORD: "${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      PGPASSWORD: "${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
     entrypoint: ["/bin/sh","-c"]
     command:
       - |
@@ -271,7 +271,7 @@ services:
       PGHOST: "postgres"
       PGPORT: "5432"
       PGUSER: "${POSTGRES_USER:-sms}"
-      PGPASSWORD: "${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      PGPASSWORD: "${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
       PGDATABASE: "postgres"
       BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-86400}"
       BACKUP_RETENTION_DAYS: "${BACKUP_RETENTION_DAYS:-7}"
@@ -284,7 +284,7 @@ services:
     cpus: 0.50
     build:
       context: .
-      dockerfile: database/seeds/Sms.Seed/Dockerfile
+      dockerfile: database/seeds/TextRelay.Seed/Dockerfile
     depends_on:
       db-init:
         condition: service_completed_successfully
@@ -293,7 +293,7 @@ services:
       Admin__Password: "${ADMIN_PASSWORD:-platform}"
       Admin__Email: "${ADMIN_EMAIL:-platform@example.com}"
       Admin__AllowInsecureBootstrapPassword: "true"
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
 
   api-1:
@@ -302,7 +302,7 @@ services:
     cpus: 0.50
     build:
       context: .
-      dockerfile: src/Sms.Api/Dockerfile
+      dockerfile: src/TextRelay.Api/Dockerfile
     depends_on:
       provider-init:
         condition: service_completed_successfully
@@ -317,9 +317,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
-      ConnectionStrings__LogsPostgres: "Host=postgres;Port=5432;Database=sms_api_logs;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
-      ConnectionStrings__ReportingPostgres: "Host=postgres;Port=5432;Database=sms_api_reporting;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
+      ConnectionStrings__LogsPostgres: "Host=postgres;Port=5432;Database=sms_api_logs;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
+      ConnectionStrings__ReportingPostgres: "Host=postgres;Port=5432;Database=sms_api_reporting;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
       ConnectionStrings__Redis: "redis:6379"
       Cache__Enabled: "${CACHE_ENABLED:-true}"
       Jwt__Key: "${JWT_KEY:-local-development-jwt-key-change-me-1234567890}"
@@ -333,7 +333,7 @@ services:
       RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-      OTEL_SERVICE_NAME: "sms-api"
+      OTEL_SERVICE_NAME: "text-relay"
       OTEL_RESOURCE_ATTRIBUTES: "service.instance.id=api-1,deployment.environment=development"
 
   api-2:
@@ -342,7 +342,7 @@ services:
     cpus: 0.50
     build:
       context: .
-      dockerfile: src/Sms.Api/Dockerfile
+      dockerfile: src/TextRelay.Api/Dockerfile
     depends_on:
       provider-init:
         condition: service_completed_successfully
@@ -357,9 +357,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
-      ConnectionStrings__LogsPostgres: "Host=postgres;Port=5432;Database=sms_api_logs;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
-      ConnectionStrings__ReportingPostgres: "Host=postgres;Port=5432;Database=sms_api_reporting;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
+      ConnectionStrings__LogsPostgres: "Host=postgres;Port=5432;Database=sms_api_logs;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
+      ConnectionStrings__ReportingPostgres: "Host=postgres;Port=5432;Database=sms_api_reporting;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
       ConnectionStrings__Redis: "redis:6379"
       Cache__Enabled: "${CACHE_ENABLED:-true}"
       Jwt__Key: "${JWT_KEY:-local-development-jwt-key-change-me-1234567890}"
@@ -373,7 +373,7 @@ services:
       RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-      OTEL_SERVICE_NAME: "sms-api"
+      OTEL_SERVICE_NAME: "text-relay"
       OTEL_RESOURCE_ATTRIBUTES: "service.instance.id=api-2,deployment.environment=development"
 
   haproxy:
@@ -398,7 +398,7 @@ services:
     cpus: 0.50
     build:
       context: .
-      dockerfile: src/Sms.Worker/Dockerfile
+      dockerfile: src/TextRelay.Worker/Dockerfile
     depends_on:
       provider-init:
         condition: service_completed_successfully
@@ -411,9 +411,9 @@ services:
       otel-collector:
         condition: service_started
     environment:
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
-      ConnectionStrings__LogsPostgres: "Host=postgres;Port=5432;Database=sms_api_logs;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
-      ConnectionStrings__ReportingPostgres: "Host=postgres;Port=5432;Database=sms_api_reporting;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
+      ConnectionStrings__LogsPostgres: "Host=postgres;Port=5432;Database=sms_api_logs;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
+      ConnectionStrings__ReportingPostgres: "Host=postgres;Port=5432;Database=sms_api_reporting;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
       ConnectionStrings__Redis: "redis:6379"
       Cache__Enabled: "${CACHE_ENABLED:-true}"
       Encryption__MasterKey: "${ENCRYPTION_MASTER_KEY:-AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=}"
@@ -440,7 +440,7 @@ services:
       db-init:
         condition: service_completed_successfully
     environment:
-      SMS_TEST_POSTGRES: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-SmsApi_Local_2026!}"
+      SMS_TEST_POSTGRES: "Host=postgres;Port=5432;Database=sms_api;Username=${POSTGRES_USER:-sms};Password=${POSTGRES_PASSWORD:-TextRelay_Local_2026!}"
 
   ui:
     mem_reservation: 32m
