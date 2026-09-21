@@ -7,6 +7,10 @@ WITH evaluation AS
         r.Provider,
         r.Status,
         r.WindowMinutes,
+        r.RepeatMode,
+        r.RepeatIntervalMinutes,
+        r.IsTriggered,
+        r.LastTriggeredAt,
         COALESCE(counts.MatchCount, 0)::INTEGER AS MatchCount
     FROM AlertRules r
     LEFT JOIN LATERAL
@@ -16,6 +20,7 @@ WITH evaluation AS
         WHERE c.TenantId=r.TenantId
           AND c.Status=r.Status
           AND c.BucketStartUtc >= @OccurredAtUtc - make_interval(mins => r.WindowMinutes)
+          AND c.BucketStartUtc <= @OccurredAtUtc
           AND (r.Provider IS NULL OR c.Provider=r.Provider)
     ) counts ON TRUE
     WHERE r.TenantId=@TenantId
@@ -23,19 +28,6 @@ WITH evaluation AS
       AND r.DeletedAt IS NULL
       AND r.Status=@Status
       AND (r.Provider IS NULL OR r.Provider=@Provider)
-      AND
-      (
-          NOT r.IsTriggered
-          OR
-          (
-              r.RepeatMode=2
-              AND
-              (
-                  r.LastTriggeredAt IS NULL
-                  OR r.LastTriggeredAt <= @OccurredAtUtc - make_interval(mins => r.RepeatIntervalMinutes)
-              )
-          )
-      )
       AND COALESCE(counts.MatchCount, 0) >= r.Threshold
     FOR UPDATE OF r
 ),
@@ -55,12 +47,26 @@ fired AS
         @OccurredAtUtc,
         FALSE
     FROM evaluation
+    WHERE NOT IsTriggered
+       OR
+       (
+           RepeatMode=2
+           AND
+           (
+               LastTriggeredAt IS NULL
+               OR LastTriggeredAt <= @OccurredAtUtc - make_interval(mins => RepeatIntervalMinutes)
+           )
+       )
     RETURNING RuleId
 )
 UPDATE AlertRules r
-SET IsTriggered=TRUE,
-    LastTriggeredAt=@OccurredAtUtc,
-    UpdatedAt=@OccurredAtUtc
-FROM fired f
-WHERE r.Id=f.RuleId
+SET IsTriggered=CASE WHEN e.MatchCount >= r.Threshold THEN TRUE ELSE FALSE END,
+    LastTriggeredAt=CASE WHEN f.RuleId IS NOT NULL THEN @OccurredAtUtc ELSE r.LastTriggeredAt END,
+    UpdatedAt=CASE
+        WHEN f.RuleId IS NOT NULL OR (r.IsTriggered AND e.MatchCount < r.Threshold) THEN @OccurredAtUtc
+        ELSE r.UpdatedAt
+    END
+FROM evaluation e
+LEFT JOIN fired f ON f.RuleId=e.Id
+WHERE r.Id=e.Id
   AND r.TenantId=@TenantId;
