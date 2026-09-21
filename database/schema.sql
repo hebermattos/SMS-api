@@ -317,6 +317,14 @@ CREATE TABLE TenantSmsOverviewOutbox
     EventId UUID NOT NULL UNIQUE,
     TenantId UUID NOT NULL REFERENCES Tenants(Id) ON DELETE CASCADE,
     UserId UUID NULL,
+    MessageId UUID NOT NULL,
+    TenantName VARCHAR(200) NOT NULL,
+    Username VARCHAR(200) NULL,
+    Provider VARCHAR(50) NOT NULL,
+    Direction INTEGER NOT NULL,
+    QueueStatus INTEGER NOT NULL,
+    Status INTEGER NOT NULL,
+    CreatedAtUtc TIMESTAMPTZ NOT NULL,
     OutboundDelta BIGINT NOT NULL,
     InboundDelta BIGINT NOT NULL,
     DeliveredDelta BIGINT NOT NULL,
@@ -329,7 +337,7 @@ CREATE TABLE TenantSmsOverviewOutbox
 );
 CREATE INDEX IX_TenantSmsOverviewOutbox_Pending
     ON TenantSmsOverviewOutbox(SequenceNumber)
-    INCLUDE (EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+    INCLUDE (EventId, TenantId, UserId, MessageId, Provider, Direction, QueueStatus, Status, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
     WHERE PublishedAtUtc IS NULL;
 
 CREATE OR REPLACE FUNCTION enqueue_alert_evaluation()
@@ -359,12 +367,21 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     INSERT INTO TenantSmsOverviewOutbox
-        (EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+        (EventId, TenantId, UserId, MessageId, TenantName, Username, Provider, Direction, QueueStatus, Status, CreatedAtUtc,
+         OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
     VALUES
         (
             gen_random_uuid(),
             NEW.TenantId,
             NEW.UserId,
+            NEW.Id,
+            (SELECT Name FROM Tenants WHERE Id = NEW.TenantId),
+            (SELECT Username::text FROM PortalUsers WHERE TenantId = NEW.TenantId AND Id = NEW.UserId),
+            NEW.Provider,
+            NEW.Direction,
+            NEW.QueueStatus,
+            NEW.Status,
+            NEW.CreatedAt,
             CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END,
             CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END,
@@ -385,14 +402,23 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF NEW.Direction IS DISTINCT FROM OLD.Direction OR NEW.Status IS DISTINCT FROM OLD.Status THEN
+    IF NEW.Direction IS DISTINCT FROM OLD.Direction OR NEW.Status IS DISTINCT FROM OLD.Status OR NEW.QueueStatus IS DISTINCT FROM OLD.QueueStatus OR NEW.Provider IS DISTINCT FROM OLD.Provider THEN
         INSERT INTO TenantSmsOverviewOutbox
-            (EventId, TenantId, UserId, OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
+            (EventId, TenantId, UserId, MessageId, TenantName, Username, Provider, Direction, QueueStatus, Status, CreatedAtUtc,
+             OutboundDelta, InboundDelta, DeliveredDelta, FailedDelta, PendingDelta, OccurredAtUtc)
         VALUES
             (
                 gen_random_uuid(),
                 NEW.TenantId,
                 NEW.UserId,
+                NEW.Id,
+                (SELECT Name FROM Tenants WHERE Id = NEW.TenantId),
+                (SELECT Username::text FROM PortalUsers WHERE TenantId = NEW.TenantId AND Id = NEW.UserId),
+                NEW.Provider,
+                NEW.Direction,
+                NEW.QueueStatus,
+                NEW.Status,
+                NEW.CreatedAt,
                 (CASE WHEN NEW.Direction = 1 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 2 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 2 THEN 1 ELSE 0 END),
                 (CASE WHEN NEW.Direction = 1 AND NEW.Status = 3 THEN 1 ELSE 0 END) - (CASE WHEN OLD.Direction = 1 AND OLD.Status = 3 THEN 1 ELSE 0 END),
