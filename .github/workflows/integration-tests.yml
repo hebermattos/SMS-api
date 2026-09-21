@@ -1,0 +1,127 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-integration:
+    name: PostgreSQL integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sms
+          POSTGRES_PASSWORD: 'SmsApi_Local_2026!'
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U sms -d postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=20 --health-start-period=10s
+    env:
+      SMS_TEST_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_webhook_tests;Username=sms;Password=SmsApi_Local_2026!'
+      SMS_TEST_REPORTING_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_reporting_tests;Username=sms;Password=SmsApi_Local_2026!'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - name: Initialize canonical schemas
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker exec "$POSTGRES_CONTAINER" createdb -U sms sms_api_webhook_tests
+          docker exec -i "$POSTGRES_CONTAINER" psql -v ON_ERROR_STOP=1 -U sms -d sms_api_webhook_tests < database/schema.sql
+          docker exec "$POSTGRES_CONTAINER" createdb -U sms sms_api_reporting_tests
+          docker exec -i "$POSTGRES_CONTAINER" psql -v ON_ERROR_STOP=1 -U sms -d sms_api_reporting_tests < database/reporting-schema.sql
+      - name: Verify webhook and administration persistence against PostgreSQL
+        run: dotnet test Sms.Api.sln --configuration Release --filter 'FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests|FullyQualifiedName~AlertSqlTests|FullyQualifiedName~ReportingSqlTests|FullyQualifiedName~ExampleProviderSeedSqlTests|FullyQualifiedName~AdministratorSqlTests'
+
+  compose-integration:
+    name: Docker Compose end-to-end test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Initialize databases through Docker Compose
+        run: docker compose run --build --rm provider-init
+      - name: Verify schemas, the example client, and encrypted providers
+        run: |
+          docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U sms -d sms_api <<'SQL'
+          DO $$
+          BEGIN
+            IF to_regclass('public.smsmessages') IS NULL THEN RAISE EXCEPTION 'Application schema is missing.'; END IF;
+            IF to_regclass('public.alertrules') IS NULL THEN RAISE EXCEPTION 'Alert rules schema is missing.'; END IF;
+            IF to_regclass('public.alerts') IS NULL THEN RAISE EXCEPTION 'Alerts schema is missing.'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM PlatformAdministrators
+              WHERE Username='platform' AND IsActive
+                AND octet_length(PasswordHash)=32 AND octet_length(PasswordSalt)=32
+                AND PasswordIterations=600000
+            ) THEN RAISE EXCEPTION 'Initial administrator is missing or password hashing is invalid.'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM ApiClients c
+              JOIN Tenants t ON t.Id=c.TenantId
+              WHERE c.ClientId='client' AND c.IsActive AND t.IsActive
+            ) THEN RAISE EXCEPTION 'Example tenant/client is missing.'; END IF;
+            IF (SELECT COUNT(*) FROM TenantSmsProviders
+                WHERE TenantId='11111111-1111-4111-8111-111111111111'
+                  AND Provider IN ('Twilio','Bandwidth') AND IsActive) <> 2
+              THEN RAISE EXCEPTION 'Example providers are missing.'; END IF;
+            IF (SELECT COUNT(*) FROM TenantSmsProviders
+                WHERE TenantId='11111111-1111-4111-8111-111111111111' AND IsDefault) <> 1
+              THEN RAISE EXCEPTION 'Expected one default provider.'; END IF;
+            IF EXISTS (SELECT 1 FROM TenantSmsProviders WHERE ApiSecret LIKE 'fake-%' OR Settings LIKE '%webhookPassword%')
+              THEN RAISE EXCEPTION 'Provider secrets must be encrypted.'; END IF;
+          END $$;
+          SQL
+          docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U sms -d sms_api_logs <<'SQL'
+          DO $$
+          BEGIN
+            IF to_regclass('public.useractivitylogs') IS NULL THEN RAISE EXCEPTION 'User activity schema is missing.'; END IF;
+            IF to_regclass('public.systemlogs') IS NULL THEN RAISE EXCEPTION 'System log schema is missing.'; END IF;
+            IF to_regclass('public.traces') IS NULL THEN RAISE EXCEPTION 'Trace schema is missing.'; END IF;
+            IF to_regclass('public.metrics') IS NULL THEN RAISE EXCEPTION 'Metric schema is missing.'; END IF;
+          END $$;
+          SQL
+      - name: Verify administrator password login and tenant separation over HTTP
+        run: |
+          docker compose up -d --wait rabbitmq
+          docker compose up -d --build --no-deps api
+          python3 - <<'PY'
+          import json, time, urllib.request, urllib.error
+          base = 'http://localhost:8080'
+          def request(path, payload=None, token=None):
+              headers = {'Content-Type': 'application/json'}
+              if token: headers['Authorization'] = 'Bearer ' + token
+              req = urllib.request.Request(base + path, data=None if payload is None else json.dumps(payload).encode(), headers=headers)
+              try:
+                  with urllib.request.urlopen(req, timeout=5) as response: return response.status, response.read()
+              except urllib.error.HTTPError as error: return error.code, error.read()
+          for attempt in range(30):
+              try:
+                  if request('/health')[0] == 200: break
+              except (urllib.error.URLError, TimeoutError, ConnectionError): pass
+              time.sleep(2)
+          else: raise RuntimeError('API did not become healthy')
+          assert request('/api/v1/admin/auth/token', {'key': 'local-admin-key-change-me'})[0] == 400
+          assert request('/api/v1/admin/auth/token', {'username': 'platform'})[0] == 400
+          assert request('/api/v1/admin/auth/token', {'username': 'platform', 'password': 'x' * 129})[0] == 400
+          assert request('/api/v1/admin/auth/token', {'username': 'platform', 'password': 'wrong'})[0] == 401
+          status, body = request('/api/v1/admin/auth/token', {'username': 'PLATFORM', 'password': 'platform'})
+          assert status == 200, 'Administrator login failed'
+          token = json.loads(body)['access_token']
+          assert request('/api/v1/admin/tenants', token=token)[0] == 200
+          assert request('/api/v1/overview', token=token)[0] == 403
+          print('Administrator password login and tenant separation verified.')
+          PY
+      - name: Show initialization logs
+        if: failure()
+        run: docker compose logs postgres db-init provider-init rabbitmq api
+      - name: Clean up
+        if: always()
+        run: docker compose down --remove-orphans --volumes
