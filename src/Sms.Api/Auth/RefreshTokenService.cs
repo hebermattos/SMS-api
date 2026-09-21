@@ -10,18 +10,16 @@ public sealed class RefreshTokenService(
     IRefreshTokenRepository repository,
     TokenService tokens,
     IPortalUserRepository portalUsers,
-    IAdministratorRepository administrators,
     IOptions<JwtOptions> options)
 {
     public async Task<IssuedTokens> IssueAsync(
         Guid userId, string username, Guid? tenantId, string context, string role,
-        bool isPlatformAdministrator = false,
         CancellationToken cancellationToken = default)
     {
         var raw = CreateToken();
         var expiresAt = DateTimeOffset.UtcNow.AddDays(options.Value.RefreshExpirationDays);
         var session = new RefreshTokenSession(
-            Guid.NewGuid(), userId, username, tenantId, context, role, isPlatformAdministrator, expiresAt);
+            Guid.NewGuid(), userId, username, tenantId, context, role, false, expiresAt);
         await repository.CreateAsync(session, Hash(raw), cancellationToken);
         return Build(session, raw);
     }
@@ -37,11 +35,6 @@ public sealed class RefreshTokenService(
             Hash(refreshToken), Hash(replacement), replacementId, replacementExpiresAt, cancellationToken);
         if (session is null) return null;
 
-        if (session.IsPlatformAdministrator)
-        {
-            if (!await administrators.IsActiveAsync(session.UserId, cancellationToken)) return null;
-        }
-        else
         {
             var user = await portalUsers.GetActiveByIdAsync(session.UserId, cancellationToken);
             if (user is null
@@ -55,9 +48,7 @@ public sealed class RefreshTokenService(
 
     private IssuedTokens Build(RefreshTokenSession session, string refreshToken)
     {
-        var accessToken = session.IsPlatformAdministrator
-            ? tokens.CreateAdministrator(session.UserId, session.Username)
-            : tokens.CreatePortalUser(session.UserId, session.Username, session.TenantId, session.Context, session.Role);
+        var accessToken = tokens.CreatePortalUser(session.UserId, session.Username, session.TenantId, session.Context, session.Role);
         return new IssuedTokens(accessToken, refreshToken, options.Value.ExpirationMinutes * 60);
     }
 
