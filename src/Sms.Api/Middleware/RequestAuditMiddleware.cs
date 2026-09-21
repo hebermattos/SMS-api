@@ -13,7 +13,7 @@ public sealed class RequestAuditMiddleware(ILogger<RequestAuditMiddleware> logge
             return Task.CompletedTask;
 
         var description = UserActivityMessageFormatter.Format(
-            audit.Action?.ControllerName, audit.Action?.ActionName, context.Request.Method);
+            audit.Action?.ControllerName, audit.Action?.ActionName);
         if (description is null)
             return Task.CompletedTask;
 
