@@ -34,15 +34,20 @@ public sealed class PortalSecurityTests
         using var provider = services.BuildServiceProvider();
         var claims = new List<Claim>();
         if (tenant)
-        {
             claims.Add(new("tenant_id", Guid.NewGuid().ToString()));
-            claims.Add(new(PortalSecurity.ContextClaim, PortalSecurity.TenantContext));
-            claims.Add(new(PortalSecurity.RoleClaim, PortalSecurity.UserRole));
-        }
+
+        // A token has exactly one portal context and role. The tenant+admin case below
+        // intentionally combines a platform administrator identity with a tenant id
+        // to verify that neither policy accepts the malformed cross-context token.
         if (admin)
         {
             claims.Add(new(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext));
             claims.Add(new(PortalSecurity.RoleClaim, PortalSecurity.AdministratorRole));
+        }
+        else if (tenant)
+        {
+            claims.Add(new(PortalSecurity.ContextClaim, PortalSecurity.TenantContext));
+            claims.Add(new(PortalSecurity.RoleClaim, PortalSecurity.UserRole));
         }
         var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer"));
         var authorization = provider.GetRequiredService<IAuthorizationService>();
