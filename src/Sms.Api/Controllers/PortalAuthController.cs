@@ -61,6 +61,16 @@ public sealed class PortalAuthController(
         return issued is null ? Unauthorized() : Ok(ToResponse(issued));
     }
 
+    [Authorize]
+    [RequestSizeLimit(2048)]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "no-store";
+        await refreshTokens.RevokeAsync(request.RefreshToken, cancellationToken);
+        return NoContent();
+    }
+
     private static object ToResponse(IssuedTokens issued) => new
     {
         access_token = issued.AccessToken,
