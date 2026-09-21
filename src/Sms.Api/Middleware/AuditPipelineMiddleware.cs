@@ -13,7 +13,9 @@ public interface IAuditPipelineStep
     Task AuditAsync(AuditPipelineContext context);
 }
 
-public sealed class AuditPipelineMiddleware(RequestDelegate next)
+public sealed class AuditPipelineMiddleware(
+    RequestDelegate next,
+    ILogger<AuditPipelineMiddleware>? logger = null)
 {
     public async Task InvokeAsync(HttpContext context, IEnumerable<IAuditPipelineStep> steps)
     {
@@ -34,7 +36,21 @@ public sealed class AuditPipelineMiddleware(RequestDelegate next)
         {
             var auditContext = new AuditPipelineContext(context, action, failed, started);
             foreach (var step in steps)
-                await step.AuditAsync(auditContext);
+            {
+                try
+                {
+                    await step.AuditAsync(auditContext);
+                }
+                catch (Exception exception)
+                {
+                    logger?.LogError(
+                        exception,
+                        "Audit step {AuditStep} failed for {RequestMethod} {RequestPath}.",
+                        step.GetType().Name,
+                        context.Request.Method,
+                        context.Request.Path);
+                }
+            }
         }
     }
 }

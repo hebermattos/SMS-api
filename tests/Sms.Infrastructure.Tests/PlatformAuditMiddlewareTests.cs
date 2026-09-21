@@ -15,6 +15,8 @@ public sealed class PlatformAuditMiddlewareTests
     public async Task FailedPlatformOperationsAreSystemErrorsWithoutCustomerTenant(int status)
     {
         var context = Context("Administration", "SaveProvider");
+        context.Request.Method = "PUT";
+        context.Request.Path = "/api/platform/tenants/test/providers";
         var tenant = Guid.NewGuid();
         context.Request.RouteValues["tenantId"] = tenant.ToString();
         var logger = new RecordingLogger();
@@ -22,6 +24,8 @@ public sealed class PlatformAuditMiddlewareTests
         Assert.Equal(LogLevel.Error, logger.Level);
         Assert.Equal("Administration.SaveProvider", logger.Values["Action"]);
         Assert.Equal(tenant.ToString(), logger.Values["TargetTenantId"]);
+        Assert.Equal("PUT", logger.Values["RequestMethod"]);
+        Assert.Equal("/api/platform/tenants/test/providers", logger.Values["RequestPath"]);
         Assert.False(logger.Values.ContainsKey("TenantId"));
     }
 

@@ -42,8 +42,14 @@ public sealed class PlatformAuditMiddleware(
         if (status >= 400)
         {
             logger.LogError(
-                "Platform operation {Action} failed. HTTP {StatusCode}. Target tenant {TargetTenantId}, client {TargetClientId}, administrator {TargetAdministratorId}",
-                $"{action.ControllerName}.{action.ActionName}", status, targetTenant, targetClient, targetAdministrator);
+                "Platform operation {Action} failed. HTTP {StatusCode}. {RequestMethod} {RequestPath}. Target tenant {TargetTenantId}, client {TargetClientId}, administrator {TargetAdministratorId}",
+                $"{action.ControllerName}.{action.ActionName}",
+                status,
+                context.Request.Method,
+                context.Request.Path.Value,
+                targetTenant,
+                targetClient,
+                targetAdministrator);
             return;
         }
 
