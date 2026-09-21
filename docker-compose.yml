@@ -118,7 +118,7 @@ services:
       start_period: 10s
 
   otel-collector:
-    image: clickhouse/clickhouse-otel-collector:latest
+    image: otel/opentelemetry-collector-contrib:0.136.0
     mem_reservation: 128m
     depends_on:
       clickstack:
