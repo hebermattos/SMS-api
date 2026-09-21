@@ -35,12 +35,12 @@ export class TenantUsersComponent {
   constructor() { this.load(); }
   load() {
     this.loading.set(true); this.error.set('');
-    let params = new HttpParams().set('skip', (this.page() - 1) * this.pageSize).set('take', this.pageSize);
+    let params = new HttpParams().set('skip', (this.page() - 1) * this.pageSize).set('take', this.pageSize + 1);
     if (this.search.trim()) params = params.set('search', this.search.trim());
     if (this.roleFilter) params = params.set('role', this.roleFilter);
     if (this.statusFilter) params = params.set('isActive', this.statusFilter === 'active');
     this.http.get<PortalUser[]>('/api/v1/tenant/users', { params }).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
-      next: rows => { this.users.set(rows); this.hasNext.set(rows.length === this.pageSize); },
+      next: rows => { this.hasNext.set(rows.length > this.pageSize); this.users.set(rows.slice(0, this.pageSize)); },
       error: error => this.error.set(errorMessage(error))
     });
   }
