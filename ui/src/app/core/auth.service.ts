@@ -57,6 +57,11 @@ export class AuthService implements OnDestroy {
 
   logout(expired = false) {
     clearTimeout(this.timer);
+    const refreshToken = this.refreshToken;
+    const endpoint = this.role() === 'admin' ? '/api/v1/admin/auth/logout' : '/api/v1/portal/auth/logout';
+    if (!expired && refreshToken) {
+      this.http.post<void>(endpoint, { refreshToken }).subscribe({ error: () => undefined });
+    }
     this.clearStoredSession();
     this.token = null;
     this.refreshToken = null;
