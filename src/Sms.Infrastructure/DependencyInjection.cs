@@ -1,7 +1,11 @@
 using MassTransit;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Sms.Application.Auth;
 using Sms.Application.Alerts;
 using Sms.Application.Common;
@@ -24,6 +28,15 @@ namespace Sms.Infrastructure;
 
 public static class DependencyInjection
 {
+    public static IServiceCollection AddRedisConnection(this IServiceCollection services, IConfiguration configuration)
+    {
+        var redisConnectionString = configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("Connection string 'Redis' is required.");
+
+        services.TryAddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+        return services;
+    }
+
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool registerConsumers = false)
     {
         var retryOptions = configuration.GetSection("SmsRetry").Get<SmsRetryOptions>() ?? new SmsRetryOptions();
@@ -32,15 +45,14 @@ public static class DependencyInjection
 
         if (CacheConfiguration.IsEnabled(configuration))
         {
-            var redisConnectionString = configuration.GetConnectionString("Redis");
-            if (string.IsNullOrWhiteSpace(redisConnectionString))
-                throw new InvalidOperationException("Connection string 'Redis' is not configured when cache is enabled.");
-
-            services.AddStackExchangeRedisCache(options =>
-            {
-                options.Configuration = redisConnectionString;
-                options.InstanceName = "sms-api:";
-            });
+            services.AddRedisConnection(configuration);
+            services.AddOptions<RedisCacheOptions>()
+                .Configure<IConnectionMultiplexer>((options, redis) =>
+                {
+                    options.ConnectionMultiplexerFactory = () => Task.FromResult(redis);
+                    options.InstanceName = "sms-api:";
+                });
+            services.AddSingleton<IDistributedCache, RedisCache>();
         }
         else
         {
