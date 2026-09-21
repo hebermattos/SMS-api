@@ -13,13 +13,13 @@ public sealed class AlertServiceCoverageTests
         var repository = new Repository();
         var service = new AlertService(repository, new AlertRuleFactory(TimeProvider.System));
         var id = await service.CreateRuleAsync(tenantId,
-            new("  Delivery failures  ", " Twilio ", SmsStatus.Failed, 5, 10, AlertRepeatMode.Repeating, 30, true));
+            new("  Delivery failures  ", " Twilio ", SmsStatus.Failed, 10, true));
 
         Assert.Equal(id, repository.Rule!.Id);
         Assert.Equal(tenantId, repository.Rule.TenantId);
         Assert.Equal("Delivery failures", repository.Rule.Name);
         Assert.Equal("Twilio", repository.Rule.Provider);
-        Assert.Equal(30, repository.Rule.RepeatIntervalMinutes);
+        Assert.Equal(10, repository.Rule.WindowMinutes);
     }
 
     [Fact]
@@ -27,9 +27,9 @@ public sealed class AlertServiceCoverageTests
     {
         var repository = new Repository();
         await new AlertService(repository, new AlertRuleFactory(TimeProvider.System)).CreateRuleAsync(tenantId,
-            new("Rule", " ", SmsStatus.Failed, 1, 1, AlertRepeatMode.Once, 30, true));
+            new("Rule", " ", SmsStatus.Failed, 1, true));
         Assert.Null(repository.Rule!.Provider);
-        Assert.Null(repository.Rule.RepeatIntervalMinutes);
+        Assert.Equal(1, repository.Rule.WindowMinutes);
     }
 
     [Theory]
@@ -42,24 +42,19 @@ public sealed class AlertServiceCoverageTests
 
     public static IEnumerable<object[]> InvalidRules()
     {
-        yield return [new SaveAlertRule("", null, SmsStatus.Failed, 1, 1, AlertRepeatMode.Once, null, true)];
-        yield return [new SaveAlertRule(new string('x', 121), null, SmsStatus.Failed, 1, 1, AlertRepeatMode.Once, null, true)];
-        yield return [new SaveAlertRule("Rule", null, (SmsStatus)99, 1, 1, AlertRepeatMode.Once, null, true)];
-        yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 0, 1, AlertRepeatMode.Once, null, true)];
-        yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 1_000_001, 1, AlertRepeatMode.Once, null, true)];
-        yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 1, 0, AlertRepeatMode.Once, null, true)];
-        yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 1, 43_201, AlertRepeatMode.Once, null, true)];
-        yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 1, 1, (AlertRepeatMode)99, null, true)];
-        yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 1, 1, AlertRepeatMode.Repeating, null, true)];
-        yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 1, 1, AlertRepeatMode.Repeating, 43_201, true)];
-        yield return [new SaveAlertRule("Rule", new string('p', 51), SmsStatus.Failed, 1, 1, AlertRepeatMode.Once, null, true)];
+        yield return [new SaveAlertRule("", null, SmsStatus.Failed, 1, true)];
+        yield return [new SaveAlertRule(new string('x', 121), null, SmsStatus.Failed, 1, true)];
+        yield return [new SaveAlertRule("Rule", null, (SmsStatus)99, 1, true)];
+        yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 0, true)];
+        yield return [new SaveAlertRule("Rule", null, SmsStatus.Failed, 1441, true)];
+        yield return [new SaveAlertRule("Rule", new string('p', 51), SmsStatus.Failed, 1, true)];
     }
 
     [Fact]
     public async Task UpdateDeleteAndMarkRead_ThrowWhenRepositoryDoesNotFindItem()
     {
         var service = new AlertService(new Repository(), new AlertRuleFactory(TimeProvider.System));
-        var request = new SaveAlertRule("Rule", null, SmsStatus.Failed, 1, 1, AlertRepeatMode.Once, null, true);
+        var request = new SaveAlertRule("Rule", null, SmsStatus.Failed, 1, true);
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateRuleAsync(tenantId, Guid.NewGuid(), request));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.DeleteRuleAsync(tenantId, Guid.NewGuid()));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.MarkReadAsync(tenantId, Guid.NewGuid()));
@@ -100,6 +95,6 @@ public sealed class AlertServiceCoverageTests
         public Task<IReadOnlyList<AlertNotification>> ListAlertsAsync(Guid tenantId, bool unreadOnly, int skip, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<AlertNotification>>([]);
         public Task<bool> MarkReadAsync(Guid tenantId, Guid id, CancellationToken cancellationToken = default) => Task.FromResult(Found);
         public Task MarkAllReadAsync(Guid tenantId, CancellationToken cancellationToken = default) { MarkAllReadCalled = true; return Task.CompletedTask; }
-        public Task EvaluateAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task EvaluateAsync(Guid tenantId, SmsStatus status, string provider, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }
