@@ -57,7 +57,7 @@ public sealed class PortalSecurityTests
         var services = new ServiceCollection().AddLogging(); services.AddAuthorization(PortalSecurity.ConfigureAuthorization);
         using var provider = services.BuildServiceProvider(); var authorization = provider.GetRequiredService<IAuthorizationService>();
         var options = provider.GetRequiredService<IOptions<AuthorizationOptions>>().Value;
-        Assert.False((await authorization.AuthorizeAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim(PortalSecurity.AdminClaim, "true")])), null, options.GetPolicy(PortalSecurity.AdminPolicy)!)).Succeeded);
+        Assert.False((await authorization.AuthorizeAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim(PortalSecurity.ContextClaim, PortalSecurity.PlatformContext)])), null, options.GetPolicy(PortalSecurity.AdminPolicy)!)).Succeeded);
         Assert.False((await authorization.AuthorizeAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim("tenant_id", "invalid")], "Bearer")), null, options.DefaultPolicy)).Succeeded);
     }
 
