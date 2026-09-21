@@ -41,7 +41,7 @@ Local services:
 | Swagger | `http://localhost:8080/swagger` | API documentation |
 | Health | `http://localhost:8080/health` | Dependency health through HAProxy |
 | HyperDX | `http://localhost:8081` | Technical telemetry UI |
-| RabbitMQ Management | `http://localhost:15672` | Queue management UI |
+| RabbitMQ Management | `http://localhost:15672` | Queue management UI (node 1) |
 | PostgreSQL | `localhost:5432` | Application, logs, and reporting databases |
 | Redis | `localhost:6379` | Shared cache and distributed rate-limit state |
 | ClickHouse HTTP | `http://localhost:18123` | Technical telemetry storage |
@@ -116,6 +116,10 @@ Tenant configuration is also cached in Redis. Tenant metadata, time zone, API-cl
 
 Immediate messages are queued through RabbitMQ/MassTransit. Scheduled messages are stored in UTC and queued when due.
 
+Docker Compose runs a three-node RabbitMQ cluster. Application AMQP connections use a dedicated HAProxy endpoint on port `5672`, which health-checks all three brokers and removes failed nodes from connection rotation. The application queues (`sms.send`, `sms.alert.evaluation`, and `sms.reporting.overview`) are quorum queues with three members, so one RabbitMQ node can fail while a majority remains available. Each broker has its own persistent Docker volume.
+
+All three RabbitMQ containers run on the same Docker host in the local Compose environment. This provides broker/container failover for development, but not host-level high availability. A production deployment should place the three RabbitMQ nodes on separate hosts or failure domains while retaining an odd-sized quorum.
+
 To schedule a message, send `scheduledAt` as a local date/time without an offset. The API converts it using the tenant IANA time zone. API clients may also send an optional `userId`; when provided, it must identify an active user in the authenticated tenant.
 
 ```json
@@ -148,6 +152,7 @@ Sms__DefaultProvider
 Sms__PublicBaseUrl
 RabbitMq__Host
 RabbitMq__Port
+RABBITMQ_ERLANG_COOKIE
 RabbitMq__User
 RabbitMq__Password
 HYPERDX_USERNAME
@@ -167,7 +172,7 @@ OTEL_SERVICE_NAME
 - `postgres.observability` — tenant activity and platform error-log database.
 - `postgres.reporting` — reporting database.
 - `redis` — Redis connectivity used by the caches; reports `Healthy` with `Cache is disabled.` when caching is disabled.
-- `rabbitmq` — RabbitMQ TCP connectivity.
+- `rabbitmq` — RabbitMQ AMQP load-balancer connectivity.
 - `twilio` — Twilio API reachability.
 - `bandwidth` — Bandwidth API reachability.
 
@@ -286,7 +291,7 @@ Docker Compose runs two independent API instances behind HAProxy. HAProxy expose
 
 HAProxy exposes local-only runtime statistics on `http://localhost:8404/stats`. HAProxy and both API containers use a 30-second Docker stop grace period, allowing in-flight requests to finish before containers are terminated.
 
-The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, RabbitMQ handles asynchronous messaging between the API and the independently deployed Worker, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from both processes and persists them in the ClickHouse instance bundled with ClickStack.
+The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, a three-node RabbitMQ quorum cluster behind a dedicated HAProxy handles asynchronous messaging between the API and the independently deployed Worker, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from both processes and persists them in the ClickHouse instance bundled with ClickStack.
 
 ### Application database ER diagram
 
@@ -317,3 +322,22 @@ The Worker collects RabbitMQ queue metrics from the Management API every five mi
 - `rabbitmq.queue.consumers`: active consumers per queue.
 
 Metrics include the `rabbitmq.queue` attribute for filtering. The monitored queues are `sms.send`, `sms.alert.evaluation`, and `sms.reporting.overview`. Collection failures are logged as errors.
+
+
+### RabbitMQ high availability
+
+The local topology is:
+
+```text
+API instances / Worker
+          |
+     rabbitmq-lb
+      HAProxy :5672
+       /   |   \
+      /    |    \
+rabbitmq-1 rabbitmq-2 rabbitmq-3
+      \    |    /
+       quorum queues (3 members)
+```
+
+RabbitMQ nodes share the same Erlang cookie so they form one cluster. Override `RABBITMQ_ERLANG_COOKIE` outside local development and keep it secret. HAProxy handles new AMQP connection failover; RabbitMQ quorum queues handle durable message replication and leader election. These mechanisms complement the existing database-backed failed-publish recovery and do not create a distributed transaction between PostgreSQL and RabbitMQ.
