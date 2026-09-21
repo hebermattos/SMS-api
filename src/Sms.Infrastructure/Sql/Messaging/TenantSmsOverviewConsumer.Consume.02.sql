@@ -75,6 +75,19 @@ DO UPDATE SET
     Status=EXCLUDED.Status, UpdatedAtUtc=EXCLUDED.UpdatedAtUtc
 WHERE EXCLUDED.UpdatedAtUtc >= ReportingSmsMessages.UpdatedAtUtc;
 
+-- Older events are kept for delta counters and idempotency, but must not rewrite current-state aggregates.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM ReportingSmsMessages
+        WHERE MessageId=@MessageId AND UpdatedAtUtc=@OccurredAtUtc
+          AND TenantId=@TenantId AND Provider=@Provider AND Direction=@Direction
+          AND QueueStatus=@QueueStatus AND Status=@Status
+    ) THEN
+        RETURN;
+    END IF;
+END $$;
+
 -- Add the new current state to each reporting grain.
 INSERT INTO TenantSmsDailyOverview
     (ReportDate,TenantId,TenantName,TotalMessages,Scheduled,Queued,Sent,Delivered,Failed,Received,Outbound,Inbound,Pending,UpdatedAtUtc)
