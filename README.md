@@ -98,6 +98,22 @@ Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended f
 
 Ollama model initialization runs independently from the API startup. A slow or failed model pull does not prevent the API from starting; AI assistance becomes available after `ollama-init` successfully downloads the model.
 
+## Rate limiting
+
+Rate limiting is enforced per authenticated tenant/login and request bucket. Counters are stored in Redis, so all API instances behind HAProxy share the same limits.
+
+| Bucket | Default limit | Scope |
+| --- | ---: | --- |
+| API requests | 120 requests/minute | Tenant + login |
+| SMS sends | 10 requests/minute | Tenant + login |
+| Ollama / AI assistant | 6 requests/minute | Tenant + login |
+
+The effective key combines **tenant + login + request bucket**, preventing one authenticated user from consuming another user's allowance. Exceeding a configured limit returns HTTP `429 Too Many Requests`.
+
+The platform can configure tenant rate limits. The values are persisted with the tenant configuration rather than being tied to a specific API instance. Redis contains the distributed counters used to enforce those configured limits.
+
+The Ollama bucket is intentionally more restrictive because local model inference is comparatively expensive. Its default of 6 requests per minute is equivalent to an average of one request every 10 seconds.
+
 The tenant UI exposes a single **AI tips** action for SMS messages and templates. It uses the validation endpoint to review clarity, spelling, tone, length, ambiguous wording, and malformed template placeholders, then returns concise improvement suggestions without automatically rewriting the user's text. It does not make legal/compliance decisions.
 
 The backend keeps both `/improve` and `/validate` endpoints available for API compatibility, but the tenant UI uses only `/validate`. SMS/template content sent to the assistant stays inside the local Ollama deployment. AI output is advisory and should be reviewed before sending. Platform administrators can configure the tenant AI prompts from the company settings screen; the validation prompt controls the AI tips experience.
