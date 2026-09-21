@@ -39,7 +39,7 @@
 <text x="1307" y="900" text-anchor="middle" class="s">SmsMessages triggers create projection events</text><text x="1307" y="925" text-anchor="middle" class="mini">Events are published asynchronously to the reporting database.</text>
 
 <rect x="35" y="1040" width="1530" height="125" class="group"/><text x="55" y="1072" class="h">Standalone and relationship notes</text>
-<rect x="80" y="1095" width="300" height="45" fill="#f8fafc" stroke="#64748b" class="box"/><text x="230" y="1123" text-anchor="middle" class="t">PlatformAdministrators</text>
+<rect x="80" y="1095" width="300" height="45" fill="#f8fafc" stroke="#64748b" class="box"/><text x="230" y="1123" text-anchor="middle" class="t">PortalUsers</text>
 <text x="420" y="1110" class="s">No foreign keys in the current schema.</text><text x="420" y="1135" class="mini">All tenant-owned tables reference Tenants directly or through composite message/rule relationships.</text>
 
 <path d="M180 270V320H1450V365H1220V410" class="line"/><path d="M187 320V410" class="line"/><path d="M525 320V395" class="line"/><path d="M207 320V550" class="line"/>
