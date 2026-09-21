@@ -291,7 +291,7 @@ Docker Compose runs two independent API instances behind HAProxy. HAProxy expose
 
 HAProxy exposes local-only runtime statistics on `http://localhost:8404/stats`. HAProxy and both API containers use a 30-second Docker stop grace period, allowing in-flight requests to finish before containers are terminated.
 
-The diagram reflects the current Docker Compose topology and startup dependencies. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, a three-node RabbitMQ quorum cluster behind a dedicated HAProxy handles asynchronous messaging between the API and the independently deployed Worker, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from both processes and persists them in the ClickHouse instance bundled with ClickStack.
+The diagram reflects the current Docker Compose topology and startup dependencies, including the dedicated AMQP HAProxy, three RabbitMQ cluster members, three-member quorum queues, and per-node persistent volumes. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, a three-node RabbitMQ quorum cluster behind a dedicated HAProxy handles asynchronous messaging between the API and the independently deployed Worker, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from both processes and persists them in the ClickHouse instance bundled with ClickStack.
 
 ### Application database ER diagram
 
