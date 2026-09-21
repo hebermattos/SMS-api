@@ -15,7 +15,7 @@ public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTe
     {
         if (skip < 0) return BadRequest("skip must be zero or greater.");
         take = Math.Clamp(take, 1, 200);
-        return Ok((await repository.ListAsync(tenant.TenantId, skip, take, cancellationToken)).Select(Response));
+        return Ok((await repository.ListAsync(tenant.TenantId, skip, take, cancellationToken)).Select(ToResponse));
     }
 
     [HttpGet("{id:guid}")]
