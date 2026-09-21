@@ -12,7 +12,7 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
         await connection.ExecuteAsync(new CommandDefinition(sql, new
         {
             session.Id, session.UserId, session.Username, session.TenantId, session.Context, session.Role,
-            session.IsPlatformAdministrator, TokenHash = tokenHash, session.ExpiresAt
+            TokenHash = tokenHash, session.ExpiresAt
         }, cancellationToken: cancellationToken));
     }
 
@@ -41,7 +41,7 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
         await connection.ExecuteAsync(new CommandDefinition(insertSql, new
         {
             Id = replacementId, session.UserId, session.Username, session.TenantId, session.Context, session.Role,
-            session.IsPlatformAdministrator, TokenHash = replacementTokenHash, ExpiresAt = replacementExpiresAt
+            TokenHash = replacementTokenHash, ExpiresAt = replacementExpiresAt
         }, transaction, cancellationToken: cancellationToken));
 
         await transaction.CommitAsync(cancellationToken);

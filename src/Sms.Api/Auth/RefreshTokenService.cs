@@ -19,7 +19,7 @@ public sealed class RefreshTokenService(
         var raw = CreateToken();
         var expiresAt = DateTimeOffset.UtcNow.AddDays(options.Value.RefreshExpirationDays);
         var session = new RefreshTokenSession(
-            Guid.NewGuid(), userId, username, tenantId, context, role, false, expiresAt);
+            Guid.NewGuid(), userId, username, tenantId, context, role, expiresAt);
         await repository.CreateAsync(session, Hash(raw), cancellationToken);
         return Build(session, raw);
     }

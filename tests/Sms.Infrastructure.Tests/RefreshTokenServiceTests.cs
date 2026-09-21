@@ -19,7 +19,6 @@ public sealed class RefreshTokenServiceTests
         Assert.Equal(3600, issued.ExpiresIn);
         Assert.NotNull(repository.Created);
         Assert.Equal(user.Id, repository.Created!.UserId);
-        Assert.False(repository.Created.IsPlatformAdministrator);
         Assert.Equal(32, repository.CreatedHash!.Length);
     }
 
@@ -52,7 +51,7 @@ public sealed class RefreshTokenServiceTests
     private static PortalUserAccount User() =>
         new(Guid.NewGuid(), Guid.NewGuid(), "user", "user@example.com", [], [], 600000, "tenant", "user", true);
     private static RefreshTokenSession Session(PortalUserAccount user) =>
-        new(Guid.NewGuid(), user.Id, user.Username, user.TenantId, user.Context, user.Role, false, DateTimeOffset.UtcNow.AddDays(1));
+        new(Guid.NewGuid(), user.Id, user.Username, user.TenantId, user.Context, user.Role, DateTimeOffset.UtcNow.AddDays(1));
 
     private sealed class RefreshTokens : IRefreshTokenRepository
     {

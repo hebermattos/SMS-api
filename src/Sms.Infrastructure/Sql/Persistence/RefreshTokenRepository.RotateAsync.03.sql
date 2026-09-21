@@ -1,4 +1,4 @@
 INSERT INTO RefreshTokens
-    (Id, UserId, Username, TenantId, Context, Role, IsPlatformAdministrator, TokenHash, ExpiresAt, CreatedAt)
+    (Id, UserId, Username, TenantId, Context, Role, TokenHash, ExpiresAt, CreatedAt)
 VALUES
-    (@Id, @UserId, @Username, @TenantId, @Context, @Role, @IsPlatformAdministrator, @TokenHash, @ExpiresAt, CURRENT_TIMESTAMP);
+    (@Id, @UserId, @Username, @TenantId, @Context, @Role, @TokenHash, @ExpiresAt, CURRENT_TIMESTAMP);
