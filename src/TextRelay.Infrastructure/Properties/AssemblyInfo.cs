@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Sms.Infrastructure.Tests")]
+[assembly: InternalsVisibleTo("TextRelay.Infrastructure.Tests")]
