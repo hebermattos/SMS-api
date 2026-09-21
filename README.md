@@ -34,6 +34,12 @@ Requires Docker with Docker Compose.
 docker compose up --build
 ```
 
+The default stack does not start the local AI services. Enable Ollama only when AI assistance is needed:
+
+```bash
+docker compose --profile ai up --build
+```
+
 Local services:
 
 | Service | Address | Notes |
@@ -69,7 +75,7 @@ docker compose up --build
 
 Database backups are stored outside Docker volumes in `./backups` by default, so `docker compose down --volumes` does not delete them. Set `POSTGRES_BACKUP_PATH` to an absolute path on independent storage for stronger protection.
 
-> Docker is intended for local testing only. Never use fallback Compose credentials outside development. Resource reservations and limits are defined directly in `docker-compose.yml`; treat that file as the source of truth.
+> Docker is intended for local testing only. Never use fallback Compose credentials outside development. Resource reservations and limits are defined directly in `docker-compose.yml`; treat that file as the source of truth. The current limits are intentionally sized for integration testing and a single-user local environment; Ollama is excluded from the default stack through the `ai` profile to reduce idle resource usage.
 
 ## Features
 
@@ -95,7 +101,7 @@ Swagger documents the complete API surface.
 
 ## Local AI message assistant
 
-Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints. AI assistant requests use a dedicated `OllamaRequestsPerMinute` rate-limit bucket; see [Rate limiting](#rate-limiting) for limits and enforcement details.
+When the `ai` profile is enabled, Docker Compose runs Ollama locally with `qwen2.5:0.5b`, a small model intended for lightweight message assistance. The API exposes authenticated `POST /api/v1/message-assistant/improve` and `POST /api/v1/message-assistant/validate` endpoints. AI assistant requests use a dedicated `OllamaRequestsPerMinute` rate-limit bucket; see [Rate limiting](#rate-limiting) for limits and enforcement details.
 
 Ollama model initialization runs independently from the API startup. A slow or failed model pull does not prevent the API from starting; AI assistance becomes available after `ollama-init` successfully downloads the model.
 
@@ -309,11 +315,11 @@ HAProxy exposes local-only runtime statistics on `http://localhost:8404/stats`. 
 
 The diagram reflects the current Docker Compose topology and startup dependencies, including the dedicated AMQP HAProxy, three RabbitMQ cluster members, three-member quorum queues, and per-node persistent volumes. PostgreSQL hosts the application, audit/error-log, and reporting databases. Redis provides caching, a three-node RabbitMQ quorum cluster behind a dedicated HAProxy handles asynchronous messaging between the API and the independently deployed Worker, and the standalone OpenTelemetry Collector receives technical logs, traces, and metrics from both processes and persists them in the ClickHouse instance bundled with ClickStack.
 
-### Application database ER diagram
+### Database ER diagram
 
-![SMS API application database ER diagram](docs/images/sms-api-er-diagram.svg)
+![SMS API database ER diagram](docs/images/sms-api-er-diagram.svg)
 
-The diagram represents the PostgreSQL application schema defined in `database/schema.sql` and uses the same visual language as the Docker Compose architecture diagram. Auxiliary observability and reporting databases remain separate from the transactional application database. `PlatformAdministrators` and `AlertEvaluationInbox` have no foreign-key relationships in the current schema.
+The diagram keeps the database model in a single image. It contains the transactional schema from `database/schema.sql` and the reporting read model from `database/reporting-schema.sql`, while preserving the boundary between `sms_api` and `sms_api_reporting`. The reporting flow is `SmsMessages → TenantSmsOverviewOutbox → RabbitMQ → Worker → ReportingSmsMessages → daily tenant/provider/user aggregates`. The audit/error-log database remains separate. `PlatformAdministrators` and `AlertEvaluationInbox` have no foreign-key relationships in the transactional schema.
 
 The two API containers and Worker are separate processes and can be deployed and scaled independently. HAProxy is the single host-facing API entry point; API containers are reachable only on the internal Compose network. The API handles HTTP, authentication, authorization, webhooks, and RabbitMQ publishing. The Worker owns RabbitMQ consumers, scheduled-message publishing, failed-publish retry, alert outbox publishing, and RabbitMQ monitoring. Both wait for their required infrastructure dependencies before starting. HyperDX browser access is exposed separately through the Basic Auth proxy. The optional `webhook-tests` service is enabled through the `tests` profile.
 
