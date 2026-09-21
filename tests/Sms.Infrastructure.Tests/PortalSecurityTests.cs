@@ -118,7 +118,7 @@ public sealed class PortalSecurityTests
     [InlineData(400)] [InlineData(404)] [InlineData(409)] [InlineData(500)]
     public void PortalErrors_DoNotExposeInfrastructureFailures(int status)
     {
-        Exception exception = status switch { 400 => new ArgumentException("Invalid input"), 404 => new KeyNotFoundException(), 409 => new AdministrationConflictException(), _ => new InvalidOperationException("private database details") };
+        Exception exception = status switch { 400 => new ArgumentException("Invalid input"), 404 => new KeyNotFoundException(), 409 => new PortalUserConflictException(), _ => new InvalidOperationException("private database details") };
         var action = new ActionContext(new DefaultHttpContext(), new RouteData(), new ActionDescriptor(), new ModelStateDictionary());
         var context = new ExceptionContext(action, new List<IFilterMetadata>()) { Exception = exception };
         new PortalExceptionFilter().OnException(context);
