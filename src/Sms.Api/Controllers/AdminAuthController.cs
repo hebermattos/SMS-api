@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -51,5 +52,18 @@ public sealed class AdminAuthController(
         Response.Headers.CacheControl = "no-store";
         var issued = await refreshTokens.RotateAsync(request.RefreshToken, cancellationToken);
         return issued is null ? Unauthorized() : Ok(new { access_token = issued.AccessToken, refresh_token = issued.RefreshToken, token_type = "Bearer", expires_in = issued.ExpiresIn });
+    }
+
+    [Authorize(Policy = PortalSecurity.AdminPolicy)]
+    [HttpPost("logout")]
+    [RequestSizeLimit(2048)]
+    public async Task<IActionResult> Logout(RefreshTokenRequest request, CancellationToken cancellationToken = default)
+    {
+        var subject = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (!Guid.TryParse(subject, out var userId))
+            return Unauthorized();
+
+        await refreshTokens.RevokeAsync(request.RefreshToken, userId, cancellationToken);
+        return NoContent();
     }
 }
