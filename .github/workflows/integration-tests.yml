@@ -88,6 +88,8 @@ jobs:
             IF to_regclass('public.systemlogs') IS NULL THEN RAISE EXCEPTION 'System log schema is missing.'; END IF;
           END $$;
           SQL
+      - name: Start application stack
+        run: docker compose up -d --build haproxy
       - name: Verify administrator password login and tenant separation over HTTP
         run: python3 tests/e2e/auth_and_tenant_isolation.py
       - name: Show resource diagnostics
