@@ -13,9 +13,10 @@ public sealed class RabbitMqMonitoringService(
 {
     public const string MeterName = "Sms.Api.RabbitMq";
     private static readonly Meter Meter = new(MeterName);
-    private static readonly Histogram<long> Ready = Meter.CreateHistogram<long>("rabbitmq.queue.messages.ready");
-    private static readonly Histogram<long> Unacknowledged = Meter.CreateHistogram<long>("rabbitmq.queue.messages.unacknowledged");
-    private static readonly Histogram<long> Consumers = Meter.CreateHistogram<long>("rabbitmq.queue.consumers");
+    private static readonly UpDownCounter<long> Ready = Meter.CreateUpDownCounter<long>("rabbitmq.queue.messages.ready");
+    private static readonly UpDownCounter<long> Unacknowledged = Meter.CreateUpDownCounter<long>("rabbitmq.queue.messages.unacknowledged");
+    private static readonly UpDownCounter<long> Consumers = Meter.CreateUpDownCounter<long>("rabbitmq.queue.consumers");
+    private readonly Dictionary<string, QueueMetrics> previous = new(StringComparer.Ordinal);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -38,9 +39,11 @@ public sealed class RabbitMqMonitoringService(
                 if (result is null) continue;
 
                 var tags = new TagList { { "rabbitmq.queue", queue } };
-                Ready.Record(result.MessagesReady, tags);
-                Unacknowledged.Record(result.MessagesUnacknowledged, tags);
-                Consumers.Record(result.Consumers, tags);
+                previous.TryGetValue(queue, out var old);
+                Ready.Add(result.MessagesReady - (old?.MessagesReady ?? 0), tags);
+                Unacknowledged.Add(result.MessagesUnacknowledged - (old?.MessagesUnacknowledged ?? 0), tags);
+                Consumers.Add(result.Consumers - (old?.Consumers ?? 0), tags);
+                previous[queue] = result;
 
                 if (result.Consumers == 0)
                     logger.LogWarning("RabbitMQ queue {Queue}: {Ready} ready, {Unacknowledged} unacknowledged, {Consumers} consumers.",
