@@ -90,9 +90,23 @@ public sealed class SmsSendConsumer(
             providerActivity?.SetTag("message.id", sendEvent.MessageId);
             providerActivity?.SetTag("sms.provider", provider.Name);
             var started = Stopwatch.GetTimestamp();
-            var sendResult = await provider.SendAsync(message.From, message.To, message.Body, cancellationToken);
-            TextRelayTelemetry.ProviderDuration.Record(Stopwatch.GetElapsedTime(started).TotalMilliseconds,
-                new KeyValuePair<string, object?>("sms.provider", provider.Name));
+            ProviderSendResult sendResult;
+            try
+            {
+                sendResult = await provider.SendAsync(message.From, message.To, message.Body, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                providerActivity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+                providerActivity?.AddException(exception);
+                throw;
+            }
+            finally
+            {
+                TextRelayTelemetry.ProviderDuration.Record(
+                    Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                    new KeyValuePair<string, object?>("sms.provider", provider.Name));
+            }
             providerActivity?.SetTag("sms.status", sendResult.Status.ToString());
             if (sendResult.Status == SmsStatus.Failed)
                 TextRelayTelemetry.SmsFailed.Add(1, new KeyValuePair<string, object?>("sms.provider", provider.Name));
