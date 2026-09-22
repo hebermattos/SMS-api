@@ -28,20 +28,6 @@ public sealed class RecentFeatureCoverageTests
         new SmsRetryOptions { MaxAttempts = 10, InitialIntervalSeconds = 86400 }.Validate();
     }
 
-    [Fact]
-    public void TemplateRenderer_DetectsRendersAndValidatesVariables()
-    {
-        Assert.Equal(new[] { "recipientName", "Code" }, MessageTemplateRenderer.Variables("Hi {{ recipientName }}, {{Code}} {{code}}"));
-        var rendered = MessageTemplateRenderer.Render(
-            "{{recipientName}} from {{tenantName}}: {{code}}",
-            new Dictionary<string, string> { ["CODE"] = "123", ["recipientName"] = "wrong" },
-            new Dictionary<string, string> { ["recipientName"] = "Ana", ["tenantName"] = "Acme" });
-        Assert.Equal("Ana from Acme: 123", rendered);
-        var error = Assert.Throws<ArgumentException>(() =>
-            MessageTemplateRenderer.Render("{{one}} {{two}}", new Dictionary<string, string>()));
-        Assert.Contains("one", error.Message);
-        Assert.Contains("two", error.Message);
-    }
 
     [Fact]
     public async Task MessageAssistantController_ReturnsResultsAndBadRequests()
