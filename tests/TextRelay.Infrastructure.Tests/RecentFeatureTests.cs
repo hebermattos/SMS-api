@@ -14,7 +14,7 @@ using Sms.Infrastructure.Providers;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class RecentFeatureCoverageTests
+public sealed class RecentFeatureTests
 {
     [Fact]
     public void RetryOptions_ValidateDefaultsAndBounds()
