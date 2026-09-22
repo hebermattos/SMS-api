@@ -12,7 +12,10 @@ public sealed class RabbitMqOptionsTests
 
         Assert.Equal("localhost", options.Host);
         Assert.Equal(5672, options.Port);
+        Assert.Equal("localhost", options.ManagementHost);
         Assert.Equal(15672, options.ManagementPort);
+        Assert.Equal((ushort)4, options.SendPrefetchCount);
+        Assert.Equal(4, options.SendConcurrentMessageLimit);
         Assert.Equal("sms.alert.evaluation", options.Queue);
         Assert.Equal("sms.send", options.SendQueue);
         Assert.Equal("sms.reporting.overview", options.ReportingQueue);
@@ -25,7 +28,10 @@ public sealed class RabbitMqOptionsTests
         {
             ["RabbitMq:Host"] = "broker",
             ["RabbitMq:Port"] = "5673",
+            ["RabbitMq:ManagementHost"] = "management",
             ["RabbitMq:ManagementPort"] = "15673",
+            ["RabbitMq:SendPrefetchCount"] = "6",
+            ["RabbitMq:SendConcurrentMessageLimit"] = "5",
             ["RabbitMq:User"] = "sms",
             ["RabbitMq:Password"] = "secret",
             ["RabbitMq:VirtualHost"] = "/sms",
@@ -38,7 +44,10 @@ public sealed class RabbitMqOptionsTests
 
         Assert.Equal("broker", options.Host);
         Assert.Equal(5673, options.Port);
+        Assert.Equal("management", options.ManagementHost);
         Assert.Equal(15673, options.ManagementPort);
+        Assert.Equal((ushort)6, options.SendPrefetchCount);
+        Assert.Equal(5, options.SendConcurrentMessageLimit);
         Assert.Equal("sms", options.User);
         Assert.Equal("secret", options.Password);
         Assert.Equal("/sms", options.VirtualHost);
