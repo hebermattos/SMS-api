@@ -24,6 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddSmsLogging();
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing
+        .AddSource(Sms.Infrastructure.Observability.TextRelayTelemetry.ActivitySourceName)
         .AddAspNetCoreInstrumentation()
         .AddOtlpExporter())
     .WithMetrics(metrics => metrics
