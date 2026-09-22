@@ -121,8 +121,10 @@ public sealed class RegistrationAndModelTests
         Assert.NotNull(TextRelayTelemetry.SmsQueued);
         Assert.NotNull(TextRelayTelemetry.SmsSent);
         Assert.NotNull(TextRelayTelemetry.SmsFailed);
+        Assert.NotNull(TextRelayTelemetry.SmsClaimRejected);
         Assert.NotNull(TextRelayTelemetry.QueuePublishFailed);
         Assert.NotNull(TextRelayTelemetry.ProviderDuration);
+        Assert.NotNull(TextRelayTelemetry.ProcessingDuration);
     }
 
     [Fact]
@@ -158,14 +160,18 @@ public sealed class RegistrationAndModelTests
         TextRelayTelemetry.SmsQueued.Add(1);
         TextRelayTelemetry.SmsSent.Add(1);
         TextRelayTelemetry.SmsFailed.Add(1);
+        TextRelayTelemetry.SmsClaimRejected.Add(1);
         TextRelayTelemetry.QueuePublishFailed.Add(1);
         TextRelayTelemetry.ProviderDuration.Record(1);
+        TextRelayTelemetry.ProcessingDuration.Record(1);
 
         Assert.Contains("sms.queued", measurements);
         Assert.Contains("sms.sent", measurements);
         Assert.Contains("sms.failed", measurements);
+        Assert.Contains("sms.queue.claim.rejected", measurements);
         Assert.Contains("sms.queue.publish.failed", measurements);
         Assert.Contains("sms.provider.duration", measurements);
+        Assert.Contains("sms.processing.duration", measurements);
     }
 
     [Fact]

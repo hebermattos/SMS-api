@@ -19,7 +19,7 @@ public sealed class SmsSendConsumer(
     public async Task Consume(ConsumeContext<SmsSendEvent> context)
     {
         var sendEvent = context.Message;
-        using var activity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.consume");
+        using var activity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.consume", ActivityKind.Consumer);
         activity?.SetTag("tenant.id", sendEvent.TenantId);
         activity?.SetTag("message.id", sendEvent.MessageId);
         tenantContext.SetTenant(sendEvent.TenantId);
@@ -47,20 +47,35 @@ public sealed class SmsSendConsumer(
         if (message.QueueStatus != SmsQueueStatus.Queued)
             return;
 
-        using var claimActivity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.claim");
-        claimActivity?.SetTag("tenant.id", sendEvent.TenantId);
-        claimActivity?.SetTag("message.id", sendEvent.MessageId);
-        var claimed = await repository.TryClaimQueuedAsync(
-            sendEvent.TenantId,
-            sendEvent.MessageId,
-            DateTimeOffset.UtcNow,
-            context.CancellationToken);
+        bool claimed;
+        using (var claimActivity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.claim", ActivityKind.Internal))
+        {
+            claimActivity?.SetTag("tenant.id", sendEvent.TenantId);
+            claimActivity?.SetTag("message.id", sendEvent.MessageId);
+            claimed = await repository.TryClaimQueuedAsync(
+                sendEvent.TenantId,
+                sendEvent.MessageId,
+                DateTimeOffset.UtcNow,
+                context.CancellationToken);
+            claimActivity?.SetTag("sms.queue.claimed", claimed);
+        }
 
         if (!claimed)
+        {
+            TextRelayTelemetry.SmsClaimRejected.Add(1);
             return;
+        }
 
         message.QueueStatus = SmsQueueStatus.Processing;
-        await SendAsync(sendEvent, message, context.CancellationToken);
+        var processingStarted = Stopwatch.GetTimestamp();
+        try
+        {
+            await SendAsync(sendEvent, message, context.CancellationToken);
+        }
+        finally
+        {
+            TextRelayTelemetry.ProcessingDuration.Record(Stopwatch.GetElapsedTime(processingStarted).TotalMilliseconds);
+        }
     }
 
     private async Task SendAsync(SmsSendEvent sendEvent, SmsMessage message, CancellationToken cancellationToken)
@@ -70,7 +85,7 @@ public sealed class SmsSendConsumer(
             await optOut.EnsureCanSendAsync(sendEvent.TenantId, message.To, cancellationToken);
 
             var provider = providerResolver.Resolve(message.Provider);
-            using var providerActivity = TextRelayTelemetry.ActivitySource.StartActivity("sms.provider.send");
+            using var providerActivity = TextRelayTelemetry.ActivitySource.StartActivity("sms.provider.send", ActivityKind.Client);
             providerActivity?.SetTag("tenant.id", sendEvent.TenantId);
             providerActivity?.SetTag("message.id", sendEvent.MessageId);
             providerActivity?.SetTag("sms.provider", provider.Name);
@@ -95,8 +110,10 @@ public sealed class SmsSendConsumer(
         {
             throw;
         }
-        catch (TransientSmsProviderException)
+        catch (TransientSmsProviderException exception)
         {
+            Activity.Current?.SetStatus(ActivityStatusCode.Error, exception.Message);
+            Activity.Current?.AddException(exception);
             // MassTransit retries the same delivery in this consumer instance. The
             // database claim remains Processing so another delivery cannot send it.
             // SendAsync is retried directly instead of returning through Consume,
@@ -105,6 +122,8 @@ public sealed class SmsSendConsumer(
         }
         catch (Exception exception)
         {
+            Activity.Current?.SetStatus(ActivityStatusCode.Error, exception.Message);
+            Activity.Current?.AddException(exception);
             TextRelayTelemetry.SmsFailed.Add(1, new KeyValuePair<string, object?>("sms.provider", message.Provider));
             logger.LogError(exception, "Failed to process queued SMS message {MessageId} for tenant {TenantId} with provider {Provider}.", sendEvent.MessageId, sendEvent.TenantId, message.Provider);
 
