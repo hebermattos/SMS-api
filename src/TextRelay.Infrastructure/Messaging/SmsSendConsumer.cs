@@ -106,7 +106,7 @@ public sealed class SmsSendConsumer(
             catch (Exception exception)
             {
                 providerActivity?.SetStatus(ActivityStatusCode.Error, exception.Message);
-                providerActivity?.AddException(exception);
+                providerActivity?.RecordException(exception);
                 throw;
             }
             finally
@@ -135,7 +135,7 @@ public sealed class SmsSendConsumer(
         catch (TransientSmsProviderException exception)
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, exception.Message);
-            Activity.Current?.AddException(exception);
+            Activity.Current?.RecordException(exception);
             // Keep the persisted state as Processing. Delayed redelivery creates a
             // new delivery for the same message after the configured backoff; that
             // delivery may continue without claiming again, while unrelated duplicates
@@ -145,7 +145,7 @@ public sealed class SmsSendConsumer(
         catch (Exception exception)
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, exception.Message);
-            Activity.Current?.AddException(exception);
+            Activity.Current?.RecordException(exception);
             TextRelayTelemetry.SmsFailed.Add(1, new KeyValuePair<string, object?>("sms.provider", message.Provider));
             logger.LogError(exception, "Failed to process queued SMS message {MessageId} for tenant {TenantId} with provider {Provider}.", sendEvent.MessageId, sendEvent.TenantId, message.Provider);
 
