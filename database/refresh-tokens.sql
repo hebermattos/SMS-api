@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS RefreshTokens
 (
     Id UUID PRIMARY KEY,
     UserId UUID NOT NULL,
+    FamilyId UUID NOT NULL,
     Username CITEXT NOT NULL,
     TenantId UUID NULL,
     Context VARCHAR(20) NOT NULL,
@@ -14,6 +15,9 @@ CREATE TABLE IF NOT EXISTS RefreshTokens
     CHECK (Context IN ('tenant', 'platform')),
     CHECK (Role IN ('user', 'administrator'))
 );
+
+CREATE INDEX IF NOT EXISTS IX_RefreshTokens_FamilyId
+    ON RefreshTokens(FamilyId);
 
 CREATE INDEX IF NOT EXISTS IX_RefreshTokens_User_Active
     ON RefreshTokens(UserId, ExpiresAt DESC)
