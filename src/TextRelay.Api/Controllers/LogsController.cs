@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sms.Api.Auth;
 using Sms.Application.Common;
 using Sms.Application.Logs;
 
 namespace Sms.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
 [Route("api/v1/logs")]
 public sealed class LogsController(ITenantContext tenantContext, ILogEntryRepository repository, ITenantTimeZoneProvider? timeZones = null) : ControllerBase
 {
