@@ -1,4 +1,5 @@
 using MassTransit;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Sms.Application.Common;
 using Sms.Application.Messages;
@@ -73,8 +74,15 @@ public sealed class SmsSendConsumer(
             providerActivity?.SetTag("tenant.id", sendEvent.TenantId);
             providerActivity?.SetTag("message.id", sendEvent.MessageId);
             providerActivity?.SetTag("sms.provider", provider.Name);
+            var started = Stopwatch.GetTimestamp();
             var sendResult = await provider.SendAsync(message.From, message.To, message.Body, cancellationToken);
+            TextRelayTelemetry.ProviderDuration.Record(Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                new KeyValuePair<string, object?>("sms.provider", provider.Name));
             providerActivity?.SetTag("sms.status", sendResult.Status.ToString());
+            if (sendResult.Status == SmsStatus.Failed)
+                TextRelayTelemetry.SmsFailed.Add(1, new KeyValuePair<string, object?>("sms.provider", provider.Name));
+            else
+                TextRelayTelemetry.SmsSent.Add(1, new KeyValuePair<string, object?>("sms.provider", provider.Name));
             await repository.UpdateStatusAsync(
                 sendEvent.TenantId,
                 sendEvent.MessageId,
@@ -97,6 +105,7 @@ public sealed class SmsSendConsumer(
         }
         catch (Exception exception)
         {
+            TextRelayTelemetry.SmsFailed.Add(1, new KeyValuePair<string, object?>("sms.provider", message.Provider));
             logger.LogError(exception, "Failed to process queued SMS message {MessageId} for tenant {TenantId} with provider {Provider}.", sendEvent.MessageId, sendEvent.TenantId, message.Provider);
 
             await repository.UpdateStatusAsync(
