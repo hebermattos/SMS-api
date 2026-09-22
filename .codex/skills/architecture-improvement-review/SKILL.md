@@ -1,6 +1,6 @@
 ---
 name: architecture-improvement-review
-description: Analyze the sms-api repository architecture and produce evidence-backed, prioritized improvement suggestions. Use when asked to review, assess, improve, or rethink the project architecture; do not modify code unless the user separately asks for implementation.
+description: Analyze the TextRelay repository architecture and produce evidence-backed, prioritized improvement suggestions. Use when asked to review, assess, improve, or rethink the project architecture; do not modify code unless the user separately asks for implementation.
 ---
 
 # Architecture Improvement Review
@@ -125,12 +125,14 @@ Inspect:
 - reporting tables versus transactional tables;
 - idempotency and concurrency boundaries;
 - UTC storage and tenant time-zone conversion boundaries;
-- separate operational/observability database responsibilities;
+- explicit ownership of the application database, audit/error-log database, reporting database, Redis state, and ClickHouse technical telemetry;
 - schema initialization and bootstrap ownership.
 
 Do not recommend an ORM or repository rewrite without a concrete maintainability or correctness problem.
 
 ### Messaging and background processing
+
+Preserve and inspect the current outbound invariant: persist the SMS, publish only its identity, load it in the Worker, atomically claim `Queued` → `Processing`, then call the provider outside the database transaction. Keep `SmsQueueStatus` separate from provider/delivery `SmsStatus`.
 
 Inspect RabbitMQ, hosted services, scheduling, retry, alerts, and outbox-like flows for:
 
@@ -183,6 +185,9 @@ Check:
 - separation between system logs, user activity logs, traces, and metrics;
 - tenant isolation for customer-visible logs;
 - OpenTelemetry ownership and exporter configuration;
+- API service identity (`textrelay-api`) versus Worker identity (`textrelay-worker`) and distinct instance IDs;
+- producer/consumer/internal/client span semantics across publish, consume, claim, and provider calls;
+- low-cardinality metric dimensions and latency visibility on both success and failure;
 - health checks matching optional dependencies;
 - useful correlation identifiers;
 - excessive coupling between application startup and observability systems;
