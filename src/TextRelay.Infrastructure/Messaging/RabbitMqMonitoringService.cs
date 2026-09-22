@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,10 +14,16 @@ public sealed class RabbitMqMonitoringService(
 {
     public const string MeterName = "Sms.Api.RabbitMq";
     private static readonly Meter Meter = new(MeterName);
-    private static readonly UpDownCounter<long> Ready = Meter.CreateUpDownCounter<long>("rabbitmq.queue.messages.ready");
-    private static readonly UpDownCounter<long> Unacknowledged = Meter.CreateUpDownCounter<long>("rabbitmq.queue.messages.unacknowledged");
-    private static readonly UpDownCounter<long> Consumers = Meter.CreateUpDownCounter<long>("rabbitmq.queue.consumers");
-    private readonly Dictionary<string, QueueMetrics> previous = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, QueueMetrics> Current = new(StringComparer.Ordinal);
+    private static readonly ObservableGauge<long> Ready = Meter.CreateObservableGauge(
+        "rabbitmq.queue.messages.ready",
+        () => Current.Select(x => new Measurement<long>(x.Value.MessagesReady, new KeyValuePair<string, object?>("rabbitmq.queue", x.Key))));
+    private static readonly ObservableGauge<long> Unacknowledged = Meter.CreateObservableGauge(
+        "rabbitmq.queue.messages.unacknowledged",
+        () => Current.Select(x => new Measurement<long>(x.Value.MessagesUnacknowledged, new KeyValuePair<string, object?>("rabbitmq.queue", x.Key))));
+    private static readonly ObservableGauge<long> Consumers = Meter.CreateObservableGauge(
+        "rabbitmq.queue.consumers",
+        () => Current.Select(x => new Measurement<long>(x.Value.Consumers, new KeyValuePair<string, object?>("rabbitmq.queue", x.Key))));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -39,11 +46,7 @@ public sealed class RabbitMqMonitoringService(
                 if (result is null) continue;
 
                 var tags = new TagList { { "rabbitmq.queue", queue } };
-                previous.TryGetValue(queue, out var old);
-                Ready.Add(result.MessagesReady - (old?.MessagesReady ?? 0), tags);
-                Unacknowledged.Add(result.MessagesUnacknowledged - (old?.MessagesUnacknowledged ?? 0), tags);
-                Consumers.Add(result.Consumers - (old?.Consumers ?? 0), tags);
-                previous[queue] = result;
+                Current[queue] = result;
 
                 if (result.Consumers == 0)
                     logger.LogWarning("RabbitMQ queue {Queue}: {Ready} ready, {Unacknowledged} unacknowledged, {Consumers} consumers.",
