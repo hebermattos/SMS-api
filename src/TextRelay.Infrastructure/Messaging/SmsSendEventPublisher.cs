@@ -11,6 +11,15 @@ public sealed class SmsSendEventPublisher(IPublishEndpoint publishEndpoint) : IS
         using var activity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.publish");
         activity?.SetTag("tenant.id", tenantId);
         activity?.SetTag("message.id", messageId);
-        await publishEndpoint.Publish(new SmsSendEvent(Guid.NewGuid(), tenantId, messageId), cancellationToken);
+        try
+        {
+            await publishEndpoint.Publish(new SmsSendEvent(Guid.NewGuid(), tenantId, messageId), cancellationToken);
+            TextRelayTelemetry.SmsQueued.Add(1);
+        }
+        catch
+        {
+            TextRelayTelemetry.QueuePublishFailed.Add(1);
+            throw;
+        }
     }
 }
