@@ -20,7 +20,7 @@ public sealed class SmsSendEventPublisher(IPublishEndpoint publishEndpoint) : IS
         catch (Exception exception)
         {
             activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
-            activity?.AddException(exception);
+            activity?.RecordException(exception);
             TextRelayTelemetry.QueuePublishFailed.Add(1);
             throw;
         }
