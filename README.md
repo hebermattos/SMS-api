@@ -385,13 +385,15 @@ tests                    Unit and integration tests
 
 ### Monitoring
 
-The Worker collects RabbitMQ queue metrics from the Management API every five minutes and exports them through the existing OpenTelemetry pipeline to ClickStack/HyperDX.
+The Worker collects RabbitMQ queue metrics from the Management API every five minutes and exports them through the existing OpenTelemetry pipeline to ClickStack/HyperDX. In Docker Compose, AMQP traffic uses `rabbitmq-lb:5672`, while management polling uses `rabbitmq-1:15672`; transport and management endpoints are configured independently.
 
 - `rabbitmq.queue.messages.ready`: messages waiting for a consumer.
 - `rabbitmq.queue.messages.unacknowledged`: messages currently being processed.
 - `rabbitmq.queue.consumers`: active consumers per queue.
 
 Metrics include the `rabbitmq.queue` attribute for filtering. The monitored queues are `sms.send`, `sms.alert.evaluation`, `sms.alert.rule-evaluation`, and `sms.reporting.overview`. Collection failures are logged as errors.
+
+The `sms.send` endpoint defaults to a prefetch count and concurrent-message limit of **4**, configurable with `RabbitMq__SendPrefetchCount` and `RabbitMq__SendConcurrentMessageLimit` (or `RABBITMQ_SEND_PREFETCH_COUNT` and `RABBITMQ_SEND_CONCURRENCY` in Compose). Keep these values bounded to respect provider throughput limits. The RabbitMQ HAProxy uses one-hour idle client/server timeouts so normal long-lived AMQP connections are not recycled every minute.
 
 
 ### High availability
