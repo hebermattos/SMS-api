@@ -44,8 +44,8 @@ public sealed class SmsSendConsumer(
             message.QueueStatus = SmsQueueStatus.Queued;
         }
 
-        var retryAttempt = context.GetRetryAttempt();
-        var isProviderRetry = retryAttempt > 0 && message.QueueStatus == SmsQueueStatus.Processing;
+        var redeliveryCount = context.GetRedeliveryCount();
+        var isProviderRetry = redeliveryCount > 0 && message.QueueStatus == SmsQueueStatus.Processing;
 
         if (!isProviderRetry)
         {
@@ -74,7 +74,7 @@ public sealed class SmsSendConsumer(
             message.QueueStatus = SmsQueueStatus.Processing;
         }
 
-        activity?.SetTag("messaging.retry.attempt", retryAttempt);
+        activity?.SetTag("messaging.redelivery.count", redeliveryCount);
         var processingStarted = Stopwatch.GetTimestamp();
         try
         {
@@ -136,9 +136,10 @@ public sealed class SmsSendConsumer(
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, exception.Message);
             Activity.Current?.AddException(exception);
-            // Keep the persisted state as Processing. MassTransit re-enters this
-            // consumer for the same delivery and the retry attempt is allowed to
-            // continue without claiming again; unrelated duplicate deliveries are rejected.
+            // Keep the persisted state as Processing. Delayed redelivery creates a
+            // new delivery for the same message after the configured backoff; that
+            // delivery may continue without claiming again, while unrelated duplicates
+            // with no redelivery metadata remain rejected.
             throw;
         }
         catch (Exception exception)
