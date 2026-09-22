@@ -25,7 +25,7 @@ public sealed class RabbitMqMonitoringService(
             await CollectAsync(stoppingToken);
     }
 
-    private async Task CollectAsync(CancellationToken cancellationToken)
+    internal async Task CollectAsync(CancellationToken cancellationToken)
     {
         try
         {
