@@ -61,10 +61,21 @@ public sealed class SmsSendConsumer(
         }
 
         if (!claimed)
+        {
+            TextRelayTelemetry.SmsClaimRejected.Add(1);
             return;
+        }
 
         message.QueueStatus = SmsQueueStatus.Processing;
-        await SendAsync(sendEvent, message, context.CancellationToken);
+        var processingStarted = Stopwatch.GetTimestamp();
+        try
+        {
+            await SendAsync(sendEvent, message, context.CancellationToken);
+        }
+        finally
+        {
+            TextRelayTelemetry.ProcessingDuration.Record(Stopwatch.GetElapsedTime(processingStarted).TotalMilliseconds);
+        }
     }
 
     private async Task SendAsync(SmsSendEvent sendEvent, SmsMessage message, CancellationToken cancellationToken)
