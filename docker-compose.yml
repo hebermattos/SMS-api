@@ -333,7 +333,7 @@ services:
       RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-      OTEL_SERVICE_NAME: "text-relay"
+      OTEL_SERVICE_NAME: "textrelay-api"
       OTEL_RESOURCE_ATTRIBUTES: "service.instance.id=api-1,deployment.environment=development"
 
   api-2:
@@ -373,7 +373,7 @@ services:
       RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-      OTEL_SERVICE_NAME: "text-relay"
+      OTEL_SERVICE_NAME: "textrelay-api"
       OTEL_RESOURCE_ATTRIBUTES: "service.instance.id=api-2,deployment.environment=development"
 
   haproxy:
@@ -425,7 +425,8 @@ services:
       RabbitMq__Password: "${RABBITMQ_PASSWORD:-sms}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-      OTEL_SERVICE_NAME: "sms-worker"
+      OTEL_SERVICE_NAME: "textrelay-worker"
+      OTEL_RESOURCE_ATTRIBUTES: "service.instance.id=worker-1,deployment.environment=development"
     restart: unless-stopped
 
   webhook-tests:
