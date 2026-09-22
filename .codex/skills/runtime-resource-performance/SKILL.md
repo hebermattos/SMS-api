@@ -1,11 +1,11 @@
 ---
 name: runtime-resource-performance
-description: Statically review this SMS API for opportunities to reduce CPU usage, memory allocations, memory retention, and resource pressure. Use when investigating high CPU or memory usage, reviewing hot paths, or looking for low-risk runtime efficiency improvements; do not benchmark or execute the application unless explicitly requested.
+description: Statically review TextRelay for opportunities to reduce CPU usage, memory allocations, memory retention, and resource pressure. Use when investigating high CPU or memory usage, reviewing hot paths, or looking for low-risk runtime efficiency improvements; do not benchmark or execute the application unless explicitly requested.
 ---
 
 # Runtime Resource Performance
 
-Review the repository for CPU and memory efficiency risks in the ASP.NET Core API, application services, Dapper infrastructure, background services, provider integrations, observability pipeline, and Angular UI when relevant. Prefer small, measurable, maintainable improvements and preserve correctness, security, tenant isolation, and readability.
+Review the repository for CPU and memory efficiency risks across both ASP.NET Core API instances, the independently deployed Worker, Dapper infrastructure, RabbitMQ/MassTransit, Redis, provider integrations, OpenTelemetry/ClickStack, Docker Compose, and Angular UI when relevant. Prefer small, measurable, maintainable improvements and preserve correctness, security, tenant isolation, and readability.
 
 ## Safety and scope
 
@@ -25,7 +25,7 @@ Review the repository for CPU and memory efficiency risks in the ASP.NET Core AP
 3. Determine whether the issue is primarily CPU, allocation rate, retained memory, I/O amplification, concurrency, or resource lifetime.
 4. Check whether the framework or library already manages the resource efficiently before suggesting custom pooling or caching.
 5. Prefer improvements with a clear mechanism and bounded behavioral risk.
-6. Separate confirmed code patterns from hypotheses that require runtime measurement.
+6. Separate confirmed code patterns from hypotheses that require runtime measurement.\n7. When Compose resources are in scope, compare reservations with enforced limits and account for API replicas, the three-node RabbitMQ quorum cluster, Redis, PostgreSQL, OpenTelemetry Collector, ClickStack, and optional profiles.\n8. Inspect worker polling cadence, consumer concurrency, RabbitMQ Management polling, telemetry batching/export, retries, and backpressure as potential sources of recurring resource pressure.
 
 ## CPU checklist
 
@@ -75,7 +75,7 @@ Inspect for:
 - Prefer structured logging templates over preformatted/interpolated strings on frequently executed paths.
 - Check that error-only system logging and user activity logging remain consistent with project requirements.
 - Do not recommend removing required traces, metrics, audit events, or security logs solely to reduce CPU or memory.
-- When runtime validation is requested, prefer existing OpenTelemetry/runtime metrics before adding custom instrumentation.
+- When runtime validation is requested, prefer existing OpenTelemetry/runtime metrics before adding custom instrumentation.\n- Preserve low-cardinality metric dimensions; do not propose tenant IDs, message IDs, or phone numbers as metric labels.\n- Treat technical telemetry export as best-effort operational infrastructure: performance changes must not introduce sensitive telemetry or couple SMS correctness to ClickStack availability.
 
 ## Prioritization
 
