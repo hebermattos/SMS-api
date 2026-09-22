@@ -44,29 +44,37 @@ public sealed class SmsSendConsumer(
             message.QueueStatus = SmsQueueStatus.Queued;
         }
 
-        if (message.QueueStatus != SmsQueueStatus.Queued)
-            return;
+        var retryAttempt = context.GetRetryAttempt();
+        var isProviderRetry = retryAttempt > 0 && message.QueueStatus == SmsQueueStatus.Processing;
 
-        bool claimed;
-        using (var claimActivity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.claim", ActivityKind.Internal))
+        if (!isProviderRetry)
         {
-            claimActivity?.SetTag("tenant.id", sendEvent.TenantId);
-            claimActivity?.SetTag("message.id", sendEvent.MessageId);
-            claimed = await repository.TryClaimQueuedAsync(
-                sendEvent.TenantId,
-                sendEvent.MessageId,
-                DateTimeOffset.UtcNow,
-                context.CancellationToken);
-            claimActivity?.SetTag("sms.queue.claimed", claimed);
+            if (message.QueueStatus != SmsQueueStatus.Queued)
+                return;
+
+            bool claimed;
+            using (var claimActivity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.claim", ActivityKind.Internal))
+            {
+                claimActivity?.SetTag("tenant.id", sendEvent.TenantId);
+                claimActivity?.SetTag("message.id", sendEvent.MessageId);
+                claimed = await repository.TryClaimQueuedAsync(
+                    sendEvent.TenantId,
+                    sendEvent.MessageId,
+                    DateTimeOffset.UtcNow,
+                    context.CancellationToken);
+                claimActivity?.SetTag("sms.queue.claimed", claimed);
+            }
+
+            if (!claimed)
+            {
+                TextRelayTelemetry.SmsClaimRejected.Add(1);
+                return;
+            }
+
+            message.QueueStatus = SmsQueueStatus.Processing;
         }
 
-        if (!claimed)
-        {
-            TextRelayTelemetry.SmsClaimRejected.Add(1);
-            return;
-        }
-
-        message.QueueStatus = SmsQueueStatus.Processing;
+        activity?.SetTag("messaging.retry.attempt", retryAttempt);
         var processingStarted = Stopwatch.GetTimestamp();
         try
         {
@@ -128,10 +136,9 @@ public sealed class SmsSendConsumer(
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, exception.Message);
             Activity.Current?.AddException(exception);
-            // MassTransit retries the same delivery in this consumer instance. The
-            // database claim remains Processing so another delivery cannot send it.
-            // SendAsync is retried directly instead of returning through Consume,
-            // which would reject the already claimed Processing state.
+            // Keep the persisted state as Processing. MassTransit re-enters this
+            // consumer for the same delivery and the retry attempt is allowed to
+            // continue without claiming again; unrelated duplicate deliveries are rejected.
             throw;
         }
         catch (Exception exception)
