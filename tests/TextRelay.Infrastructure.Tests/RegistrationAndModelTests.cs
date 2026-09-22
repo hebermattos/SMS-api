@@ -128,6 +128,20 @@ public sealed class RegistrationAndModelTests
     }
 
     [Fact]
+    public void ActivityExtensions_RecordExceptionAddsSafeExceptionEvent()
+    {
+        using var activity = new Activity("test").Start();
+
+        activity.RecordException(new InvalidOperationException("failed"));
+
+        var exceptionEvent = Assert.Single(activity.Events);
+        Assert.Equal("exception", exceptionEvent.Name);
+        Assert.Contains(exceptionEvent.Tags, tag => tag.Key == "exception.type" && Equals(tag.Value, typeof(InvalidOperationException).FullName));
+        Assert.Contains(exceptionEvent.Tags, tag => tag.Key == "exception.message" && Equals(tag.Value, "failed"));
+        Assert.DoesNotContain(exceptionEvent.Tags, tag => tag.Key == "exception.stacktrace");
+    }
+
+    [Fact]
     public void TextRelayTelemetry_ActivitySourceCreatesActivityWhenObserved()
     {
         using var listener = new ActivityListener
