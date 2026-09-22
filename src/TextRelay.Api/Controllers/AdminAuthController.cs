@@ -39,7 +39,8 @@ public sealed class AdminAuthController(
             account.Id, account.Username, null, PortalSecurity.PlatformContext,
             PortalSecurity.AdministratorRole, cancellationToken);
         HttpContext.Items[PortalSecurity.AdministratorLoginIdentityKey] = account.Id.ToString();
-        return Ok(new { access_token = issued.AccessToken, refresh_token = issued.RefreshToken, token_type = "Bearer", expires_in = issued.ExpiresIn });
+        SetRefreshCookie(issued.RefreshToken);
+        return Ok(ToResponse(issued));
     }
 
     [Authorize(Policy = PortalSecurity.AdminPolicy)]
@@ -48,7 +49,9 @@ public sealed class AdminAuthController(
     public async Task<IActionResult> Logout(RefreshTokenRequest request, CancellationToken cancellationToken = default)
     {
         Response.Headers.CacheControl = "no-store";
-        await refreshTokens.RevokeAsync(request.RefreshToken, cancellationToken);
+        var raw = Request.Cookies["textrelay_refresh"];
+        if (!string.IsNullOrWhiteSpace(raw)) await refreshTokens.RevokeAsync(raw, cancellationToken);
+        DeleteRefreshCookie();
         return NoContent();
     }
 
@@ -59,7 +62,22 @@ public sealed class AdminAuthController(
     public async Task<IActionResult> Refresh(RefreshTokenRequest request, CancellationToken cancellationToken = default)
     {
         Response.Headers.CacheControl = "no-store";
-        var issued = await refreshTokens.RotateAsync(request.RefreshToken, cancellationToken);
-        return issued is null ? Unauthorized() : Ok(new { access_token = issued.AccessToken, refresh_token = issued.RefreshToken, token_type = "Bearer", expires_in = issued.ExpiresIn });
+        var raw = Request.Cookies["textrelay_refresh"];
+        if (string.IsNullOrWhiteSpace(raw)) return Unauthorized();
+        var issued = await refreshTokens.RotateAsync(raw, cancellationToken);
+        if (issued is null) { DeleteRefreshCookie(); return Unauthorized(); }
+        SetRefreshCookie(issued.RefreshToken);
+        return Ok(ToResponse(issued));
     }
+    private void SetRefreshCookie(string token) => Response.Cookies.Append("textrelay_refresh", token, CookieOptions());
+    private void DeleteRefreshCookie() => Response.Cookies.Delete("textrelay_refresh", CookieOptions());
+    private CookieOptions CookieOptions() => new()
+    {
+        HttpOnly = true,
+        Secure = Request.IsHttps,
+        SameSite = SameSiteMode.Strict,
+        Path = "/",
+        MaxAge = TimeSpan.FromDays(7)
+    };
+    private static object ToResponse(IssuedTokens issued) => new { access_token = issued.AccessToken, token_type = "Bearer", expires_in = issued.ExpiresIn };
 }
