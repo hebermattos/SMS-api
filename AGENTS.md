@@ -69,7 +69,7 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 
 - Do not create or use migrations. Always treat the target database as new.
 - `database/schema.sql` is the complete canonical schema for the application database.
-- `database/logs-schema.sql` is the complete canonical schema for the observability database.
+- `database/logs-schema.sql` is the complete canonical schema for the audit/error-log database. Technical OpenTelemetry telemetry is stored separately in ClickStack/ClickHouse.
 - Update the appropriate complete schema whenever persistence changes.
 - Keep the example tenant seed under `database/seeds/` and use it only for local/test bootstrap.
 - Use parameterized Dapper queries. Never build SQL from untrusted values.
@@ -80,7 +80,13 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 - Use `ILogger<T>` and OpenTelemetry for structured logs, traces, and metrics.
 - Store tenant user activity and error-level platform logs in the separate database configured by `ConnectionStrings__LogsPostgres`; do not mix them with SMS application tables.
 - Export technical OpenTelemetry logs, traces, and metrics over OTLP to ClickStack/ClickHouse. Do not persist traces or metrics in PostgreSQL.
-- Include safe correlation fields where available: `TenantId`, `MessageId`, `Provider`, `TraceId`, and `SpanId`.
+- Use `textrelay-api` as the API OpenTelemetry service name and `textrelay-worker` as the Worker service name. Give each running process a distinct `service.instance.id`.
+- Preserve distributed tracing semantics for SMS processing: queue publication is a `Producer` span, queue consumption is a `Consumer` span, the atomic database claim is an `Internal` span, and the provider call is a `Client` span.
+- Mark the span at the failing operation as `Error` and record exception information only when it is safe. Never attach provider response bodies or other potentially sensitive payloads to spans.
+- Include safe correlation fields in traces where useful: `TenantId`, `MessageId`, `Provider`, `TraceId`, and `SpanId`.
+- Keep metric dimensions low-cardinality. Do not use `TenantId`, `MessageId`, phone numbers, or other per-request/per-customer identifiers as metric labels. Prefer bounded dimensions such as provider, status, and queue name.
+- Record latency measurements on both successful and failed operations so failure latency is observable.
+- Never emit SMS bodies, phone numbers, credentials, access tokens, authorization headers, or secrets in logs, traces, metrics, exception attributes, or OpenTelemetry resource attributes.
 - Customer log access must be authenticated and filtered by the JWT tenant claim.
 - Tenant-less technical events are support-only and must not be returned by customer-facing endpoints.
 - Preserve the separation between technical observability, customer audit events, and SMS message/status history.
