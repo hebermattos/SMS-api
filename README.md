@@ -293,9 +293,25 @@ Observability is deliberately split between **audit data** and **technical telem
 
 The API and Worker export technical telemetry over OTLP to a dedicated ClickStack OpenTelemetry Collector running in standalone mode. The collector writes directly to the ClickHouse instance bundled with ClickStack, while HyperDX remains the visualization UI. This keeps high-volume telemetry writes out of the PostgreSQL audit database while preserving the existing authorization and tenant-isolation model for user activity logs.
 
-In Docker Compose both API instances and the Worker send OTLP/HTTP protobuf to `http://otel-collector:4318`. Both API instances keep the logical OpenTelemetry service name `text-relay`, while `service.instance.id` identifies them individually as `api-1` and `api-2`. This allows HyperDX to aggregate the APIs as one service or filter logs, traces, metrics, latency, and errors by a specific instance. The collector is reachable only inside the Compose network, so its OTLP ports are not published to the host and local startup does not depend on a HyperDX-generated ingestion key. The collector writes to `http://clickstack:8123`. The local ClickStack container runs its HyperDX UI without built-in authentication and is reachable only inside the Compose network. A small Caddy proxy exposes HyperDX at `http://localhost:8081` with Basic Auth, defaulting to `HyperDX / HyperDX`; override those development defaults with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`. The ClickHouse HTTP endpoint is mapped to `18123`.
+In Docker Compose both API instances and the Worker send OTLP/HTTP protobuf to `http://otel-collector:4318`. Both API instances use the logical OpenTelemetry service name `textrelay-api`, while the Worker uses `textrelay-worker`. `service.instance.id` identifies the processes individually as `api-1`, `api-2`, and `worker-1`. This allows HyperDX to aggregate API telemetry as one service, separate Worker telemetry, or filter logs, traces, metrics, latency, and errors by a specific instance. The collector is reachable only inside the Compose network, so its OTLP ports are not published to the host and local startup does not depend on a HyperDX-generated ingestion key. The collector writes to `http://clickstack:8123`. The local ClickStack container runs its HyperDX UI without built-in authentication and is reachable only inside the Compose network. A small Caddy proxy exposes HyperDX at `http://localhost:8081` with Basic Auth, defaulting to `HyperDX / HyperDX`; override those development defaults with `HYPERDX_USERNAME` and `HYPERDX_PASSWORD`. The ClickHouse HTTP endpoint is mapped to `18123`.
 
 ClickStack is technical infrastructure and must not be exposed as a tenant-facing log source. Secrets, access tokens, authorization headers, SMS bodies, and full phone numbers must never be emitted as telemetry.
+
+### SMS telemetry
+
+The outbound SMS path emits application-level traces and metrics in addition to the framework and RabbitMQ telemetry.
+
+| Instrument | Type | Purpose |
+| --- | --- | --- |
+| `sms.queued` | Counter | Messages successfully published for asynchronous processing |
+| `sms.sent` | Counter | Provider sends that complete without a failed status |
+| `sms.failed` | Counter | Failed SMS processing attempts |
+| `sms.queue.publish.failed` | Counter | RabbitMQ publish failures |
+| `sms.queue.claim.rejected` | Counter | Atomic queue claims rejected because another execution already owns the message |
+| `sms.provider.duration` | Histogram | Provider-call latency in milliseconds, including failed calls |
+| `sms.processing.duration` | Histogram | Total Worker processing duration in milliseconds |
+
+The SMS processing trace uses `sms.queue.publish` as a producer span, `sms.queue.consume` as a consumer span, `sms.queue.claim` for the atomic database claim, and `sms.provider.send` as the external provider client span. Failed publish and provider operations mark their spans as errors and attach exception information. Trace attributes are limited to operational identifiers and state such as tenant ID, message ID, provider, status, and claim result; SMS bodies, phone numbers, credentials, and tokens are excluded.
 
 ## Security
 
