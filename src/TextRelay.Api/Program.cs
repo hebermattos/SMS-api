@@ -24,10 +24,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddSmsLogging();
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing
+        .AddSource(Sms.Infrastructure.Observability.TextRelayTelemetry.ActivitySourceName)
         .AddAspNetCoreInstrumentation()
         .AddOtlpExporter())
     .WithMetrics(metrics => metrics
         .AddMeter(Sms.Infrastructure.Messaging.RabbitMqMonitoringService.MeterName)
+        .AddMeter(Sms.Infrastructure.Observability.TextRelayTelemetry.MeterName)
         .AddAspNetCoreInstrumentation()
         .AddOtlpExporter());
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();

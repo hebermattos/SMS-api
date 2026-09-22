@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,9 +14,16 @@ public sealed class RabbitMqMonitoringService(
 {
     public const string MeterName = "Sms.Api.RabbitMq";
     private static readonly Meter Meter = new(MeterName);
-    private static readonly Histogram<long> Ready = Meter.CreateHistogram<long>("rabbitmq.queue.messages.ready");
-    private static readonly Histogram<long> Unacknowledged = Meter.CreateHistogram<long>("rabbitmq.queue.messages.unacknowledged");
-    private static readonly Histogram<long> Consumers = Meter.CreateHistogram<long>("rabbitmq.queue.consumers");
+    private static readonly ConcurrentDictionary<string, QueueMetrics> Current = new(StringComparer.Ordinal);
+    private static readonly ObservableGauge<long> Ready = Meter.CreateObservableGauge(
+        "rabbitmq.queue.messages.ready",
+        () => Current.Select(x => new Measurement<long>(x.Value.MessagesReady, new KeyValuePair<string, object?>("rabbitmq.queue", x.Key))));
+    private static readonly ObservableGauge<long> Unacknowledged = Meter.CreateObservableGauge(
+        "rabbitmq.queue.messages.unacknowledged",
+        () => Current.Select(x => new Measurement<long>(x.Value.MessagesUnacknowledged, new KeyValuePair<string, object?>("rabbitmq.queue", x.Key))));
+    private static readonly ObservableGauge<long> Consumers = Meter.CreateObservableGauge(
+        "rabbitmq.queue.consumers",
+        () => Current.Select(x => new Measurement<long>(x.Value.Consumers, new KeyValuePair<string, object?>("rabbitmq.queue", x.Key))));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -38,9 +46,7 @@ public sealed class RabbitMqMonitoringService(
                 if (result is null) continue;
 
                 var tags = new TagList { { "rabbitmq.queue", queue } };
-                Ready.Record(result.MessagesReady, tags);
-                Unacknowledged.Record(result.MessagesUnacknowledged, tags);
-                Consumers.Record(result.Consumers, tags);
+                Current[queue] = result;
 
                 if (result.Consumers == 0)
                     logger.LogWarning("RabbitMQ queue {Queue}: {Ready} ready, {Unacknowledged} unacknowledged, {Consumers} consumers.",

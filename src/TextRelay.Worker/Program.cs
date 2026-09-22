@@ -12,7 +12,9 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.AddSmsLogging();
 
 builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing => tracing.AddOtlpExporter())
+    .WithTracing(tracing => tracing
+        .AddSource(TextRelayTelemetry.ActivitySourceName)
+        .AddOtlpExporter())
     .WithMetrics(metrics => metrics
         .AddMeter(RabbitMqMonitoringService.MeterName)
         .AddOtlpExporter());
