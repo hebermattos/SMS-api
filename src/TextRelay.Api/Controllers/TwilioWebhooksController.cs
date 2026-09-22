@@ -11,6 +11,7 @@ namespace Sms.Api.Controllers;
 [AllowAnonymous]
 [ApiController]
 [Route("api/v1/webhooks/twilio")]
+[RequestSizeLimit(1_048_576)]
 public sealed class TwilioWebhooksController(
     ITenantSmsProviderRepository providers,
     ISmsMessageRepository messages,
@@ -53,7 +54,8 @@ public sealed class TwilioWebhooksController(
         var sid = form["MessageSid"].ToString();
         if (string.IsNullOrWhiteSpace(sid)) return BadRequest();
         var status = MapStatus(form["MessageStatus"].ToString());
-        await messages.UpdateStatusByProviderMessageIdAsync(config.TenantId, "Twilio", sid, status, DateTimeOffset.UtcNow, cancellationToken);
+        if (!status.HasValue) return BadRequest();
+        await messages.UpdateStatusByProviderMessageIdAsync(config.TenantId, "Twilio", sid, status.Value, DateTimeOffset.UtcNow, cancellationToken);
         return NoContent();
     }
 
@@ -71,11 +73,11 @@ public sealed class TwilioWebhooksController(
         return validator.Validate(url, parameters, signature, config.ApiSecret) ? config : null;
     }
 
-    private static SmsStatus MapStatus(string status) => status.ToLowerInvariant() switch
+    private static SmsStatus? MapStatus(string status) => status.ToLowerInvariant() switch
     {
         "sent" => SmsStatus.Sent,
         "delivered" => SmsStatus.Delivered,
         "failed" or "undelivered" => SmsStatus.Failed,
-        _ => SmsStatus.Pending
+        _ => null
     };
 }
