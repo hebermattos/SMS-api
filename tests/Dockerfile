@@ -3,4 +3,4 @@ WORKDIR /src
 COPY . .
 RUN dotnet restore TextRelay.Api.sln
 RUN dotnet build TextRelay.Api.sln --configuration Release --no-restore
-ENTRYPOINT ["dotnet", "test", "TextRelay.Api.sln", "--configuration", "Release", "--no-build", "--filter", "FullyQualifiedName~BandwidthWebhookSqlTests|FullyQualifiedName~AdministrationSqlTests|FullyQualifiedName~ExampleProviderSeedSqlTests|FullyQualifiedName~AdministratorSqlTests"]
+ENTRYPOINT ["dotnet", "test", "TextRelay.Api.sln", "--configuration", "Release", "--no-build", "--filter", "Category=Integration"]

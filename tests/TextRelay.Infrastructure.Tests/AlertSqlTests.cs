@@ -8,6 +8,7 @@ using Sms.Infrastructure.Persistence;
 namespace Sms.Infrastructure.Tests;
 
 [Collection(PostgresTestCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class AlertSqlTests
 {
     [PostgresFact]

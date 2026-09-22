@@ -18,6 +18,7 @@ public sealed class ReportingSqlFactAttribute : FactAttribute
 }
 
 [Collection(PostgresTestCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class ReportingSqlTests
 {
     [ReportingSqlFact]

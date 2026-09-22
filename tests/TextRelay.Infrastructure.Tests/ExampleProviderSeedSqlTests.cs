@@ -9,6 +9,7 @@ using Sms.Seed;
 namespace Sms.Infrastructure.Tests;
 
 [Collection(PostgresTestCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class ExampleProviderSeedSqlTests
 {
     [PostgresFact]
