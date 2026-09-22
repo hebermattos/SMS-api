@@ -1,4 +1,5 @@
 using Sms.Application.Auth;
+using Moq;
 using Microsoft.AspNetCore.Mvc;
 using Sms.Api.Controllers;
 using Sms.Application.Common;
@@ -18,6 +19,54 @@ public sealed class MessagesControllerTests
         var controller=Create(tenantId,repo);
         Assert.IsType<OkObjectResult>(await controller.GetById(id,default));
         Assert.Equal(tenantId,repo.LastTenant);
+    }
+
+    [Fact]
+    public async Task GetById_WithMockedRepository_UsesAuthenticatedTenant()
+    {
+        var tenantId = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+        var message = new SmsMessage { Id = messageId, TenantId = tenantId, To = "+1", Body = "test" };
+        var repository = new Mock<ISmsMessageRepository>(MockBehavior.Strict);
+        repository.Setup(x => x.GetByIdAsync(tenantId, messageId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(message);
+
+        var result = await Create(tenantId, repository.Object).GetById(messageId, default);
+
+        Assert.IsType<OkObjectResult>(result);
+        repository.Verify(x => x.GetByIdAsync(tenantId, messageId, It.IsAny<CancellationToken>()), Times.Once);
+        repository.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetHistory_WithMockedRepository_PassesTenantAndPagination()
+    {
+        var tenantId = Guid.NewGuid();
+        var repository = new Mock<ISmsMessageRepository>(MockBehavior.Strict);
+        repository.Setup(x => x.GetHistoryAsync(tenantId, 20, 50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<SmsMessage>());
+
+        var result = await Create(tenantId, repository.Object).GetHistory(20, 50);
+
+        Assert.IsType<OkObjectResult>(result);
+        repository.VerifyAll();
+    }
+
+    [Fact]
+    public async Task GetStatusHistory_WithMockedRepository_DoesNotQueryHistoryWhenMessageIsOutsideTenant()
+    {
+        var tenantId = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+        var repository = new Mock<ISmsMessageRepository>(MockBehavior.Strict);
+        repository.Setup(x => x.GetByIdAsync(tenantId, messageId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SmsMessage?)null);
+
+        var result = await Create(tenantId, repository.Object).GetStatusHistory(messageId, default);
+
+        Assert.IsType<NotFoundResult>(result);
+        repository.Verify(x => x.GetByIdAsync(tenantId, messageId, It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(x => x.GetStatusHistoryAsync(
+            It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -80,6 +129,9 @@ public sealed class MessagesControllerTests
     }
 
     private static MessagesController Create(Guid tenantId, Repository repo, TimeZoneInfo? zone=null, TimeProvider? clock=null)
+        => Create(tenantId, (ISmsMessageRepository)repo, zone, clock);
+
+    private static MessagesController Create(Guid tenantId, ISmsMessageRepository repo, TimeZoneInfo? zone=null, TimeProvider? clock=null)
     {
         var context=new TenantContext(tenantId);
         var timeZones=new TimeZones(zone ?? TimeZoneInfo.Utc);
