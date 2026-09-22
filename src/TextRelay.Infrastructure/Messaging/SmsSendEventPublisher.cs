@@ -1,10 +1,16 @@
 using MassTransit;
 using Sms.Application.Messages;
+using Sms.Infrastructure.Observability;
 
 namespace Sms.Infrastructure.Messaging;
 
 public sealed class SmsSendEventPublisher(IPublishEndpoint publishEndpoint) : ISmsSendEventPublisher
 {
-    public Task PublishAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default) =>
-        publishEndpoint.Publish(new SmsSendEvent(Guid.NewGuid(), tenantId, messageId), cancellationToken);
+    public async Task PublishAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
+    {
+        using var activity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.publish");
+        activity?.SetTag("tenant.id", tenantId);
+        activity?.SetTag("message.id", messageId);
+        await publishEndpoint.Publish(new SmsSendEvent(Guid.NewGuid(), tenantId, messageId), cancellationToken);
+    }
 }
