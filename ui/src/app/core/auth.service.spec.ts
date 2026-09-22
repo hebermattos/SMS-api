@@ -77,7 +77,10 @@ describe('Portal sessions', () => {
     const bearer = `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 60 }))}.s`;
     sessionStorage.setItem('sms-ui-session', JSON.stringify({ token: bearer, role: 'tenant', identity: 'client' }));
     const restored = TestBed.runInInjectionContext(() => new AuthService());
-    vi.advanceTimersByTime(60000);
+    vi.advanceTimersByTime(1);
+    const refresh = http.expectOne('/api/v1/portal/auth/refresh');
+    expect(refresh.request.body).toEqual({});
+    refresh.flush({}, { status: 401, statusText: 'Unauthorized' });
     expect(restored.bearer()).toBeNull(); expect(restored.expired()).toBe(true);
     expect(sessionStorage.getItem('sms-ui-session')).toBeNull();
     restored.ngOnDestroy();
