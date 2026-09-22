@@ -6,7 +6,7 @@ using Sms.Infrastructure.Messaging;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class MockedInfrastructureCoverageTests
+public sealed class InfrastructureBehaviorTests
 {
     [Fact]
     public async Task RabbitMonitoringQueriesAllConfiguredQueues()

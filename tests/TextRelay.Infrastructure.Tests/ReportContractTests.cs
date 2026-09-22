@@ -3,7 +3,7 @@ using Sms.Application.Reports;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class ReportContractCoverageTests
+public sealed class ReportContractTests
 {
     [Fact]
     public void ReportContractsExposeAllConsolidatedValues()

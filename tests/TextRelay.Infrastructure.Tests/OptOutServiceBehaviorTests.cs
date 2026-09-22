@@ -2,7 +2,7 @@ using Sms.Application.OptOut;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class OptOutServiceCoverageTests
+public sealed class OptOutServiceBehaviorTests
 {
     private readonly Guid tenantId = Guid.NewGuid();
 

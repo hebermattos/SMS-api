@@ -5,7 +5,7 @@ using Sms.Application.Common;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class UserControllerCoverageTests
+public sealed class UserControllerBehaviorTests
 {
     private const string Password = "StrongPassword123!";
 

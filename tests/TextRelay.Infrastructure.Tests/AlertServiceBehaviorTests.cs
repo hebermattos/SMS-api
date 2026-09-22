@@ -3,7 +3,7 @@ using Sms.Domain.Messages;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class AlertServiceCoverageTests
+public sealed class AlertServiceBehaviorTests
 {
     private readonly Guid tenantId = Guid.NewGuid();
 

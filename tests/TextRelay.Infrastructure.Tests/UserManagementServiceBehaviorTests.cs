@@ -2,7 +2,7 @@ using Sms.Application.Auth;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class UserManagementServiceCoverageTests
+public sealed class UserManagementServiceBehaviorTests
 {
     private const string Password = "StrongPassword123!";
 

@@ -6,7 +6,7 @@ using Sms.Application.OptOut;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class UtilityCoverageTests
+public sealed class UtilityBehaviorTests
 {
     [Theory]
     [InlineData("+1 (555) 123-4567", "+15551234567")]
