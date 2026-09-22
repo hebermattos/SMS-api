@@ -125,14 +125,14 @@ public static class DependencyInjection
                     endpoint.SetQuorumQueue(3);
                     endpoint.PrefetchCount = rabbitMq.SendPrefetchCount;
                     endpoint.ConcurrentMessageLimit = rabbitMq.SendConcurrentMessageLimit;
-                    endpoint.UseMessageRetry(retry =>
+                    endpoint.UseDelayedRedelivery(redelivery =>
                     {
-                        retry.Handle<TransientSmsProviderException>();
-                        retry.Exponential(
-                            retryOptions.MaxAttempts,
-                            TimeSpan.FromSeconds(retryOptions.InitialIntervalSeconds),
-                            TimeSpan.FromSeconds(retryOptions.InitialIntervalSeconds * Math.Pow(2, Math.Max(0, retryOptions.MaxAttempts - 1))),
-                            TimeSpan.FromSeconds(retryOptions.InitialIntervalSeconds));
+                        redelivery.Handle<TransientSmsProviderException>();
+                        redelivery.Intervals(
+                            Enumerable.Range(0, retryOptions.MaxAttempts)
+                                .Select(attempt => TimeSpan.FromSeconds(
+                                    retryOptions.InitialIntervalSeconds * Math.Pow(2, attempt)))
+                                .ToArray());
                     });
                     endpoint.ConfigureConsumer<SmsSendConsumer>(context);
                 });

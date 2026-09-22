@@ -1,6 +1,8 @@
 services:
   rabbitmq-1:
-    image: rabbitmq:3.13-management
+    build:
+      context: .
+      dockerfile: docker/rabbitmq/Dockerfile
     mem_limit: 384m
     cpus: 0.40
     hostname: rabbitmq-1
@@ -19,7 +21,9 @@ services:
       retries: 20
 
   rabbitmq-2:
-    image: rabbitmq:3.13-management
+    build:
+      context: .
+      dockerfile: docker/rabbitmq/Dockerfile
     mem_limit: 384m
     cpus: 0.40
     hostname: rabbitmq-2
@@ -41,7 +45,9 @@ services:
     healthcheck: *rabbitmq-healthcheck
 
   rabbitmq-3:
-    image: rabbitmq:3.13-management
+    build:
+      context: .
+      dockerfile: docker/rabbitmq/Dockerfile
     mem_limit: 384m
     cpus: 0.40
     hostname: rabbitmq-3
