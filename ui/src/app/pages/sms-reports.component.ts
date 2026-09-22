@@ -36,11 +36,11 @@ downloadCsv(){
     rows.push(['Provider','Total','Scheduled','Queued','Sent','Delivered','Failed','Received','Outbound','Inbound','Pending']);
     for(const provider of report.byProvider)rows.push([provider.provider,String(provider.totalMessages),String(provider.scheduled),String(provider.queued),String(provider.sent),String(provider.delivered),String(provider.failed),String(provider.received),String(provider.outbound),String(provider.inbound),String(provider.pending)]);
   }
-  const csv='\\uFEFF'+rows.map(row=>row.map(value=>this.csvValue(value)).join(',')).join('\\r\\n');
+  const csv='\uFEFF'+rows.map(row=>row.map(value=>this.csvValue(value)).join(',')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob); const link=document.createElement('a');
   link.href=url; link.download='sms-report-'+new Date().toISOString().slice(0,10)+'.csv'; link.click(); URL.revokeObjectURL(url);
 }
-private csvValue(value:string){if(value && '=+-@\\t\\r\\n'.includes(value[0]))value=\"'\"+value;return '\"'+value.replace(/\"/g,'\"\"')+'\"';}
+private csvValue(value:string){if(value && '=+-@\t\r\n'.includes(value[0]))value="'"+value;return '"'+value.replace(/"/g,'""')+'"';}
 percent(v:number,t:number){return t?((v/t)*100).toFixed(1):'0.0';}
 }
