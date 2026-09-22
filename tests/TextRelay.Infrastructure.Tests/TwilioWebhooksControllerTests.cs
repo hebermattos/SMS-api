@@ -44,13 +44,19 @@ public sealed class TwilioWebhooksControllerTests
     [InlineData("delivered",SmsStatus.Delivered)]
     [InlineData("failed",SmsStatus.Failed)]
     [InlineData("undelivered",SmsStatus.Failed)]
-    [InlineData("unknown",SmsStatus.Pending)]
     public async Task Status_MapsProviderStatus(string value,SmsStatus expected)
     {
         var messages=new MessageRepository();
         var controller=Create(Guid.NewGuid(),messages,Form(("AccountSid","AC1"),("MessageSid","SM1"),("MessageStatus",value),("From","+15557654321")));
         Assert.IsType<NoContentResult>(await controller.Status(default));
         Assert.Equal(expected,messages.Status);
+    }
+
+    [Fact]
+    public async Task Status_RejectsUnknownProviderStatus()
+    {
+        var controller=Create(Guid.NewGuid(),new MessageRepository(),Form(("AccountSid","AC1"),("MessageSid","SM1"),("MessageStatus","unknown"),("From","+15557654321")));
+        Assert.IsType<BadRequestResult>(await controller.Status(default));
     }
 
     [Fact]
