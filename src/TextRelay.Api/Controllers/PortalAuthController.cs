@@ -8,7 +8,7 @@ using Sms.Api.Middleware;
 namespace Sms.Api.Controllers;
 
 public sealed record PortalTokenRequest(string Username, string Password, string Context, string? TenantCode = null);
-public sealed record RefreshTokenRequest(string RefreshToken);
+public sealed record RefreshTokenRequest(string? RefreshToken = null);
 
 [ApiController]
 [Route("api/v1/portal/auth")]
@@ -44,6 +44,7 @@ public sealed class PortalAuthController(
             var issued = await refreshTokens.IssueAsync(
                 user.Id, user.Username, user.TenantId, user.Context, user.Role,
                 cancellationToken: cancellationToken);
+            SetRefreshCookie(issued.RefreshToken);
             return Ok(ToResponse(issued));
         }
 
@@ -57,8 +58,12 @@ public sealed class PortalAuthController(
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
     {
         Response.Headers.CacheControl = "no-store";
-        var issued = await refreshTokens.RotateAsync(request.RefreshToken, cancellationToken);
-        return issued is null ? Unauthorized() : Ok(ToResponse(issued));
+        var raw = Request.Cookies["textrelay_refresh"];
+        if (string.IsNullOrWhiteSpace(raw)) return Unauthorized();
+        var issued = await refreshTokens.RotateAsync(raw, cancellationToken);
+        if (issued is null) { DeleteRefreshCookie(); return Unauthorized(); }
+        SetRefreshCookie(issued.RefreshToken);
+        return Ok(ToResponse(issued));
     }
 
     [Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
@@ -67,14 +72,26 @@ public sealed class PortalAuthController(
     public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
     {
         Response.Headers.CacheControl = "no-store";
-        await refreshTokens.RevokeAsync(request.RefreshToken, cancellationToken);
+        var raw = Request.Cookies["textrelay_refresh"];
+        if (!string.IsNullOrWhiteSpace(raw)) await refreshTokens.RevokeAsync(raw, cancellationToken);
+        DeleteRefreshCookie();
         return NoContent();
     }
+
+    private void SetRefreshCookie(string token) => Response.Cookies.Append("textrelay_refresh", token, CookieOptions());
+    private void DeleteRefreshCookie() => Response.Cookies.Delete("textrelay_refresh", CookieOptions());
+    private CookieOptions CookieOptions() => new()
+    {
+        HttpOnly = true,
+        Secure = Request.IsHttps,
+        SameSite = SameSiteMode.Strict,
+        Path = "/",
+        MaxAge = TimeSpan.FromDays(7)
+    };
 
     private static object ToResponse(IssuedTokens issued) => new
     {
         access_token = issued.AccessToken,
-        refresh_token = issued.RefreshToken,
         token_type = "Bearer",
         expires_in = issued.ExpiresIn
     };
