@@ -77,7 +77,7 @@ describe('Portal sessions', () => {
     const bearer = `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 60 }))}.s`;
     sessionStorage.setItem('sms-ui-session', JSON.stringify({ token: bearer, role: 'tenant', identity: 'client' }));
     const restored = TestBed.runInInjectionContext(() => new AuthService());
-    vi.advanceTimersByTime(1);
+    vi.runOnlyPendingTimers();
     const refresh = http.expectOne('/api/v1/portal/auth/refresh');
     expect(refresh.request.body).toEqual({});
     refresh.flush({}, { status: 401, statusText: 'Unauthorized' });
