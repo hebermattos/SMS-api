@@ -6,10 +6,6 @@ on:
 permissions:
   contents: read
 
-env:
-  POSTGRES_USER: sms
-  POSTGRES_PASSWORD: 'TextRelay_Local_2026!'
-
 jobs:
   postgres-integration:
     name: PostgreSQL integration tests
@@ -18,8 +14,8 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_USER: sms
+          POSTGRES_PASSWORD: 'TextRelay_Local_2026!'
           POSTGRES_DB: postgres
         ports:
           - 5432:5432
@@ -27,8 +23,10 @@ jobs:
           --health-cmd="pg_isready -U sms -d postgres"
           --health-interval=5s --health-timeout=5s --health-retries=20 --health-start-period=10s
     env:
-      SMS_TEST_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_webhook_tests;Username=${{ env.POSTGRES_USER }};Password=${{ env.POSTGRES_PASSWORD }}'
-      SMS_TEST_REPORTING_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_reporting_tests;Username=${{ env.POSTGRES_USER }};Password=${{ env.POSTGRES_PASSWORD }}'
+      POSTGRES_USER: sms
+      POSTGRES_PASSWORD: 'TextRelay_Local_2026!'
+      SMS_TEST_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_webhook_tests;Username=sms;Password=TextRelay_Local_2026!'
+      SMS_TEST_REPORTING_POSTGRES: 'Host=localhost;Port=5432;Database=sms_api_reporting_tests;Username=sms;Password=TextRelay_Local_2026!'
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
@@ -120,6 +118,13 @@ jobs:
           assert request('/api/v1/overview', token=token)[0] == 403
           print('Administrator password login and tenant separation verified.')
           PY
+      - name: Show resource diagnostics
+        if: failure()
+        run: |
+          free -h
+          df -h
+          docker stats --no-stream || true
+
       - name: Show initialization logs
         if: failure()
         run: docker compose logs postgres db-init provider-init rabbitmq-1 rabbitmq-2 rabbitmq-3 rabbitmq-lb redis clickstack otel-collector api-1 api-2 haproxy
