@@ -47,6 +47,9 @@ jobs:
     name: Docker Compose end-to-end test
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      POSTGRES_USER: sms
+      POSTGRES_PASSWORD: 'TextRelay_Local_2026!'
     steps:
       - uses: actions/checkout@v5
       - name: Initialize databases through Docker Compose
