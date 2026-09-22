@@ -14,6 +14,7 @@ using Sms.Infrastructure.Security;
 namespace Sms.Infrastructure.Tests;
 
 [Collection(PostgresTestCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class AdministrationSqlTests
 {
     [ReportingSqlFact]
