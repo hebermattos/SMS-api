@@ -25,9 +25,7 @@ public sealed class MockedInfrastructureCoverageTests
             new RabbitMqAlertOptions { VirtualHost = "/", Queue = "alerts", SendQueue = "send", ReportingQueue = "reports" },
             Mock.Of<ILogger<RabbitMqMonitoringService>>());
 
-        await service.StartAsync(default);
-        await WaitUntilAsync(() => requests.Count == 3);
-        await service.StopAsync(default);
+        await service.CollectAsync(default);
 
         Assert.Contains(requests, x => x.EndsWith("api/queues/%2F/alerts"));
         Assert.Contains(requests, x => x.EndsWith("api/queues/%2F/send"));
@@ -44,9 +42,7 @@ public sealed class MockedInfrastructureCoverageTests
             new RabbitMqAlertOptions { VirtualHost = "/", Queue = "alerts", SendQueue = "send", ReportingQueue = "reports" },
             logger.Object);
 
-        await service.StartAsync(default);
-        await Task.Delay(100);
-        await service.StopAsync(default);
+        await service.CollectAsync(default);
 
         logger.Verify(x => x.Log(
             LogLevel.Error, It.IsAny<EventId>(), It.Is<It.IsAnyType>((_, _) => true),
@@ -76,11 +72,6 @@ public sealed class MockedInfrastructureCoverageTests
         return factory.Object;
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        for (var i = 0; i < 50 && !condition(); i++)
-            await Task.Delay(10);
-    }
 
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> response) : HttpMessageHandler
     {
