@@ -55,5 +55,5 @@ public sealed class OptOutsController(ITenantContext tenant, OptOutService optOu
         return await optOuts.RemoveAsync(tenant.TenantId, id, cancellationToken) ? NoContent() : NotFound();
     }
 
-    private static string Csv(string value) => $"\"{value.Replace("\"", "\"\"")}\"";
+    private static string Csv(string value)\n    {\n        if (value.Length > 0 && "=+-@\\t\\r\\n".Contains(value[0])) value = "\'" + value;\n        return $"\\\"{value.Replace("\\\"", "\\\"\\\"")}\\\"";\n    }
 }
