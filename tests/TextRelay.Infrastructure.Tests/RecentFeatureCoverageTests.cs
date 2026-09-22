@@ -44,17 +44,15 @@ public sealed class RecentFeatureCoverageTests
     }
 
     [Fact]
-    public async Task TemplateController_CoversCrudValidationAndRendering()
+    public async Task TemplateController_ValidatesListAndCreateRequests()
     {
-        var tenant = new Tenant();
         var repository = new Templates();
-        var controller = new MessageTemplatesController(tenant, repository, new Portal());
+        var controller = CreateTemplateController(repository);
+
         Assert.IsType<BadRequestObjectResult>(await controller.List(-1, 20));
         Assert.IsType<OkObjectResult>(await controller.List(0, 500));
         Assert.Equal(200, repository.Take);
 
-        var missing = Guid.NewGuid();
-        Assert.IsType<NotFoundResult>(await controller.Get(missing, default));
         foreach (var request in new[]
         {
             new SaveTemplateRequest("", "body"),
@@ -63,21 +61,34 @@ public sealed class RecentFeatureCoverageTests
             new SaveTemplateRequest("name", new string('b', 4001))
         })
             Assert.IsType<BadRequestObjectResult>(await controller.Create(request, default));
+    }
 
+    [Fact]
+    public async Task TemplateController_CreatesUpdatesRendersAndDeletesTemplate()
+    {
+        var controller = CreateTemplateController(new Templates());
+        var missing = Guid.NewGuid();
+
+        Assert.IsType<NotFoundResult>(await controller.Get(missing, default));
         var created = Assert.IsType<CreatedAtActionResult>(
             await controller.Create(new(" Welcome ", " Hi {{recipientName}} from {{tenantName}} "), default));
         var id = Assert.IsType<Guid>(created.RouteValues!["id"]);
+
         Assert.IsType<OkObjectResult>(await controller.Get(id, default));
         Assert.IsType<NotFoundResult>(await controller.Update(missing, new("name", "body"), default));
         Assert.IsType<BadRequestObjectResult>(await controller.Update(id, new("", "body"), default));
         Assert.IsType<OkObjectResult>(await controller.Update(id, new("Updated", "{{missing}}"), default));
         Assert.IsType<BadRequestObjectResult>(await controller.Render(id, new(new()), default));
+
         await controller.Update(id, new("Updated", "Hi {{recipientName}} at {{tenantName}}"), default);
         Assert.IsType<OkObjectResult>(await controller.Render(id, new(new(), "Ana", "+1555"), default));
         Assert.IsType<NotFoundResult>(await controller.Render(missing, new(new()), default));
         Assert.IsType<NoContentResult>(await controller.Delete(id, default));
         Assert.IsType<NotFoundResult>(await controller.Delete(id, default));
     }
+
+    private static MessageTemplatesController CreateTemplateController(Templates repository) =>
+        new(new Tenant(), repository, new Portal());
 
     [Fact]
     public async Task OllamaAssistant_ImprovesAndValidatesResponses()
