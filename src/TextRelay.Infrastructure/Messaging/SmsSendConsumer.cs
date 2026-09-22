@@ -4,6 +4,7 @@ using Sms.Application.Common;
 using Sms.Application.Messages;
 using Sms.Application.OptOut;
 using Sms.Domain.Messages;
+using Sms.Infrastructure.Observability;
 
 namespace Sms.Infrastructure.Messaging;
 
@@ -17,6 +18,9 @@ public sealed class SmsSendConsumer(
     public async Task Consume(ConsumeContext<SmsSendEvent> context)
     {
         var sendEvent = context.Message;
+        using var activity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.consume");
+        activity?.SetTag("tenant.id", sendEvent.TenantId);
+        activity?.SetTag("message.id", sendEvent.MessageId);
         tenantContext.SetTenant(sendEvent.TenantId);
 
         var message = await repository.GetByIdAsync(
@@ -42,6 +46,9 @@ public sealed class SmsSendConsumer(
         if (message.QueueStatus != SmsQueueStatus.Queued)
             return;
 
+        using var claimActivity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.claim");
+        claimActivity?.SetTag("tenant.id", sendEvent.TenantId);
+        claimActivity?.SetTag("message.id", sendEvent.MessageId);
         var claimed = await repository.TryClaimQueuedAsync(
             sendEvent.TenantId,
             sendEvent.MessageId,
@@ -62,7 +69,12 @@ public sealed class SmsSendConsumer(
             await optOut.EnsureCanSendAsync(sendEvent.TenantId, message.To, cancellationToken);
 
             var provider = providerResolver.Resolve(message.Provider);
+            using var providerActivity = TextRelayTelemetry.ActivitySource.StartActivity("sms.provider.send");
+            providerActivity?.SetTag("tenant.id", sendEvent.TenantId);
+            providerActivity?.SetTag("message.id", sendEvent.MessageId);
+            providerActivity?.SetTag("sms.provider", provider.Name);
             var sendResult = await provider.SendAsync(message.From, message.To, message.Body, cancellationToken);
+            providerActivity?.SetTag("sms.status", sendResult.Status.ToString());
             await repository.UpdateStatusAsync(
                 sendEvent.TenantId,
                 sendEvent.MessageId,
