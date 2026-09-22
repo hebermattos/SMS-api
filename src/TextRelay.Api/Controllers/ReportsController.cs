@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sms.Api.Auth;
 using Sms.Application.Common;
 using Sms.Application.Reports;
 
 namespace Sms.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
 [Route("api/v1/reports")]
 public sealed class ReportsController(ITenantContext tenantContext, ISmsReportRepository reports, ITenantTimeZoneProvider? timeZones = null) : ControllerBase
 {

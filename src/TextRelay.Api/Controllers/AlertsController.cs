@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sms.Api.Auth;
 using Sms.Application.Alerts;
 using Sms.Application.Common;
 using Sms.Api.Filters;
@@ -7,7 +8,7 @@ using Sms.Api.Filters;
 namespace Sms.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
 [ServiceFilter(typeof(PortalExceptionFilter))]
 [Route("api/v1/alerts")]
 public sealed class AlertsController(ITenantContext tenant, AlertService alerts) : ControllerBase

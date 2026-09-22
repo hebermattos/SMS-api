@@ -41,6 +41,6 @@ downloadCsv(){
   const url=URL.createObjectURL(blob); const link=document.createElement('a');
   link.href=url; link.download='sms-report-'+new Date().toISOString().slice(0,10)+'.csv'; link.click(); URL.revokeObjectURL(url);
 }
-private csvValue(value:string){return '"'+value.replace(/"/g,'""')+'"';}
+private csvValue(value:string){if(value && '=+-@\\t\\r\\n'.includes(value[0]))value=\"'\"+value;return '\"'+value.replace(/\"/g,'\"\"')+'\"';}
 percent(v:number,t:number){return t?((v/t)*100).toFixed(1):'0.0';}
 }

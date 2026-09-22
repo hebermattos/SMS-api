@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sms.Api.Auth;
 using Sms.Api.Middleware;
 using Sms.Application.Common;
 
@@ -9,7 +10,7 @@ namespace Sms.Api.Controllers;
 public sealed record PageActivityRequest(string Page);
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
 [Route("api/v1/activity")]
 public sealed class ActivityController(
     ITenantContext tenant,

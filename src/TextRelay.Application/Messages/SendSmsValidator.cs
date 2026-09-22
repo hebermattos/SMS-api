@@ -17,6 +17,14 @@ public sealed class SendSmsValidator(
             throw new ArgumentException("Destination phone number is required.");
         if (string.IsNullOrWhiteSpace(request.Body))
             throw new ArgumentException("Message body is required.");
+        if (request.Body.Length > 4000)
+            throw new ArgumentException("Message body cannot exceed 4000 characters.");
+        if (request.To.Length > 32)
+            throw new ArgumentException("Destination phone number is too long.");
+        if (request.From?.Length > 32)
+            throw new ArgumentException("Source phone number is too long.");
+        if (request.Provider?.Length > 50)
+            throw new ArgumentException("Provider name is too long.");
 
         await ValidateUserAsync(request.UserId, cancellationToken);
         return await ValidateScheduleAsync(request.ScheduledAt, now, cancellationToken);

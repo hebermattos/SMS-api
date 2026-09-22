@@ -36,7 +36,10 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
             new CommandDefinition(selectSql, new { TokenHash = currentTokenHash }, transaction, cancellationToken: cancellationToken));
         if (session is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            var reuseSql = Sms.Infrastructure.Sql.SqlQuery.Load("Persistence/RefreshTokenRepository.RevokeFamilyOnReuseAsync.01.sql");
+            await connection.ExecuteAsync(new CommandDefinition(reuseSql,
+                new { TokenHash = currentTokenHash }, transaction, cancellationToken: cancellationToken));
+            await transaction.CommitAsync(cancellationToken);
             return null;
         }
 
@@ -48,7 +51,7 @@ public sealed class RefreshTokenRepository(SqlConnectionFactory connections) : I
         await connection.ExecuteAsync(new CommandDefinition(insertSql, new
         {
             Id = replacementId, session.UserId, session.Username, session.TenantId, session.Context, session.Role,
-            TokenHash = replacementTokenHash, ExpiresAt = replacementExpiresAt
+            TokenHash = replacementTokenHash, ExpiresAt = replacementExpiresAt, CurrentId = session.Id
         }, transaction, cancellationToken: cancellationToken));
 
         await transaction.CommitAsync(cancellationToken);

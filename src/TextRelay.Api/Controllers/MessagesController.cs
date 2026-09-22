@@ -8,7 +8,7 @@ using Sms.Application.Messages;
 namespace Sms.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
 [Route("api/v1/messages")]
 public sealed class MessagesController(ITenantContext tenantContext, ISmsMessageRepository repository, SendSmsService sendSmsService, ITenantTimeZoneProvider timeZones) : ControllerBase
 {

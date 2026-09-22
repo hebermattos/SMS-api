@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sms.Api.Auth;
 using Sms.Application.Administration;
 using Sms.Application.Common;
 
 namespace Sms.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
 [Route("api/v1/overview")]
 public sealed class OverviewController(ITenantContext tenant, ITenantPortalRepository repository) : ControllerBase
 {
