@@ -12,6 +12,9 @@ using Sms.Infrastructure;
 using Sms.Infrastructure.Providers;
 using Sms.Infrastructure.Caching;
 using Sms.Infrastructure.Persistence;
+using Sms.Infrastructure.Observability;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 
 namespace Sms.Infrastructure.Tests;
 
@@ -106,6 +109,63 @@ public sealed class RegistrationAndModelTests
 
         Assert.StartsWith("mock-", result.ProviderMessageId);
         Assert.Contains(result.Status, new[] { SmsStatus.Pending, SmsStatus.Sent, SmsStatus.Delivered, SmsStatus.Failed });
+    }
+
+    [Fact]
+    public void TextRelayTelemetry_ExposesConfiguredSourcesAndInstruments()
+    {
+        Assert.Equal("TextRelay", TextRelayTelemetry.ActivitySourceName);
+        Assert.Equal("TextRelay", TextRelayTelemetry.MeterName);
+        Assert.Equal(TextRelayTelemetry.ActivitySourceName, TextRelayTelemetry.ActivitySource.Name);
+        Assert.Equal(TextRelayTelemetry.MeterName, TextRelayTelemetry.Meter.Name);
+        Assert.NotNull(TextRelayTelemetry.SmsQueued);
+        Assert.NotNull(TextRelayTelemetry.SmsSent);
+        Assert.NotNull(TextRelayTelemetry.SmsFailed);
+        Assert.NotNull(TextRelayTelemetry.QueuePublishFailed);
+        Assert.NotNull(TextRelayTelemetry.ProviderDuration);
+    }
+
+    [Fact]
+    public void TextRelayTelemetry_ActivitySourceCreatesActivityWhenObserved()
+    {
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == TextRelayTelemetry.ActivitySourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        using var activity = TextRelayTelemetry.ActivitySource.StartActivity("test");
+
+        Assert.NotNull(activity);
+        Assert.Equal("test", activity.OperationName);
+    }
+
+    [Fact]
+    public void TextRelayTelemetry_MeterPublishesDomainMeasurements()
+    {
+        var measurements = new List<string>();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, meterListener) =>
+        {
+            if (instrument.Meter.Name == TextRelayTelemetry.MeterName)
+                meterListener.EnableMeasurementEvents(instrument);
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, _, _, _) => measurements.Add(instrument.Name));
+        listener.SetMeasurementEventCallback<double>((instrument, _, _, _) => measurements.Add(instrument.Name));
+        listener.Start();
+
+        TextRelayTelemetry.SmsQueued.Add(1);
+        TextRelayTelemetry.SmsSent.Add(1);
+        TextRelayTelemetry.SmsFailed.Add(1);
+        TextRelayTelemetry.QueuePublishFailed.Add(1);
+        TextRelayTelemetry.ProviderDuration.Record(1);
+
+        Assert.Contains("sms.queued", measurements);
+        Assert.Contains("sms.sent", measurements);
+        Assert.Contains("sms.failed", measurements);
+        Assert.Contains("sms.queue.publish.failed", measurements);
+        Assert.Contains("sms.provider.duration", measurements);
     }
 
     [Fact]
