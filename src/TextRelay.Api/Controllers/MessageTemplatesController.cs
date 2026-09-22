@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sms.Api.Auth;
 using Sms.Application.Common;
 using Sms.Application.Templates;
 
 namespace Sms.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
 [Route("api/v1/templates")]
 public sealed class MessageTemplatesController(ITenantContext tenant, IMessageTemplateRepository repository, Sms.Application.Administration.ITenantPortalRepository portal) : ControllerBase
 {
