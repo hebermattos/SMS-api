@@ -14,7 +14,7 @@ describe('Login screen', () => {
     http = TestBed.inject(HttpTestingController);
     vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
-  afterEach(() => { TestBed.inject(AuthService).logout(); http.verify(); vi.restoreAllMocks(); });
+  afterEach(() => { TestBed.inject(AuthService).ngOnDestroy(); http.verify(); vi.restoreAllMocks(); });
 
   it('toggles password visibility and resets credentials when switching account type', async () => {
     const fixture = TestBed.createComponent(LoginComponent);
