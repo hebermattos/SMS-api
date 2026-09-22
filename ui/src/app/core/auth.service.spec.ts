@@ -9,12 +9,20 @@ import { authInterceptor } from './api';
 describe('Portal sessions', () => {
   let auth: AuthService; let http: HttpTestingController;
   const token = () => `header.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 900 }))}.signature`;
-  beforeEach(() => {
-    sessionStorage.clear();
+  const configure = () => {
     TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting(), provideRouter([])] });
-    auth = TestBed.inject(AuthService); http = TestBed.inject(HttpTestingController);
+    auth = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
     vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-  });
+  };
+  const reconfigure = () => { http.verify(); auth.ngOnDestroy(); TestBed.resetTestingModule(); configure(); };
+  const login = (role: 'tenant' | 'admin', bearer = token()) => {
+    if (role === 'tenant') auth.loginTenant('client', 'secret').subscribe();
+    else auth.loginAdmin('admin', 'admin-password').subscribe();
+    http.expectOne(role === 'tenant' ? '/api/v1/auth/token' : '/api/v1/admin/auth/token').flush({ access_token: bearer });
+    return bearer;
+  };
+  beforeEach(() => { sessionStorage.clear(); configure(); });
   afterEach(() => { auth?.ngOnDestroy(); http?.verify(); vi.restoreAllMocks(); vi.useRealTimers(); sessionStorage.clear(); TestBed.resetTestingModule(); });
 
   it('persists only session details in tab storage, never the client secret', () => {
@@ -40,15 +48,8 @@ describe('Portal sessions', () => {
   });
 
   it.each(['tenant', 'admin'] as const)('restores a %s session before route guards after reload', role => {
-    const bearer = token();
-    if (role === 'tenant') auth.loginTenant('client', 'secret').subscribe();
-    else auth.loginAdmin('admin', 'admin-password').subscribe();
-    http.expectOne(role === 'tenant' ? '/api/v1/auth/token' : '/api/v1/admin/auth/token').flush({ access_token: bearer });
-    http.verify();
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting(), provideRouter([])] });
-    auth = TestBed.inject(AuthService); http = TestBed.inject(HttpTestingController);
-    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const bearer = login(role);
+    reconfigure();
     expect(auth.bearer()).toBe(bearer);
     expect(auth.role()).toBe(role);
     expect(auth.identity()).toBe(role === 'tenant' ? 'client' : 'admin');
@@ -105,7 +106,7 @@ describe('Portal sessions', () => {
   });
 
   it('routes tenants away from administrator pages', () => {
-    auth.loginTenant('client', 'secret').subscribe(); http.expectOne('/api/v1/auth/token').flush({ access_token: token() });
+    login('tenant');
     const route = new ActivatedRouteSnapshot(); route.data = { role: 'admin' };
     const result = TestBed.runInInjectionContext(() => roleGuard(route, {} as RouterStateSnapshot));
     expect(String(result)).toBe('/app');
