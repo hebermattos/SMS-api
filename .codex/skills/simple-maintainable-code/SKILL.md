@@ -51,6 +51,8 @@ Prefer code that a competent developer can understand quickly without reconstruc
 - Prefer existing language and framework features when they make the code clearer.
 - Keep public APIs and contracts minimal and explicit.
 - Preserve security, tenant isolation, validation, and authorization even when simplifying code.
+- Preserve TextRelay messaging invariants when simplifying asynchronous flows: ID-only queue messages, atomic claims, separate queue/provider states, idempotency, and provider calls outside database transactions.
+- Keep audit/error logging, reporting, and technical telemetry responsibilities separate; simplification must not collapse these data boundaries.
 - Do not weaken tests, coverage thresholds, validation, or security to make a change easier.
 - Keep comments for decisions and non-obvious constraints; do not comment code that is already self-explanatory.
 - Treat readability and maintainability as valid reasons to reject a technically shorter solution.
