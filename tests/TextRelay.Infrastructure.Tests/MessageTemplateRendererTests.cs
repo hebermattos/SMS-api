@@ -2,7 +2,7 @@ using Sms.Application.Templates;
 
 namespace Sms.Infrastructure.Tests;
 
-public sealed class LowCoverageUnitTests
+public sealed class MessageTemplateRendererTests
 {
     [Fact]
     public void TemplateVariablesAreDistinctAndCaseInsensitive()
@@ -41,5 +41,4 @@ public sealed class LowCoverageUnitTests
         Assert.Contains("recipientPhone", MessageTemplateRenderer.SystemVariables);
         Assert.Contains("tenantName", MessageTemplateRenderer.SystemVariables);
     }
-
 }
