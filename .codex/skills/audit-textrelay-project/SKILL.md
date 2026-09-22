@@ -1,9 +1,9 @@
 ---
-name: audit-sms-api-project
-description: Audit the sms-api repository against its project instructions and report evidence-backed compliance, gaps, risks, and prioritized next actions. Use when asked to verify, review, or check whether the SMS API project follows its requirements; do not use for implementing fixes unless the user also asks for changes.
+name: audit-textrelay-project
+description: Audit the TextRelay repository against its project instructions and report evidence-backed compliance, gaps, risks, and prioritized next actions. Use when asked to verify, review, or check whether the SMS API project follows its requirements; do not use for implementing fixes unless the user also asks for changes.
 ---
 
-# Audit SMS API Project
+# Audit TextRelay Project
 
 Perform a read-only compliance audit of the repository. Treat the user's current project instructions and repository-scoped instruction files as authoritative. Use [references/baseline-requirements.md](references/baseline-requirements.md) as the fallback checklist and comparison aid; current explicit instructions override it.
 
@@ -22,8 +22,8 @@ Perform a read-only compliance audit of the repository. Treat the user's current
 3. Inspect implementation evidence for every applicable requirement. Prefer direct code/configuration evidence over filenames, comments, or README claims.
 4. Trace security-sensitive flows end to end where practical: authentication, authorization, tenant resolution, tenant-filtered queries, provider selection, webhook validation, logging, and log access.
 5. Use safe static checks such as searches for migrations, hard-coded credentials, unscoped SQL queries, sensitive logging, provider-specific leakage, and CI triggers.
-6. Run permitted non-mutating validation only when needed. Never claim runtime behavior, test success, or coverage from configuration alone. If validation was not run, mark the item `Not verified` and explain why.
-7. Cross-check the README and documented setup against the actual implementation.
+6. Verify the current messaging architecture explicitly: persisted queue/provider states, ID-only RabbitMQ messages, atomic queue claim, failed-publish recovery, retry/idempotency behavior, and API/Worker ownership.\n7. Verify data-store boundaries: application PostgreSQL, audit/error-log PostgreSQL, reporting PostgreSQL, Redis cache/rate-limit state, and ClickHouse technical telemetry.\n8. Verify observability semantics where applicable: API/Worker service identity, trace span roles, safe correlation, low-cardinality metrics, and absence of sensitive SMS/provider data.\n9. Run permitted non-mutating validation only when needed. Never claim runtime behavior, test success, or coverage from configuration alone. If validation was not run, mark the item `Not verified` and explain why.
+10. Cross-check the README and documented setup against the actual implementation.
 
 ## Evidence rules
 
