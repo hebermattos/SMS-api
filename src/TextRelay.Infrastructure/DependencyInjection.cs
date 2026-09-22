@@ -73,7 +73,7 @@ public static class DependencyInjection
         services.AddSingleton(rabbitMq);
         services.AddHttpClient("RabbitMqManagement", client =>
         {
-            client.BaseAddress = new Uri($"http://{rabbitMq.Host}:{rabbitMq.ManagementPort}/");
+            client.BaseAddress = new Uri($"http://{rabbitMq.ManagementHost}:{rabbitMq.ManagementPort}/");
             client.Timeout = TimeSpan.FromSeconds(10);
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
                 "Basic", Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{rabbitMq.User}:{rabbitMq.Password}")));
@@ -123,8 +123,8 @@ public static class DependencyInjection
                 rabbit.ReceiveEndpoint(rabbitMq.SendQueue, endpoint =>
                 {
                     endpoint.SetQuorumQueue(3);
-                    endpoint.PrefetchCount = 1;
-                    endpoint.ConcurrentMessageLimit = 1;
+                    endpoint.PrefetchCount = rabbitMq.SendPrefetchCount;
+                    endpoint.ConcurrentMessageLimit = rabbitMq.SendConcurrentMessageLimit;
                     endpoint.UseMessageRetry(retry =>
                     {
                         retry.Handle<TransientSmsProviderException>();
