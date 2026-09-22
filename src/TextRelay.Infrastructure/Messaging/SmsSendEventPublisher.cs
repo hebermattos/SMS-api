@@ -1,4 +1,5 @@
 using MassTransit;
+using System.Diagnostics;
 using Sms.Application.Messages;
 using Sms.Infrastructure.Observability;
 
@@ -8,7 +9,7 @@ public sealed class SmsSendEventPublisher(IPublishEndpoint publishEndpoint) : IS
 {
     public async Task PublishAsync(Guid tenantId, Guid messageId, CancellationToken cancellationToken = default)
     {
-        using var activity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.publish");
+        using var activity = TextRelayTelemetry.ActivitySource.StartActivity("sms.queue.publish", ActivityKind.Producer);
         activity?.SetTag("tenant.id", tenantId);
         activity?.SetTag("message.id", messageId);
         try
@@ -16,8 +17,10 @@ public sealed class SmsSendEventPublisher(IPublishEndpoint publishEndpoint) : IS
             await publishEndpoint.Publish(new SmsSendEvent(Guid.NewGuid(), tenantId, messageId), cancellationToken);
             TextRelayTelemetry.SmsQueued.Add(1);
         }
-        catch
+        catch (Exception exception)
         {
+            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+            activity?.AddException(exception);
             TextRelayTelemetry.QueuePublishFailed.Add(1);
             throw;
         }
