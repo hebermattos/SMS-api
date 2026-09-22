@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sms.Api.Auth;
 using Sms.Application.Messages;
 
 namespace Sms.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = PortalSecurity.TenantPortalPolicy)]
 [Route("api/v1/message-assistant")]
 public sealed class MessageAssistantController(IMessageAssistant assistant, Sms.Application.Common.ITenantContext tenant) : ControllerBase
 {
