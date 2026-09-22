@@ -15,7 +15,7 @@ describe('Portal sessions', () => {
     auth = TestBed.inject(AuthService); http = TestBed.inject(HttpTestingController);
     vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
-  afterEach(() => { auth.logout(); http.verify(); vi.restoreAllMocks(); vi.useRealTimers(); sessionStorage.clear(); });
+  afterEach(() => { auth.ngOnDestroy(); http.verify(); vi.restoreAllMocks(); vi.useRealTimers(); sessionStorage.clear(); });
 
   it('persists only session details in tab storage, never the client secret', () => {
     auth.loginTenant('client', 'secret').subscribe();
