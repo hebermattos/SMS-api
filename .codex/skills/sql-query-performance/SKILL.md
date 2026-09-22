@@ -1,11 +1,11 @@
 ---
 name: sql-query-performance
-description: Statically review the text of PostgreSQL queries in this SMS API and suggest performance improvements. Use when reviewing Dapper SQL, investigating potential query inefficiencies, or checking query text for performance risks; do not execute queries or require database access.
+description: Statically review the text of PostgreSQL queries in TextRelay and suggest performance improvements. Use when reviewing Dapper SQL, investigating potential query inefficiencies, or checking query text for performance risks; do not execute queries or require database access.
 ---
 
 # SQL Query Performance
 
-Review queries under `src/Sms.Infrastructure/Sql` by inspecting their text, callers, and relevant schema definitions. Identify likely performance risks and suggest the smallest safe improvements while preserving behavior, tenant isolation, and readability.
+Review queries under `src/TextRelay.Infrastructure/Sql` by inspecting their text, callers, and relevant schema definitions. Identify likely performance risks and suggest the smallest safe improvements while preserving behavior, tenant isolation, and readability.
 
 ## Safety and scope
 
@@ -21,8 +21,8 @@ Review queries under `src/Sms.Infrastructure/Sql` by inspecting their text, call
 
 1. Identify the `.sql` resource and every C# caller that loads it through `SqlQuery`.
 2. Trace Dapper parameters, transaction context, result mapping, expected cardinality, and whether input remains parameterized.
-3. Inspect the relevant tables, indexes, constraints, and column types in `database/schema.sql` or `database/logs-schema.sql`.
-4. Confirm which database owns the query.
+3. Inspect the relevant tables, indexes, constraints, and column types in `database/schema.sql`, `database/logs-schema.sql`, or `database/reporting-schema.sql`.
+4. Confirm whether the query belongs to the transactional application database, audit/error-log database, or reporting read model.
 5. When a query is assembled from multiple trusted SQL resources, review the final logical statement and how the caller combines the fragments.
 
 ## Static review checklist
@@ -39,7 +39,7 @@ Inspect the query text for:
 - unnecessary `ORDER BY`, redundant joins, repeated expressions, and avoidable round trips;
 - unsafe dynamic SQL or values that should be Dapper parameters;
 - index key order that appears inconsistent with equality predicates, range predicates, joins, and ordering;
-- aggregations over raw history when an existing summary table is intended for that workload.
+- aggregations over raw history when an existing reporting consolidation/read-model table is intended for that workload;\n- tenant-scoped pagination whose filter/order shape is poorly aligned with existing composite indexes;\n- reporting queries that bypass the reporting database and unnecessarily read transactional message history.
 
 Account for correctness before suggesting changes:
 
