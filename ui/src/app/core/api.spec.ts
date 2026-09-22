@@ -15,7 +15,7 @@ describe('Authenticated requests', () => {
     auth.loginTenant('client', 'secret').subscribe();
     http.expectOne('/api/v1/auth/token').flush({ access_token: `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 900 }))}.s` });
   });
-  afterEach(() => { vi.useRealTimers(); auth.logout(); http.verify(); });
+  afterEach(() => { vi.useRealTimers(); auth?.ngOnDestroy(); http?.verify(); TestBed.resetTestingModule(); });
   it('sends credentials only to relative API URLs', () => {
     client.get('/api/v1/messages').subscribe();
     const api = http.expectOne('/api/v1/messages'); expect(api.request.headers.get('Authorization')).toBe(`Bearer ${auth.bearer()}`); api.flush([]);

@@ -15,7 +15,7 @@ describe('Portal sessions', () => {
     auth = TestBed.inject(AuthService); http = TestBed.inject(HttpTestingController);
     vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
-  afterEach(() => { auth.ngOnDestroy(); http.verify(); vi.restoreAllMocks(); vi.useRealTimers(); sessionStorage.clear(); });
+  afterEach(() => { auth?.ngOnDestroy(); http?.verify(); vi.restoreAllMocks(); vi.useRealTimers(); sessionStorage.clear(); TestBed.resetTestingModule(); });
 
   it('persists only session details in tab storage, never the client secret', () => {
     auth.loginTenant('client', 'secret').subscribe();
@@ -35,7 +35,7 @@ describe('Portal sessions', () => {
     request.flush({ access_token: token() });
     expect(auth.role()).toBe('admin');
     expect(sessionStorage.getItem('sms-ui-session')).not.toContain('admin-password');
-    auth.logout(); expect(auth.bearer()).toBeNull(); expect(auth.role()).toBeNull();
+    auth.logout(); http.expectOne('/api/v1/admin/auth/logout').flush(null); expect(auth.bearer()).toBeNull(); expect(auth.role()).toBeNull();
     expect(sessionStorage.getItem('sms-ui-session')).toBeNull();
   });
 
@@ -91,7 +91,7 @@ describe('Portal sessions', () => {
     restored.loginTenant('client', 'secret').subscribe();
     const bearer = token(); http.expectOne('/api/v1/auth/token').flush({ access_token: bearer });
     expect(restored.bearer()).toBe(bearer);
-    expect(() => restored.logout()).not.toThrow();
+    expect(() => restored.logout()).not.toThrow(); http.expectOne('/api/v1/portal/auth/logout').flush(null);
     restored.ngOnDestroy();
   });
 
