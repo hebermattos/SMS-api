@@ -89,35 +89,7 @@ jobs:
           END $$;
           SQL
       - name: Verify administrator password login and tenant separation over HTTP
-        run: |
-          docker compose up -d --build haproxy
-          python3 - <<'PY'
-          import json, time, urllib.request, urllib.error
-          base = 'http://localhost:8080'
-          def request(path, payload=None, token=None):
-              headers = {'Content-Type': 'application/json'}
-              if token: headers['Authorization'] = 'Bearer ' + token
-              req = urllib.request.Request(base + path, data=None if payload is None else json.dumps(payload).encode(), headers=headers)
-              try:
-                  with urllib.request.urlopen(req, timeout=5) as response: return response.status, response.read()
-              except urllib.error.HTTPError as error: return error.code, error.read()
-          for attempt in range(30):
-              try:
-                  if request('/health')[0] == 200: break
-              except (urllib.error.URLError, TimeoutError, ConnectionError): pass
-              time.sleep(2)
-          else: raise RuntimeError('API did not become healthy')
-          assert request('/api/v1/admin/auth/token', {'key': 'local-admin-key-change-me'})[0] == 400
-          assert request('/api/v1/admin/auth/token', {'username': 'platform'})[0] == 400
-          assert request('/api/v1/admin/auth/token', {'username': 'platform', 'password': 'x' * 129})[0] == 400
-          assert request('/api/v1/admin/auth/token', {'username': 'platform', 'password': 'wrong'})[0] == 401
-          status, body = request('/api/v1/admin/auth/token', {'username': 'PLATFORM', 'password': 'platform'})
-          assert status == 200, 'Administrator login failed'
-          token = json.loads(body)['access_token']
-          assert request('/api/v1/admin/tenants', token=token)[0] == 200
-          assert request('/api/v1/overview', token=token)[0] == 403
-          print('Administrator password login and tenant separation verified.')
-          PY
+        run: python3 tests/e2e/auth_and_tenant_isolation.py
       - name: Show resource diagnostics
         if: failure()
         run: |
