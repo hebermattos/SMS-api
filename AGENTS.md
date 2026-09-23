@@ -30,6 +30,9 @@ Build a secure multi-tenant REST API for sending, receiving, tracking, and query
 - Scheduled messages remain persisted in UTC until due, then transition to `Queued` through an atomic database operation before publication.
 - RabbitMQ delivery is at-least-once. Consumers and callbacks must therefore remain idempotent; never rely on a broker message being delivered exactly once.
 - Keep provider calls outside database transactions. Use persisted state transitions and retryable background processing rather than attempting a distributed transaction between PostgreSQL and RabbitMQ.
+- Retry only transient provider failures (HTTP 429, HTTP 5xx, and provider network failures). Use MassTransit delayed redelivery backed by RabbitMQ's delayed-message exchange so retry delays survive Worker restarts and do not occupy consumer slots.
+- A delayed redelivery may continue a message already atomically claimed as `Processing` only when MassTransit redelivery metadata proves it belongs to that delivery chain. Unrelated duplicate deliveries must still fail the claim and must not call the provider.
+- Keep the SMS retry policy platform-wide and configurable through `SmsRetry:MaxAttempts` and `SmsRetry:InitialIntervalSeconds`; do not introduce tenant-specific retry behavior without an explicit requirement.
 - Background polling must be bounded and configurable where appropriate; avoid tight polling loops and unnecessary database scans.
 - Keep RabbitMQ-specific transport concerns out of core application use cases.
 
